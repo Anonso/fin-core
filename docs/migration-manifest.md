@@ -47,12 +47,28 @@
 
 ## 过渡期事实
 
-- 状态源：本仓 `docs/pm/NOW.md` 为过渡快照，cutover（迁移步 5）前权威在老仓
-  `~/fin-analyse/docs/pm/NOW.md`。
+- 状态源：本仓 `docs/pm/NOW.md` 自 2026-08-29 步7 起为唯一权威（老仓已归档）。
 - 数据根零移动：durable store 全在 XDG/fin-data 固定路径（代码决定），不随 checkout 走。
 - 调度重指向（步 5）：systemd daily 8 timer + 2 模板 + zsxq poller/consumer、
   Windows capture 七时点、`~/.config/fin-analyse/*.env`、consult-agent/.mcp.json——
   前后逐条登记，ZSXQ 水位线（`--not-before-run-id`/`--source-commit`）原样延续。
+
+## 施工步 6/7 记录（2026-08-29 晚，绝根/退役/归档完成）
+
+- **步6 KB 绝根**：老仓 repo `knowledge-base/` 最后 1 个 tracked 文件（G 主线手工
+  批注）git rm（老仓 b5d65cba，owner-only 备份+sha256 manifest）。**迁移缺口当即
+  修复**：该批注是 consume 仓布局活输入（`consume_zsxq_capture_folder.py:504-510`
+  → rebuild_if_stale annotation_path），已按布局路径复原至本仓盘上（`.gitignore`
+  内，不入 git——沿老仓 08-28 特例先例的布防改由 NOW 待办10 接管：P5 前移入
+  canonical 根 + 读点换 knowledge_root 缝）。缺失后果=非阻塞 FAILED（audit
+  jsonl），G 工作集停自动重建。shared `index.json` 对 repo 路径引用=0（08-28
+  遗留已清，绝根零回归）。
+- **步7 release 退役**：删 10 个（闭包扫=systemd 单元/Hermes 配置/.mcp.json 零活
+  引用），留 `current`（→319faf62）+ ff7441e2 + 13c791ca 至 P5（回滚资产，无
+  运行时读方）。
+- **步7 归档**：老仓 ARCHIVED（AGENTS/NOW 横幅 + ARCHIVED.md）；施工设计稿按
+  规则5随归档删除（Git 即归档）。NOW 权威自本仓步7 记录起唯一。
+- manifest 勘误：「留馆 repo knowledge-base/」清单的批注例外如上；其余成立。
 
 
 ## 施工步 5 记录（2026-08-29，单元重指向/生产 cutover 完成）
