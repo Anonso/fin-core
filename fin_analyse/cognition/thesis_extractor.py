@@ -602,6 +602,13 @@ class LlmZsxqThesisExtractor:
         except Exception as exc:
             logger.warning("LLM thesis extraction failed: %s", exc)
             return ThesisExtraction([], [], [f"LLM extraction error: {exc}"])
+        if result is None:
+            # 空链守卫：全部 backend 熔断/不可用时链为空，循环零迭代。
+            # 返回与旧 backend-unavailable 语义一致的 typed 失败（命中
+            # retryable 契约，后续排空可重试），绝不带 None 走 .ok。
+            return ThesisExtraction(
+                [], [], ["LLM extraction failed: LLM backend unavailable"]
+            )
         if exhausted_bare_empty:
             logger.warning(
                 "LLM empty extraction persisted across escalation chain (%s)",
