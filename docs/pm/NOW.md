@@ -69,7 +69,7 @@
 | 外部检索 | 时事与星球外信息 | 在用 | 时事类问题，验引用可溯源 | consult-agent/.mcp.json |
 | 识图 | 图片理解 | 在用 | 带图问询 | llm.yaml vision 链 |
 
-### L2 六个上下文缝（决定装了什么）
+### L2 七个上下文缝（决定装了什么）
 
 | 工具 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
@@ -79,6 +79,7 @@
 | read_market_overview | 大盘结构 | 问询验收中（结构性半边待修） | 「今天大盘怎么样」，验 gaps 空 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 问询验收中（描述修复已在本仓运行树，待探针复核闭环） | 两融问题 | BUG-004 |
 | read_ready_evidence | 官方公告/记录 | 问询验收中（全调用 unavailable；公告探针未触发工具） | 公告类问题，验工具被调 + 可用 | BUG-012 |
+| read_user_watchlist | 自选股清单（user context 注意力焦点，永非投资证据） | 在用（08-29 接入；探针「看下当前自选股」ok 无 gaps，22 只如实分组） | 「看下当前自选股」，验工具被调 + 空表诚实答空 | 短设计已按规则 5 归档（git 历史：read-user-watchlist-tool）；写通道=manage_user_watchlist.py |
 
 ### L3 供给链（决定上面缝的数据质量）
 

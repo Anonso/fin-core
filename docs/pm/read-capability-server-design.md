@@ -8,7 +8,10 @@
 
 **目标**：给 CLI（v1 仅 CC）一个脱离 gateway 的 stdio-MCP 只读入口，暴露 FIN 的 6 个读能力，自带调用 trace。这是 rebaseline 后的产品本体入口。
 
-**非目标**：不做写入口（持仓确认/watchlist 不暴露）；不做 envelope/多用户身份；不做最小 import 闭包的彻底手术（v1 接受实测 0.54s/121 模块的启动闭包，断根断在两条硬边上：`production_runtime` 与 `capability_broker`(moa) 不入薄 server 的 `sys.modules`）；不替代 gateway（它继续服务飞书 WS 与 Daily delivery）。
+**非目标**：不做写入口（持仓确认/watchlist 不暴露；**批注 2026-08-29：watchlist 的
+只读面已由第 7 工具 `read_user_watchlist` 接入，写通道仍归 owner CLI——见 git
+历史中已按规则 5 归档删除的 `docs/design/read-user-watchlist-tool.md`**）；不做
+envelope/多用户身份；不做最小 import 闭包的彻底手术（v1 接受实测 0.54s/121 模块的启动闭包，断根断在两条硬边上：`production_runtime` 与 `capability_broker`(moa) 不入薄 server 的 `sys.modules`）；不替代 gateway（它继续服务飞书 WS 与 Daily delivery）。
 
 ## 2. 模块结构（特性内聚）
 
@@ -34,7 +37,7 @@ fin_analyse/read_capabilities/
 
 引用面实测 7 文件（3 源码 + 4 测试）。**断根验收**：薄 server import 完成后断言 `sys.modules` 不含 `production_runtime` 与 `capability_broker`（import-hook 式测试）。
 
-## 3. 工具面（v1 共 6 个）
+## 3. 工具面（v1 共 6 个；**2026-08-29 起为 7 个**，新增只读 `read_user_watchlist`，见 §1 批注）
 
 | 工具 | 来源 reader | question | instruments | as_of 语义 | 默认 deadline |
 |---|---|---|---|---|---|
