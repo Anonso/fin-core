@@ -235,13 +235,22 @@ _LLM_EXTRACTION_PROMPT = """你是一个金融投研认知助手，正在分析�
 从以下文章内容和图片结构化事实中提取关键信息单元（InformationUnit）。
 每篇文章通常有 1-5 个信息单元。
 
+## 提取方法（先摘录，后构造——两步缺一不可）
+第一步：先从原文（正文/图片OCR/图片描述）逐字摘录承载实质观点、规则或
+判断的句子（3-10 条）。老师的推测口吻（"我更相信""大概率"）不影响摘录。
+第二步：只对这些摘录句构造信息单元，每个单元的 evidence 必须原样引用
+其中一条或相邻几条摘录句，不得改写、拼接或超出摘录集。
+
 ## 字段说明
 - unit_type: strategic_thesis | industry_map | company_mapping | market_timing | risk_signal | catalyst_observation | methodology_rule
 - title: 10字以内的标题
 - thesis: 核心论点（1-2句）
-- evidence: 支撑该论点的原文证据（1-2句，必须来自原文）
+- evidence: 支撑该论点的原文证据（1-2句，必须来自原文，原样引用摘录句）
 - interpretation: 认知学徒的理解和推演（标注"学徒翻译：..."，区分于老师原话）
-- confidence: 0-1之间的置信度，低于0.7的不提取
+- confidence: 0-1之间的引用忠实度——衡量该表述在原文中的明确程度和你的
+  引用是否逐字，而不是观点本身为真的概率；老师以推测口吻表达的判断
+  照常提取，推测语气记入 interpretation（标注"老师时点判断"或"推测口吻"）；
+  低于0.7的不提取
 - topics: 相关主题关键词列表（须同时包含文章涉及的板块/行业词（如半导体、
   稀土）与概念词（如操作纪律、概率评估），便于命中不同提问方式）
 - companies: 涉及的公司名称列表（无则为空数组）
@@ -254,7 +263,9 @@ _LLM_EXTRACTION_PROMPT = """你是一个金融投研认知助手，正在分析�
    操作纪律/买卖纪律（如"大跌大补，小跌小补，大涨大卖，小涨小卖"、
    逢跌分批补仓/逢涨分批减仓）必须按原文提取为 methodology_rule，
    evidence 逐字引用，不得因涉及买卖表述而跳过
-5. 如果文章内容不足以提取任何单元，返回 {"units": []}
+5. 如果文章内容不足以提取任何单元，返回 {"units": [], "empty_reason":
+   "<一句话原因>"}——空返回是异常结果，必须先完成两步提取仍无实质
+   内容才允许（纯闲聊/纯转发无观点是唯一合法空返回）
 6. 关注表格中的数字、百分比和对比数据
 7. methodology_rule 用于老师明确表达的可迁移规则性认知（分析框架、
    认知规则、操作纪律、博弈规则），来源包括：
@@ -277,6 +288,7 @@ _LLM_EXTRACTION_PROMPT = """你是一个金融投研认知助手，正在分析�
 文章标题、正文内容、图片描述、图片结构化事实会依次给出。
 
 始终返回 JSON 对象: {"units": [{"unit_type": "...", "title": "...", "thesis": "...", "evidence": "...", "interpretation": "...", "confidence": 0.8, "topics": ["..."], "companies": ["..."]}]}
+（仅当完成两步提取仍无实质内容时: {"units": [], "empty_reason": "..."}）
 """
 
 
@@ -300,7 +312,9 @@ _CENTRAL_IDEA_PROMPT = """你是一个金融投研认知助手。主提取未能
 4. evidence（原文证据）：必须逐字引用原文中的原句（1-2 句），不得改写、不得拼接
 5. unit_type：从 strategic_thesis | market_timing | risk_signal | methodology_rule 中选择；
    methodology_rule 仅当原文包含明确可迁移的分析框架/操作纪律时使用
-6. confidence：0-1 之间的置信度，低于 0.7 不要返回
+6. confidence：0-1 之间的引用忠实度（该表述在原文中的明确程度与引用是否
+   逐字，非观点为真概率；老师推测口吻照常提炼，语气记入 interpretation），
+   低于 0.7 不要返回
 7. topics：相关主题关键词（板块/行业词与概念词）
 8. companies：涉及的公司名称（无则为空数组）
 
@@ -339,6 +353,14 @@ def _strip_noise(text: str) -> str:
         for ch in unicodedata.normalize("NFKC", text)
         if not ch.isspace() and not unicodedata.category(ch).startswith("P")
     )
+
+
+def _evidence_domain(source: ZsxqCognitionSource) -> str:
+    """主链 evidence 校验域：LLM 实际所见的可引用文本全集
+    （正文 + 图片OCR + 图片描述）。visual_facts 是模型生成的结构化
+    转述而非可逐字引用的原文，不进校验域。"""
+    parts = [source.content, *source.image_ocr, *source.image_descriptions]
+    return "\n".join(part for part in parts if part)
 
 
 def _evidence_in_source(evidence: str, content: str) -> bool:
@@ -556,15 +578,32 @@ class LlmZsxqThesisExtractor:
                 ["LLM extraction failed: invalid units shape; expected an array"],
             )
         if not units_data:
-            return ThesisExtraction([], [], ["LLM found no extractable units"])
+            # P2-12：无 empty_reason 时保持裸字符串逐字节不变（既有精确等值
+            # 断言 + replace_central_idea_warnings 的 substring 语义都依赖它）。
+            empty_reason = ""
+            if isinstance(result.data, dict):
+                empty_reason = str(result.data.get("empty_reason", "") or "").strip()
+            warning = (
+                f"LLM found no extractable units: {empty_reason}"
+                if empty_reason
+                else "LLM found no extractable units"
+            )
+            return ThesisExtraction([], [], [warning])
 
+        # P1-2：校验域 = LLM 实际所见全集（正文+图片OCR+图片描述），与
+        # central-idea 的 content-only 判据不同——主链 prompt 允许引用图片文本。
+        evidence_domain = _evidence_domain(source)
         units: list[InformationUnit] = []
+        dropped_unverifiable = 0
         for item in units_data:
             if not isinstance(item, dict):
                 continue
             try:
                 evidence = str(item.get("evidence", "")).strip()
                 if not evidence:
+                    continue
+                if not _evidence_in_source(evidence, evidence_domain):
+                    dropped_unverifiable += 1
                     continue
                 unit = _make_information_unit(
                     source,
@@ -585,6 +624,8 @@ class LlmZsxqThesisExtractor:
 
         chains = [_make_evidence_chain(source, unit) for unit in units]
         warnings: list[str] = []
+        if dropped_unverifiable:
+            warnings.append(f"LLM evidence not verbatim: {dropped_unverifiable} dropped")
         if not units:
             warnings.append("LLM extraction produced no valid units")
 

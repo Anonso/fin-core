@@ -216,7 +216,8 @@ def test_llm_extracts_fengxianjun_teacher_source_with_source_neutral_prompt(tmp_
     source = _source(
         tmp_path,
         "凤仙郡小故事：产业迁移的长期框架",
-        "老师指出产业迁移要先验证竞争位置和兑现路径，不能把长期框架直接当作短线信号。",
+        "老师指出产业迁移要先验证竞争位置和兑现路径，不能把长期框架直接当作短线信号。"
+        "原文称存储价格上行并改善利润。",
         column="凤仙郡小故事",
     )
 
@@ -346,7 +347,7 @@ def test_methodology_rule_unit_passes_through_extraction(tmp_path: Path) -> None
         "unit_type": "methodology_rule",
         "title": "交易纪律",
         "thesis": "频繁切换标的是大忌,要守住纪律。",
-        "evidence": "老师借故事讲频繁切换是大忌。",
+        "evidence": "老师借故事讲:频繁切换标的是大忌。",
         "interpretation": "学徒翻译:规则性认知,适用于交易纪律。",
         "confidence": 0.8,
         "topics": ["交易纪律", "凤仙郡"],
@@ -374,7 +375,8 @@ def test_narrative_rule_only_applies_to_explicit_rule_stories(tmp_path: Path) ->
     source = _source(
         tmp_path,
         "星大派特刊:算力主线",
-        "算力需求扩张带动光模块与铜连接放量,相关公司盈利有望兑现。",
+        "算力需求扩张带动光模块与铜连接放量,相关公司盈利有望兑现。"
+        "原文称存储价格上行并改善利润。",
         column="星大派特刊",
     )
     thesis_unit = _unit_payload()  # strategic_thesis
@@ -403,7 +405,7 @@ def test_prompt_rule_governs_extraction_behavior(tmp_path: Path) -> None:
         "unit_type": "methodology_rule",
         "title": "交易纪律",
         "thesis": "频繁切换标的是大忌。",
-        "evidence": "频繁切换是大忌",
+        "evidence": "频繁切换标的是大忌",
         "interpretation": "学徒翻译:规则性认知。",
         "confidence": 0.8,
         "topics": ["交易纪律"],
@@ -489,3 +491,129 @@ def test_extraction_prompt_requires_min_confidence_0_7() -> None:
 
     assert "低于0.7的不提取" in _LLM_EXTRACTION_PROMPT
     assert "低于0.6的不提取" not in _LLM_EXTRACTION_PROMPT
+
+
+# ── 06 生成核心重写（2026-08-29）：quote-driven / empty_reason / 校验域 ──────
+
+SAMPLE06_CLEAN_BODY = (
+    "在凤仙郡向来就不缺能人，用公家牌子的业务做大了，就把公产当私产肆意挥霍。\n"
+    "天天震荡，洗筹码，但这波还真得挺，虽然体感差，但其实这反而是往好的方向走。\n"
+    "所以我更相信，现在的调整就是为了社保基金、险资、基金高管吃货准备的，毕竟才出了新规。\n"
+    "躺好！除非是做t的天才，不动就行了。你只要不被洗出主线，就稳了。\n"
+    "事实就是砸盘抢筹是最合理的，必须要在新质生产力的板块，要量大价低的拿到筹码。"
+)
+
+
+def _sample06_unit(evidence: str, thesis: str, title: str, unit_type: str = "strategic_thesis"):
+    return {
+        "unit_type": unit_type,
+        "title": title,
+        "thesis": thesis,
+        "evidence": evidence,
+        "interpretation": "学徒翻译：老师时点判断，推测口吻。",
+        "confidence": 0.8,
+        "topics": ["市场节奏", "凤仙郡"],
+        "companies": [],
+    }
+
+
+def test_sample06_cleaned_body_fixture_extracts_core_theses(tmp_path: Path) -> None:
+    """06 回归夹具：清洗后的凤仙郡正文，quote-driven 单元全部通过确定性校验。"""
+    source = _source(
+        tmp_path,
+        "《凤仙郡小故事之卸磨杀驴》",
+        SAMPLE06_CLEAN_BODY,
+        column="凤仙郡小故事",
+    )
+    units_payload = [
+        _sample06_unit(
+            "现在的调整就是为了社保基金、险资、基金高管吃货准备的",
+            "本轮调整被视为社保与险资的吃货窗口。",
+            "调整即抢筹",
+        ),
+        _sample06_unit(
+            "躺好！除非是做t的天才，不动就行了。你只要不被洗出主线，就稳了。",
+            "不动就行的持有纪律。",
+            "躺好不动",
+            "market_timing",
+        ),
+        _sample06_unit(
+            "事实就是砸盘抢筹是最合理的，必须要在新质生产力的板块",
+            "砸盘抢筹集中在质生产力板块。",
+            "砸盘抢筹",
+        ),
+    ]
+    extraction = LlmZsxqThesisExtractor(llm=_JsonBackend({"units": units_payload})).extract(source)
+
+    assert len(extraction.units) == 3
+    joined = " ".join(
+        u.thesis + "".join(u.original_evidence) for u in extraction.units
+    )
+    for anchor in ("社保基金", "躺好", "砸盘抢筹", "洗出主线"):
+        assert anchor in joined
+    assert extraction.warnings == []
+
+
+def test_empty_extraction_with_reason_appends_suffix(tmp_path: Path) -> None:
+    """空返回须附因：reason 非空时拼后缀，前缀 substring 语义保持。"""
+    source = _source(tmp_path, "闲聊", "今天天气不错，大家吃了吗。")
+    extraction = LlmZsxqThesisExtractor(
+        llm=_JsonBackend({"units": [], "empty_reason": "纯闲聊无实质观点"})
+    ).extract(source)
+
+    assert extraction.units == []
+    assert extraction.warnings == ["LLM found no extractable units: 纯闲聊无实质观点"]
+
+
+def test_empty_extraction_without_reason_keeps_bare_warning(tmp_path: Path) -> None:
+    """P2-12：无 empty_reason（含顶层数组 []）保持裸字符串逐字节不变。"""
+    source = _source(tmp_path, "无内容", "正文。")
+    for payload in ({"units": []}, []):
+        extraction = LlmZsxqThesisExtractor(llm=_JsonBackend(payload)).extract(source)
+        assert extraction.warnings == ["LLM found no extractable units"]
+
+
+def test_fabricated_evidence_dropped_with_count(tmp_path: Path) -> None:
+    """主链幻觉防线：evidence 不在 LLM 所见全集的单元被确定性丢弃并计数。"""
+    source = _source(
+        tmp_path,
+        "凤仙郡小故事：真假证据",
+        "老师明确说频繁切换标的是大忌。" + SAMPLE06_CLEAN_BODY,
+        column="凤仙郡小故事",
+    )
+    good = _sample06_unit("躺好！除非是做t的天才，不动就行了。", "不动就行的持有纪律。", "躺好不动", "market_timing")
+    fabricated = _sample06_unit(
+        "钼前驱体总分14.5，197.3亿美元，设备112.6亿。", "卡脖子材料供给收缩。", "罐头证据"
+    )
+    extraction = LlmZsxqThesisExtractor(llm=_JsonBackend({"units": [good, fabricated]})).extract(source)
+
+    assert [u.title for u in extraction.units] == ["躺好不动"]
+    assert extraction.warnings == ["LLM evidence not verbatim: 1 dropped"]
+
+
+def test_ocr_evidence_passes_verification(tmp_path: Path) -> None:
+    """P1-2：校验域=LLM 所见全集——引用图片OCR原话的 evidence 不被误杀。"""
+    article = tmp_path / "article.md"
+    article.write_text(
+        "---\nid: ocr\ntopic_id: t\ndate: 2026-06-18 20:00\ncolumn: 星大派特刊\n---\n\n"
+        "# 特刊：产能表\n\n正文只有一句。\n\n"
+        "## 图片OCR文字\n- 北美产能占比 42%\n- 国内产能占比 11%",
+        encoding="utf-8",
+    )
+    source = load_zsxq_cognition_source(article)
+    unit = _sample06_unit("北美产能占比 42%", "北美产能占据主导。", "产能格局", "industry_map")
+    extraction = LlmZsxqThesisExtractor(llm=_JsonBackend({"units": [unit]})).extract(source)
+
+    assert len(extraction.units) == 1
+    assert extraction.warnings == []
+
+
+def test_prompt_declares_quote_driven_fidelity_semantics() -> None:
+    """v2 结构断言：先摘录后构造 + 引用忠实度语义。"""
+    from fin_analyse.cognition.thesis_extractor import _LLM_EXTRACTION_PROMPT
+
+    assert "先摘录，后构造" in _LLM_EXTRACTION_PROMPT
+    assert "逐字摘录" in _LLM_EXTRACTION_PROMPT
+    assert "引用忠实度" in _LLM_EXTRACTION_PROMPT
+    assert "推测口吻" in _LLM_EXTRACTION_PROMPT
+    assert "empty_reason" in _LLM_EXTRACTION_PROMPT

@@ -285,7 +285,11 @@ class ZsxqCognitionApprentice:
             is_qa=str(meta.get("is_qa", "")).lower() in ("true", "1"),
         )
         if not decision.eligible:
-            return False, None
+            # 静默跳过绝根（06 侦查教训）：原因码嵌入完整 data_gap，
+            # 未分类栏目单独成码，不折叠。
+            return False, (
+                f"central_idea_skipped_{decision.data_gap or 'g_source_type_unknown'}"
+            )
         if source.completeness == "partial":
             return False, "central_idea_skipped_insufficient_content"
         return True, None

@@ -153,6 +153,8 @@ def test_central_idea_skipped_for_non_star_column(tmp_path) -> None:
 
     assert result.units == []
     assert backend.central_idea_calls == 0
+    # 06 门修复：静默跳过绝根——ineligible 必留原因码
+    assert "central_idea_skipped_g_source_type_unknown" in result.warnings
 
 
 def test_central_idea_fails_on_low_confidence(tmp_path) -> None:

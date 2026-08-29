@@ -120,4 +120,8 @@ def test_external_context_article_persists_source_but_no_units(tmp_path: Path):
 
     assert result.source.source_rank == "external_context"
     assert result.units == []
-    assert result.warnings == ["skip non-T0 ZSXQ cognition source"]
+    # 06 门修复：非 T0 同时留 central-idea 门原因码（静默跳过绝根）
+    assert result.warnings == [
+        "skip non-T0 ZSXQ cognition source",
+        "central_idea_skipped_g_source_type_unknown",
+    ]
