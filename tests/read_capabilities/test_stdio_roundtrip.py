@@ -121,6 +121,7 @@ class TestStdioRoundTrip:
             "read_market_overview",
             "read_market_snapshot",
             "read_ready_evidence",
+            "read_user_watchlist",
         ]
         call_result = responses[3]["result"]
         assert not call_result.get("isError", False)

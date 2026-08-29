@@ -1,6 +1,6 @@
 """Read-capability thin stdio MCP server (design v2 · D1).
 
-Six read tools over the FIN provider, no gateway, no envelope, no auth
+Seven read tools over the FIN provider, no gateway, no envelope, no auth
 (single local principal — stdio is pulled up by the owner's own CLI).
 Any stray write to stdout would corrupt the JSON-RPC stream, so the guard
 below is installed at import time, before any other project import.
@@ -90,6 +90,7 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_market_overview": 22.0,
     "read_margin_evidence": 30.0,
     "read_ready_evidence": 30.0,
+    "read_user_watchlist": 10.0,
 }
 _MAX_DEADLINE_SECONDS = 300.0
 _MAX_SESSION_HINT_CHARS = 128
@@ -142,6 +143,16 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     "read_ready_evidence": (
         "Read recent reference-ready evidence (ZSXQ tiered articles) selected "
         "for the research question as of a moment in time."
+    ),
+    "read_user_watchlist": (
+        "Read the user-maintained A-share watchlist (自选股/观察票): codes, "
+        "names, added dates, list revision. USER CONTEXT ONLY — a focus-of-"
+        "attention list the owner curates; never investment evidence and "
+        "never a trade instruction. Call it when the question mentions the "
+        "watchlist (自选/自选股/观察票) or asks what to watch next; pair with "
+        "read_market_snapshot for prices. An empty list means the watchlist "
+        "is empty — say that plainly, it is not an error. Read-only; "
+        "watchlist changes go through the owner CLI, never through this tool."
     ),
 }
 
@@ -424,7 +435,7 @@ def run(runner=None) -> None:
         _stderr(f"startup failed: {exc}")
         raise SystemExit(2) from exc
     initialize(root)
-    _stderr(f"serving 6 read tools; kb_root={root}")
+    _stderr(f"serving {len(_TOOL_DEADLINE_SECONDS)} read tools; kb_root={root}")
     _run = mcp.run if runner is None else runner
     _run()
 

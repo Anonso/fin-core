@@ -33,7 +33,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import stat
 import sys
 from pathlib import Path
 from typing import NoReturn
@@ -47,7 +46,6 @@ from fin_analyse.consultation.instrument_identity import (  # noqa: E402
     ConsultationInstrumentIdentity,
 )
 from fin_analyse.guo_teacher_research.principal_binding import (  # noqa: E402
-    LocalInstallationPrincipalProvider,
     PrincipalBindingError,
 )
 from fin_analyse.market.instrument_directory import (  # noqa: E402
@@ -55,16 +53,16 @@ from fin_analyse.market.instrument_directory import (  # noqa: E402
 )
 from fin_analyse.portfolio.user_watchlist import (  # noqa: E402
     UserWatchlistStateError,
-    UserWatchlistStore,
+)
+from fin_analyse.portfolio.watchlist_state import (  # noqa: E402
+    require_production_watchlist_state,
 )
 from fin_analyse.portfolio.watchlist_write import (  # noqa: E402
     WatchlistRefError,
     resolve_watchlist_ref,
 )
-from fin_analyse.runtime.state_roots import semantic_research_state_root  # noqa: E402
 
 _OUTPUT_SCHEMA = "user-watchlist-management-result.v2"
-_INSTALLATION_NAMESPACE = "fin.local-installation.v1"
 _HEX_TOKEN = re.compile(r"[0-9a-fA-F]{1,512}\Z")
 
 
@@ -118,31 +116,6 @@ def _resolve_one(
     return resolve_watchlist_ref(resolver, directory, ref)
 
 
-def _check_state_root(root: Path) -> None:
-    try:
-        info = root.lstat()
-    except FileNotFoundError:
-        return  # 空态：identity 读取随后 fail closed
-    if (
-        not stat.S_ISDIR(info.st_mode)
-        or info.st_uid != __import__("os").geteuid()
-        or (stat.S_IMODE(info.st_mode) & 0o077)
-    ):
-        raise UserWatchlistStateError("watchlist_state_root_invalid")
-
-
-def _require_production_state() -> tuple[Path, str, UserWatchlistStore]:
-    """Resolve root/principal/store or raise a typed fail-closed error."""
-    root = semantic_research_state_root()
-    _check_state_root(root)
-    provider = LocalInstallationPrincipalProvider(
-        identity_path=root / "installation-identity.hex",
-        installation_namespace=_INSTALLATION_NAMESPACE,
-    )
-    principal = provider.require_binding().principal_id
-    return root, principal, UserWatchlistStore(root=root, principal_id=principal)
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     try:
@@ -159,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     try:
-        _root, _principal, store = _require_production_state()
+        _root, _principal, store = require_production_watchlist_state()
         read = store.list()
         # 启动时 revision 是 CLI 的 CAS 权威（design v4.1 O4）：read 与 apply 之间
         # 的外部写入必须表现为 conflict/exit 5，而不是被静默折叠进新 revision。

@@ -69,6 +69,7 @@ from fin_analyse.portfolio.actual_advisory import (
     ActualAdvisoryPortfolioReason,
     ActualAdvisoryPortfolioStatus,
 )
+from fin_analyse.portfolio.user_watchlist import WatchlistRead
 from fin_analyse.researcher.context import (
     ExternalResearchContextRequest,
     ExternalResearchContextResult,
@@ -149,6 +150,10 @@ class _ActualPortfolioReader(Protocol):
     def read(self) -> ActualAdvisoryPortfolioRead: ...
 
 
+class _UserWatchlistReader(Protocol):
+    def list(self) -> WatchlistRead: ...
+
+
 class ProductionReadCapabilityProvider:
     """Concrete, read-only implementation of FIN's fixed read capabilities.
 
@@ -175,6 +180,7 @@ class ProductionReadCapabilityProvider:
         cached_external_research: _CachedExternalResearchReader | None = None,
         ready_evidence_reader: _ReadyEvidenceReader | None = None,
         actual_portfolio: _ActualPortfolioReader | None = None,
+        user_watchlist: _UserWatchlistReader | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         if runtime_context is None:
@@ -193,6 +199,7 @@ class ProductionReadCapabilityProvider:
         self._market_overview = market_overview
         self._cached_external_research = cached_external_research
         self._actual_portfolio = actual_portfolio
+        self._user_watchlist = user_watchlist
         self._clock = clock or (lambda: datetime.now(UTC))
         self._ready_evidence_reader = (
             ready_evidence_reader
@@ -722,6 +729,28 @@ class ProductionReadCapabilityProvider:
                 data_gaps=("actual_portfolio_core_incomplete",),
             )
         return ProductionReadResult(value=value)
+
+    def read_user_watchlist(self, request: ProductionReadRequest) -> ProductionReadResult:
+        _bounded_inputs(request)
+        if self._user_watchlist is None:
+            return ProductionReadResult(
+                value=_user_watchlist_value(None),
+                data_gaps=("user_watchlist_reader_unavailable",),
+            )
+        try:
+            result = self._user_watchlist.list()
+        except Exception:
+            return ProductionReadResult(
+                value=_user_watchlist_value(None),
+                data_gaps=("user_watchlist_read_failed",),
+            )
+        if not isinstance(result, WatchlistRead):
+            return ProductionReadResult(
+                value=_user_watchlist_value(None),
+                data_gaps=("user_watchlist_result_invalid",),
+            )
+        # 空列表是合法态（用户自选可以为空），不是 gap。
+        return ProductionReadResult(value=_user_watchlist_value(result))
 
 
 def _bounded_inputs(request: ProductionReadRequest) -> tuple[str, tuple[str, ...]]:
@@ -1409,6 +1438,34 @@ def _cached_research_value(items: list[dict[str, object]]) -> dict[str, object]:
         "source_kind": SourceKind.EXTERNAL_REFERENCE.value,
         "source_trust": SourceTrust.NON_G.value,
         "items": items,
+    }
+
+
+def _user_watchlist_value(result: WatchlistRead | None) -> dict[str, object]:
+    entries: list[dict[str, str]] = []
+    revision = ""
+    as_of = ""
+    if result is not None:
+        entries = [
+            {
+                "market_symbol": entry.market_symbol,
+                "name": entry.name,
+                "added_at": entry.added_at,
+            }
+            for entry in result.entries
+        ]
+        revision = result.revision
+        as_of = result.as_of
+    return {
+        # 设计门 F1：server 只投影 value/data_gaps，user-context 语义由 value 承载。
+        "semantics": (
+            "user context / focus of attention; never investment evidence; "
+            "never a trade instruction"
+        ),
+        "revision": revision,
+        "as_of": as_of,
+        "entry_count": len(entries),
+        "entries": entries,
     }
 
 

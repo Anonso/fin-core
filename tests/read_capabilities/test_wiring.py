@@ -14,6 +14,17 @@ from pathlib import Path
 
 import pytest
 
+from fin_analyse.consultation.instrument_identity import ConsultationInstrumentIdentity
+from fin_analyse.guo_teacher_research.production_capability_provider import (
+    ProductionReadCapabilityProvider,
+)
+from fin_analyse.guo_teacher_research.semantic_contract import InstrumentRef
+from fin_analyse.portfolio.user_watchlist import (
+    UserWatchlistStore,
+    WatchlistEntry,
+    WatchlistRead,
+)
+from fin_analyse.portfolio.watchlist_state import require_production_watchlist_state
 from fin_analyse.read_capabilities.types import ProductionReadRequest
 from fin_analyse.read_capabilities.wiring import (
     READ_TOOL_NAMES,
@@ -64,11 +75,38 @@ def isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, s
     return env
 
 
+def _provision_watchlist_state(tmp_path: Path) -> None:
+    """置备 owner-only 安装身份，使 happy-path 下 watchlist 推导成功（设计门 F3）。"""
+    import os
+
+    root = tmp_path / "state" / "fin-analyse" / "semantic-research-v1"
+    root.mkdir(parents=True, exist_ok=True)
+    os.chmod(root, 0o700)
+    identity_path = root / "installation-identity.hex"
+    identity_path.write_text("ab" * 32 + "\n", encoding="ascii")
+    os.chmod(identity_path, 0o600)
+
+
 class TestConstruction:
-    def test_builds_all_six_tools(self, kb_root: Path, isolated_env: dict[str, str]) -> None:
+    def test_builds_all_seven_tools(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        _provision_watchlist_state(tmp_path)
         wiring = build_reader_wiring(kb_root, environ=isolated_env)
         assert wiring.tool_names() == READ_TOOL_NAMES
         assert wiring.unavailable_tools == ()
+
+    def test_watchlist_state_missing_degrades_only_watchlist_tool(
+        self, kb_root: Path, isolated_env: dict[str, str]
+    ) -> None:
+        # 设计门 F2 回归：无安装身份时推导 fail-closed，但只降级本工具，
+        # wiring 构造（= server 启动）绝不能崩。
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        assert wiring.tool_names() == READ_TOOL_NAMES
+        result = wiring.runners["read_user_watchlist"](
+            ProductionReadRequest(question="看下当前自选股")
+        )
+        assert "user_watchlist_reader_unavailable" in result.data_gaps
 
     def test_market_overview_failure_degrades_to_registered_tool(
         self, kb_root: Path, isolated_env: dict[str, str], monkeypatch: pytest.MonkeyPatch
@@ -98,6 +136,45 @@ class TestHappyPaths:
         # No confirmed snapshot exists under the isolated config root.
         assert "actual_portfolio_unavailable" in result.data_gaps
         assert result.value["status"] == "UNKNOWN"
+
+    def test_read_user_watchlist_empty_is_legal_ok_state(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        _provision_watchlist_state(tmp_path)
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        result = wiring.runners["read_user_watchlist"](
+            ProductionReadRequest(question="看下当前自选股")
+        )
+        # 空列表是合法态：无 gap，明确 entries 为空。
+        assert result.data_gaps == ()
+        assert result.value["entry_count"] == 0
+        assert result.value["entries"] == []
+        assert "never investment evidence" in str(result.value["semantics"])
+
+    def test_read_user_watchlist_lists_seeded_entries(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        _provision_watchlist_state(tmp_path)
+        _, principal, store = require_production_watchlist_state(environ=isolated_env)
+        store.add(
+            ConsultationInstrumentIdentity(
+                status="RESOLVED",
+                semantic_ref=InstrumentRef(ticker="600259", name="中稀有色"),
+                market_symbol="600259.SH",
+                source="A_SHARE_DIRECTORY",
+                data_gaps=(),
+            ),
+            expected_revision="r0",
+        )
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        result = wiring.runners["read_user_watchlist"](
+            ProductionReadRequest(question="看下当前自选股")
+        )
+        assert result.data_gaps == ()
+        assert result.value["entry_count"] == 1
+        assert result.value["entries"][0]["market_symbol"] == "600259.SH"
+        assert result.value["revision"] == store.list().revision
+        assert principal.startswith("finp_")
 
     def test_read_g_context_returns_projection(
         self, kb_root: Path, isolated_env: dict[str, str]
@@ -139,6 +216,90 @@ class TestHappyPaths:
         assert isinstance(result.value, dict)
 
 
+class _FakeWatchlistReader:
+    """Provider-level fake for read_user_watchlist state coverage."""
+
+    def __init__(
+        self,
+        result: WatchlistRead | None = None,
+        *,
+        error: Exception | None = None,
+        invalid: object | None = None,
+    ) -> None:
+        self._result = result
+        self._error = error
+        self._invalid = invalid
+
+    def list(self) -> WatchlistRead:
+        if self._error is not None:
+            raise self._error
+        if self._invalid is not None:
+            return self._invalid  # type: ignore[no-any-return]
+        assert self._result is not None
+        return self._result
+
+
+class TestReadUserWatchlistProviderStates:
+    """设计门 F6：四态镜像（unavailable/read_failed/result_invalid/成功）。"""
+
+    def _provider(
+        self,
+        kb_root: Path,
+        reader: _FakeWatchlistReader | None = None,
+    ) -> ProductionReadCapabilityProvider:
+        return ProductionReadCapabilityProvider(
+            knowledge_base_root=kb_root,
+            user_watchlist=reader,
+        )
+
+    def test_success_projects_entries_and_user_context_semantics(
+        self, kb_root: Path
+    ) -> None:
+        read = WatchlistRead(
+            entries=(
+                WatchlistEntry(
+                    market_symbol="600259.SH",
+                    name="中稀有色",
+                    added_at="2026-08-12T09:21:59+00:00",
+                ),
+            ),
+            revision="r1-0123456789abcdef",
+            as_of="2026-08-29T14:00:00+00:00",
+        )
+        provider = self._provider(kb_root, _FakeWatchlistReader(read))
+        result = provider.read_user_watchlist(
+            ProductionReadRequest(question="自选股有哪些")
+        )
+        assert result.data_gaps == ()
+        assert result.value["entry_count"] == 1
+        assert result.value["entries"][0]["market_symbol"] == "600259.SH"
+        assert result.value["revision"] == "r1-0123456789abcdef"
+        assert "never investment evidence" in str(result.value["semantics"])
+
+    def test_read_failed_reports_typed_gap(self, kb_root: Path) -> None:
+        provider = self._provider(
+            kb_root, _FakeWatchlistReader(error=RuntimeError("db locked"))
+        )
+        result = provider.read_user_watchlist(
+            ProductionReadRequest(question="自选股")
+        )
+        assert result.data_gaps == ("user_watchlist_read_failed",)
+
+    def test_result_invalid_reports_typed_gap(self, kb_root: Path) -> None:
+        provider = self._provider(kb_root, _FakeWatchlistReader(invalid=object()))
+        result = provider.read_user_watchlist(
+            ProductionReadRequest(question="自选股")
+        )
+        assert result.data_gaps == ("user_watchlist_result_invalid",)
+
+    def test_reader_unavailable_reports_typed_gap(self, kb_root: Path) -> None:
+        provider = self._provider(kb_root)
+        result = provider.read_user_watchlist(
+            ProductionReadRequest(question="自选股")
+        )
+        assert result.data_gaps == ("user_watchlist_reader_unavailable",)
+
+
 class TestDeadlinePath:
     def test_expired_deadline_surfaces_typed_gap(
         self, kb_root: Path, isolated_env: dict[str, str]
@@ -166,4 +327,5 @@ class TestReaderWiringShape:
             "read_market_overview",
             "read_margin_evidence",
             "read_ready_evidence",
+            "read_user_watchlist",
         }

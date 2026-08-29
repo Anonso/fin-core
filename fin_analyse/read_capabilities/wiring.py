@@ -1,6 +1,6 @@
 """Reader wiring for the read-capability thin server.
 
-Only what the six v1 read tools need is constructed here.  The G reader is
+Only what the seven v1 read tools need is constructed here.  The G reader is
 built by the provider's ``__init__`` from ``kb_root`` (its default
 construction path); this module never rebuilds it.  Each reader failure is
 kept individually: a missing knowledge root fails closed (startup error),
@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
+from fin_analyse.guo_teacher_research.principal_binding import PrincipalBindingError
 from fin_analyse.guo_teacher_research.production_capability_provider import (
     ProductionReadCapabilityProvider,
 )
@@ -29,6 +30,8 @@ from fin_analyse.market.on_demand_tactical_context import (
     build_default_on_demand_tactical_context,
 )
 from fin_analyse.portfolio.actual_advisory import ActualAdvisoryPortfolioStore
+from fin_analyse.portfolio.user_watchlist import UserWatchlistError
+from fin_analyse.portfolio.watchlist_state import require_production_watchlist_state
 
 READ_TOOL_NAMES: tuple[str, ...] = (
     "read_g_context",
@@ -37,6 +40,7 @@ READ_TOOL_NAMES: tuple[str, ...] = (
     "read_market_overview",
     "read_margin_evidence",
     "read_ready_evidence",
+    "read_user_watchlist",
 )
 
 
@@ -67,7 +71,7 @@ def build_reader_wiring(
     environ: dict[str, str] | None = None,
     clock=None,
 ) -> ReaderWiring:
-    """Wire the six v1 read tools from a validated knowledge root.
+    """Wire the seven v1 read tools from a validated knowledge root.
 
     ``knowledge_base_root`` must already be validated (fail-closed happens in
     the server preflight, mirroring ``mcp_server``).  Reader-level failures
@@ -116,6 +120,16 @@ def build_reader_wiring(
     except (OSError, ValueError) as exc:
         _stderr_note(f"actual_portfolio construction failed: {type(exc).__name__}")
 
+    # Watchlist 推导是 fail-closed（identity 缺失/坏权限 root 抛 RuntimeError 系），
+    # 必须在此降级为单工具 unavailable——绝不能让 server 启动崩溃（设计门 F2）。
+    user_watchlist = None
+    try:
+        _, _, user_watchlist = require_production_watchlist_state(
+            environ=environment,
+        )
+    except (OSError, ValueError, UserWatchlistError, PrincipalBindingError) as exc:
+        _stderr_note(f"user_watchlist construction failed: {type(exc).__name__}")
+
     unavailable: list[tuple[str, str]] = []
 
     provider: ProductionReadCapabilityProvider | None = None
@@ -126,6 +140,7 @@ def build_reader_wiring(
             on_demand_tactical_context=on_demand,
             margin_evidence=margin,
             actual_portfolio=actual_portfolio,
+            user_watchlist=user_watchlist,
             clock=effective_clock,
         )
     except (OSError, ValueError) as exc:
