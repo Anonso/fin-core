@@ -1,0 +1,55 @@
+id: knowledge.articles.deep_read
+name: 文章深读产物读取
+category: knowledge
+status: stable
+visibility: internal
+version: 1
+summary: 只读返回知识库文章已有且与当前正文匹配的 research/advisory 深读产物；它不是 teacher cognition，不产生交易动作；缓存缺失、过期或无效时明确返回 unavailable，不触发同步生成。
+intent_examples:
+- 查看这篇文章已有的深读结果
+- 这篇文章的深读核心观点是什么
+- 查看文章深读摘要
+- 读取完整文章深读产物
+primary_entry:
+  type: mcp
+  name: deep_read_article
+input_schema:
+  article_id:
+    type: string
+    required: true
+  detail:
+    type: enum
+    values:
+    - full
+    - summary
+    required: false
+output_schema:
+  article_id: string
+  title: string
+  column: string
+  published_at: string
+  source_rank: string
+  unit_count: number
+  theme_count: number
+  suggestion_count: number
+  warnings: list
+  units: list
+  evidence_chains: list
+  theme_clusters: list
+  clocks: list
+  suggestions: list
+  core_theses: list
+  injectable_summary: string
+  usage_boundary: string
+  artifact_status: string
+  artifact_generated_at: string
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- article_id
+- source_rank
+- unit_count
+- theme_count
+- artifact_status

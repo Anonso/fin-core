@@ -1,0 +1,34 @@
+id: portfolio.read
+name: 持仓只读（用户已确认快照）
+category: portfolio
+status: beta
+visibility: public
+version: public/v1
+summary: 读取用户已确认的实际持仓快照。仅展示既有快照；不修改、不发布、不核对。MCP 主入口为 read_actual_portfolio。失败原因以中文 consequence 字段返回，可直接面向用户展示。
+intent_examples:
+  - 看看我当前的持仓
+  - 给我看下已确认的持仓快照
+  - 列出我已确认账户的持仓
+primary_entry:
+  type: mcp
+  name: read_actual_portfolio
+input_schema: {}
+output_schema:
+  schema_version: string
+  status: string
+  values:
+    - REJECTED
+    - READY
+    - PARTIAL
+    - UNKNOWN
+  reason_codes: list
+  snapshot: object|null
+  consequence: string|null
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: true
+audit_fields:
+  - status
+  - reason_codes
+  - snapshot_revision_when_present

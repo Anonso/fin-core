@@ -1,0 +1,41 @@
+{
+  "schema_version": "fin.market-evidence-plan/v1",
+  "lanes": {
+    "quote": [
+      {
+        "driver_id": "eastmoney_quote",
+        "enabled": true,
+        "timeout_seconds": 15.0
+      },
+      {
+        "driver_id": "tencent_quote",
+        "enabled": true,
+        "timeout_seconds": 5.0
+      }
+    ],
+    "daily": [
+      {
+        "driver_id": "eastmoney_daily",
+        "enabled": true,
+        "timeout_seconds": 15.0
+      },
+      {
+        "driver_id": "tencent_daily",
+        "enabled": true,
+        "timeout_seconds": 8.0
+      }
+    ],
+    "intraday": [
+      {
+        "driver_id": "tencent_intraday",
+        "enabled": true,
+        "timeout_seconds": 8.0
+      },
+      {
+        "driver_id": "eastmoney_intraday",
+        "enabled": true,
+        "timeout_seconds": 15.0
+      }
+    ]
+  }
+}

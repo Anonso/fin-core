@@ -1,0 +1,84 @@
+{
+  "schema_version": "a_share_trading_calendar.v1",
+  "calendar_version": "sse-szse-a-share-2026-v1",
+  "source_policy_id": "official-notice-dual-exchange-v1",
+  "phase_policy_version": "a-share-order-entry-hours-2023-v1",
+  "valid_from": "2026-01-01",
+  "valid_through": "2026-12-31",
+  "timezone": "Asia/Shanghai",
+  "evidence_tier": "paper_candidate",
+  "verified_at": "2026-07-18T08:00:00+08:00",
+  "session_intervals": [
+    {
+      "phase": "CONTINUOUS_AM",
+      "start": "09:30",
+      "end": "11:30"
+    },
+    {
+      "phase": "CONTINUOUS_PM",
+      "start": "13:00",
+      "end": "15:00"
+    }
+  ],
+  "sources": [
+    {
+      "venue": "SSE",
+      "source_id": "sse-official-closure-notice",
+      "adapter_version": "official-notice-file.v1",
+      "notice_id": "上证公告〔2025〕45号",
+      "official_url": "https://www.sse.com.cn/disclosure/dealinstruc/closed/",
+      "published_at": "2025-12-22T00:00:00+08:00",
+      "closed_weekdays": [
+        "2026-01-01",
+        "2026-01-02",
+        "2026-02-16",
+        "2026-02-17",
+        "2026-02-18",
+        "2026-02-19",
+        "2026-02-20",
+        "2026-02-23",
+        "2026-04-06",
+        "2026-05-01",
+        "2026-05-04",
+        "2026-05-05",
+        "2026-06-19",
+        "2026-09-25",
+        "2026-10-01",
+        "2026-10-02",
+        "2026-10-05",
+        "2026-10-06",
+        "2026-10-07"
+      ]
+    },
+    {
+      "venue": "SZSE",
+      "source_id": "szse-official-closure-notice",
+      "adapter_version": "official-notice-file.v1",
+      "notice_id": "深证会〔2025〕481号",
+      "official_url": "https://www.szse.cn/disclosure/notice/t20251222_618087.html",
+      "published_at": "2025-12-22T00:00:00+08:00",
+      "closed_weekdays": [
+        "2026-01-01",
+        "2026-01-02",
+        "2026-02-16",
+        "2026-02-17",
+        "2026-02-18",
+        "2026-02-19",
+        "2026-02-20",
+        "2026-02-23",
+        "2026-04-06",
+        "2026-05-01",
+        "2026-05-04",
+        "2026-05-05",
+        "2026-06-19",
+        "2026-09-25",
+        "2026-10-01",
+        "2026-10-02",
+        "2026-10-05",
+        "2026-10-06",
+        "2026-10-07"
+      ]
+    }
+  ],
+  "artifact_sha256": "a04b7958fc80067914c25e0f6f1a85630b82ff373f94bce3f8ac1b2a28916cac"
+}

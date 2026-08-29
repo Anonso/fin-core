@@ -1,0 +1,39 @@
+id: stock.market_snapshot
+name: 市场快照
+category: market
+status: stable
+visibility: internal
+version: 1
+summary: 获取股票技术指标、估值、资金流等客观市场数据快照。
+intent_examples:
+- 行情快照600036
+- 茅台估值怎么样
+- 看下资金流
+primary_entry:
+  type: mcp
+  name: get_market_snapshot
+input_schema:
+  ticker:
+    type: string
+    required: true
+output_schema:
+  ticker: string
+  price: number
+  rsi14: number
+  pe: number
+  flow_score: number
+  cache_status: string
+  cache_session: string
+  cache_hit: boolean
+  data_freshness: object
+  data_gaps: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- provider
+- fallback_used
+- data_gaps
+- cache_status
+- cache_hit

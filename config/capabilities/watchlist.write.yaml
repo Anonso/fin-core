@@ -1,0 +1,56 @@
+id: watchlist.write
+name: 自选股更新（Hermes 写路径）
+category: portfolio
+status: beta
+visibility: public
+version: 1
+summary: Feishu/Hermes 的自选股唯一写入口。list 零写读取；preview 解析 1-10 个有序 add/remove 操作（代码逐字或目录 canonical 名称逐字节一致），返回机器候选 token 与用户可见确认短语，零写；apply 只接受候选 token——FIN 校验 HMAC 签名、身份绑定、TTL 与新 turn 要求后逐条 CAS 写入。操作员/手动路径仍由 scripts/manage_user_watchlist.py 独立承担，二者共享同一 resolve/CAS 语义。
+intent_examples:
+  - 更新我的自选股，增加贵州茅台
+  - 把 600519 加进自选股
+  - 从自选股里删掉新希望
+  - 确认更新自选股
+primary_entry:
+  type: mcp
+  name: update_user_watchlist
+input_schema:
+  command:
+    type: object
+    required: true
+  action:
+    type: string
+    required: true
+    values:
+      - list
+      - preview
+      - apply
+  operations:
+    type: array
+    required: false
+    min_items: 1
+    max_items: 10
+    item_fields:
+      - action (add|remove)
+      - ref
+  token:
+    type: string
+    required: false
+output_schema:
+  schema_version: string
+  status: string
+  reason_codes: list
+  operations: list
+  confirmation_phrase: string|null
+  candidate_token: string|null
+  outcomes: list
+  entries: list
+  revision: string|null
+side_effect: writes_runtime
+risk_level: medium
+requires_confirmation: true
+profile_sensitive: true
+audit_fields:
+  - status
+  - operations
+  - outcomes
+  - revision

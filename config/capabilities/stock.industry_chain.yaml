@@ -1,0 +1,50 @@
+id: stock.industry_chain
+name: 产业链位置分析
+category: stock
+status: stable
+visibility: internal
+version: 1
+summary: LLM 驱动的产业链位置动态分析：公司在产业链中的位置、战略重要度、替代难度、议价能力、护城河分析。不依赖静态知识图谱。
+intent_examples:
+- 分析中稀有色在产业链中的位置
+- 这个公司卡脖子吗
+- XX的议价能力怎么样
+- 宁德时代的上游有哪些
+primary_entry:
+  type: mcp
+  name: analyze_industry_chain
+input_schema:
+  company:
+    type: string
+    required: true
+  ticker:
+    type: string
+    required: false
+output_schema:
+  company: string
+  ticker: string
+  industry: string
+  chain_segment: string
+  role: string
+  key_products: list
+  key_customers: list
+  key_suppliers: list
+  strategic_importance: number
+  substitution_difficulty: string
+  bargaining_power: string
+  moat_summary: string
+  confidence: number
+  evidence_sources: list
+  data_gaps: list
+  failure_conditions: list
+  catalysts: list
+  methodology_note: string
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- company
+- ticker
+- confidence
+- data_gaps

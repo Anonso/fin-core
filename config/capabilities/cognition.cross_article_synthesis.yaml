@@ -1,0 +1,88 @@
+id: cognition.cross_article_synthesis
+name: 跨文章认知综合
+category: cognition
+status: beta
+visibility: internal
+version: 1
+description: |
+  对多篇星大派（特刊/锐评/合格好问题）文章进行跨文章认知综合。
+  自动聚类主题、集群内观点提取、跨集群 MoA 综合，输出板块方向、关注标的和风险盲区。
+  所有输出 advisory_only=true，不写入老师 Persona/pattern/trace。
+summary: 跨文章认知综合 — 从多篇星大派文章中提取板块方向、关注标的和观点变化
+intent_examples:
+  - 最近星大派关注什么
+  - 星大派对半导体怎么看
+  - 最近一个月星大派观点有没有变化
+  - 星大派最近提到了哪些公司
+
+primary_entry:
+  type: mcp
+  name: get_cross_article_synthesis
+
+# Side effect classification:
+# - writes_audit: MCP 调用可能生成并持久化 advisory synthesis/audit record
+# - Does NOT modify trade state, Persona, pattern, trace, portfolio, or user profile
+side_effect: writes_audit
+risk_level: medium
+requires_confirmation: false
+profile_sensitive: false
+
+input_schema:
+  type: object
+  properties:
+    topic:
+      type: string
+      description: 按主题过滤（如"半导体"），空字符串=不过滤
+    since:
+      type: string
+      description: 起始日期（如"2026-06-01"），空字符串=不限
+    cluster_ids:
+      type: string
+      description: 逗号分隔的cluster ID列表，空字符串=所有
+    include_analyses:
+      type: boolean
+      description: 是否包含各cluster的详细分析
+
+output_schema:
+  type: object
+  properties:
+    synthesis:
+      type: object
+      description: 综合报告或 null
+    clusters:
+      type: array
+      description: 所有 cluster 摘要
+    previous_synthesis_id:
+      type: string
+      description: 上一版本 synthesis ID
+    generated_at:
+      type: string
+      description: 生成时间
+    quality_flags:
+      type: object
+      description: cache_hit/degraded/stale/fallback/partial
+    suggested_signal_queries:
+      type: array
+      description: >
+        Top-level mirror of synthesis.suggested_signal_queries. G→Z query intents for Hermes.
+        FIN emits only query intent; Hermes executes Z tools. tool_args must match current MCP
+        signatures exactly: analyze_stock(company/ticker), get_market_snapshot(ticker).
+        company/ticker remain top-level metadata for Hermes-side filtering.
+    bridge_contract:
+      type: object
+      description: >
+        FIN-Hermes bridge metadata. version=fin-hermes-gz-bridge/v1,
+        display_policy=g_first_z_attached, z_execution_owner=hermes,
+        fin_embeds_z_results=false.
+    warnings:
+      type: array
+      description: 警告信息
+
+audit_fields:
+  - synthesis_id
+  - generated_at
+  - quality_flags
+  - source_article_ids
+  - source_cluster_ids
+  - suggested_signal_queries
+  - bridge_contract

@@ -1,0 +1,26 @@
+id: system.verification_config
+name: 实盘验证配置
+category: system
+status: stable
+visibility: internal
+version: 1
+summary: 获取小资金实盘验证的风险限制参数。S-011。
+intent_examples:
+- 验证参数
+- 风控配置
+- 仓位限制
+primary_entry:
+  type: mcp
+  name: get_verification_config
+input_schema: {}
+output_schema:
+  config: object
+  mode: string
+  advisory_only: boolean
+  note: string
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- mode

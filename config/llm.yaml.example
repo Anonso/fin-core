@@ -1,0 +1,91 @@
+# LLM 模型配置文件
+# 支持 OpenAI 兼容 API 和 Anthropic API
+# 编辑此文件后重启即可生效
+
+models:
+  # GLM-5.2 (硅基流动 SiliconFlow) - 文档/长文本 Reader
+  glm:
+    provider: openai_compatible
+    model: zai-org/GLM-5.2
+    api_key: ${SILICONFLOW_API_KEY}
+    base_url: "https://api.siliconflow.cn/v1"
+    enabled: true
+
+  # 通义千问 Qwen3.6-35B (硅基流动 SiliconFlow)
+  qwen:
+    provider: openai_compatible
+    model: Qwen/Qwen3.6-35B-A3B
+    api_key: ${SILICONFLOW_API_KEY}
+    base_url: "https://api.siliconflow.cn/v1"
+    enabled: true
+
+  # DeepSeek V4 Pro - 现有内部分析与咨询引导 backend
+  deepseek:
+    provider: openai_compatible
+    model: deepseek-v4-pro
+    api_key: ${DEEPSEEK_API_KEY}
+    base_url: "https://api.deepseek.com/v1"
+    reasoning_effort: high
+    enabled: true
+
+  # GPT-5.6 - 现有内部分析 backend；CodesOnline（mx 中转）单站
+  gpt5:
+    provider: openai_compatible
+    model: gpt-5.6-sol
+    api_key: ${CODESONLINE_API_KEY}
+    base_url: "https://mx.free.codesonline.dev/v1"
+    reasoning_effort: xhigh
+    enabled: true
+
+  # 自定义 - 任意 OpenAI 兼容端点 (Ollama/vLLM/硅基流动等)
+  custom:
+    provider: openai_compatible
+    model: llama-3
+    api_key: ${CUSTOM_LLM_API_KEY}
+    base_url: "http://localhost:11434/v1"
+    enabled: false
+
+  # 小米 MiMo n-v2.5 - 主链图片识别最高优先级（原生识图，OpenAI 兼容）
+  # 用法参考 https://mimo.mi.com/docs/zh-CN/quick-start/usage-guide/multimodal-understanding/image-understanding
+  mimo:
+    provider: openai_compatible
+    model: mimo-v2.5
+    api_key: ${MIMO_API_KEY}
+    base_url: "https://api.xiaomimimo.com/v1"
+    enabled: true
+
+  # 智谱 GLM-4V-Flash - 识图第二优先（mimo 不可用/失败后；OpenAI 兼容，超时 90s）
+  # 注意: 智谱对 glm-4v-flash 限制 max_tokens ∈ [1,1024]
+  glm-vision:
+    provider: openai_compatible
+    model: glm-4v-flash
+    api_key: ${GLM_VISION_API_KEY}
+    base_url: "https://open.bigmodel.cn/api/paas/v4"
+    timeout: 90
+    max_tokens: 1024
+    enabled: true
+
+  # 图片备用模型
+  vision:
+    provider: openai_compatible
+    model: Qwen/Qwen3.6-35B-A3B
+    api_key: ${SILICONFLOW_API_KEY}
+    base_url: "https://api.siliconflow.cn/v1"
+    enabled: true
+
+# 视觉提取设置
+vision:
+  recommendation_extractor: mimo
+  fallback_extractor: vision
+  min_article_score: 8.7            # 只处理评分≥8.7的文章图片
+  max_images_per_article: 5         # 每篇文章最多处理5张图
+  top_companies_per_article: 3      # 每篇保留综合评分最高的3家公司
+  fallback_to_ocr: true             # 视觉模型失败时是否回退到OCR
+  ocr_confidence_penalty: 0.7       # OCR回退结果的置信度打折
+
+# 交叉验证设置
+cross_validation:
+  # 最少需要几个模型达成一致
+  min_agreement: 2
+  # 达成一致时的置信度 boost
+  agreement_boost: 0.1

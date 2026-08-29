@@ -1,0 +1,42 @@
+id: system.decision_warnings
+name: 决策警告聚合
+category: system
+status: stable
+visibility: internal
+version: 1
+summary: 聚合外部感官数据警告（数据源健康、市场异动、知识覆盖缺口等）。所有警告 advisory-only，需人工确认。S-010C。
+intent_examples:
+- 有什么风险
+- 需要注意什么
+- 数据可靠吗
+- 决策警告
+primary_entry:
+  type: mcp
+  name: get_decision_warnings
+input_schema:
+  company:
+    type: string
+    required: false
+  ticker:
+    type: string
+    required: false
+output_schema:
+  company: string
+  ticker: string
+  total_warnings: number
+  critical: number
+  high: number
+  medium: number
+  low: number
+  warnings: list
+  advisory_only: boolean
+  human_confirmation_required: boolean
+  note: string
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- total_warnings
+- critical
+- high

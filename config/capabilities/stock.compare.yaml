@@ -1,0 +1,30 @@
+id: stock.compare
+name: 多股对比
+category: stock
+status: stable
+visibility: internal
+version: 1
+summary: 对比多只股票的知识库信号、置信度、评分和提及度。
+intent_examples:
+- 对比茅台和五粮液
+- 宁德时代和比亚迪哪个好
+primary_entry:
+  type: mcp
+  name: compare_stocks
+input_schema:
+  tickers:
+    type: string
+    required: true
+  window:
+    type: string
+    required: false
+output_schema:
+  results: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: true
+audit_fields:
+- targets
+- confidence
+- data_gaps

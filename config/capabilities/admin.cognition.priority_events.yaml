@@ -1,0 +1,45 @@
+id: admin.cognition.priority_events
+name: 优先级文章事件生成
+category: admin
+status: beta
+visibility: internal
+version: 1
+summary: 扫描知识库文章并生成平台无关的优先级文章 outbox 事件，供 Hermes 等投递 adapter 消费。
+intent_examples:
+- 生成星大派推送事件
+- 扫描9分文章推送候选
+- 生成优先级文章outbox
+primary_entry:
+  type: cli
+  command: fin-cognition priority-events
+input_schema:
+  kb_root:
+    type: string
+    required: false
+  runtime_root:
+    type: string
+    required: false
+  limit:
+    type: integer
+    required: false
+  dry_run:
+    type: boolean
+    required: false
+output_schema:
+  scanned: number
+  events_created: number
+  duplicates: number
+  skipped: number
+  dry_run: boolean
+  outbox_path: string
+side_effect: admin_write
+risk_level: high
+requires_confirmation: true
+profile_sensitive: true
+audit_fields:
+- limit
+- dry_run
+- events_created
+- duplicates
+- skipped
+- outbox_path

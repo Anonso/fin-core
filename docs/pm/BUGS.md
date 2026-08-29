@@ -1,0 +1,356 @@
+# FIN bug 台账（跨会话 · 跨 agent 共享追加目标）
+
+> **协议**（2026-08-28 建）：CC / codex / opencode 任何会话遇到 bug 随手追加一条，
+> 编号递增（BUG-NNN），不复述 NOW.md / DECISIONS.md 内容；已关闭条目不删
+> （Git 即归档，不在本文件做归档仪式）；同一 bug 复发在原条目下追加一行「复发」。
+> 条目格式：一行症状 + 根因 + 修复 + 状态，能短则短，不建追踪设施。
+
+## BUG-001 问询答案编错持仓中文名（000657→「中金岭南」、600879→「航发科技」）
+
+- 发现：2026-08-28，CLI 问询「分析持仓」答案把 000657 写成中金岭南（实为**中钨高新**）、
+  600879 写成航发科技（实为**航天电子**），用户误以为多了一只不存在的票。6 只持仓名错 2。
+- 根因：`portfolio_review._canonical_instrument` 用带后缀代码（如 `000657.SZ`）查只按
+  裸 6 位码索引的 `knowledge-base/runtime/a_share_name_map.json`，永远查空、静默回落
+  → 确认链路落库 `name=裸代码`；问询模型拿不到权威名，凭参数记忆补名。
+- 修复：代码分支改查裸码，抽 `_directory_display_name` helper（异常回落语义不变）；
+  补裸码/后缀码→中文名两向回归测试（`tests/portfolio/test_portfolio_review.py`；
+  portfolio + context_reader focused 149 绿）。该方向此前零覆盖，是漏网原因。
+- 状态：代码修复完成（2026-08-28，工作树）；存量库 name 回填随同日持仓确认更新关闭
+  （全量替换落库，5 只持仓均带目录权威名）。
+
+## BUG-002 大盘概览结构性缺口 + 行情快照容量耗尽（问询「最大数据短板」根因）
+
+- 发现：2026-08-28，CLI 持仓问询。trace（~/fin-data/trace/read-capability/calls.jsonl）
+  08-28T01:16:52 read_market_overview gaps=[MARKET_OVERVIEW_SECTION_COVERAGE_INVALID,
+  MARKET_OVERVIEW_UNAVAILABLE]（延迟 5.8s）；01:18:14 read_market_snapshot gaps 含
+  ON_DEMAND_MARKET_CAPACITY_EXHAUSTED（延迟 14s）→ 板块宽度/部分标的无新价（002015 用 8-25 价）。
+- 根因：未诊断（section coverage 校验失败是结构性缺陷，非盘前时点效应；capacity 额度策略待查）。
+- 修复：待办——修复方案落 market-data 特性设计页（docs/pm 特性设计页已建），排 W3-4 深化。
+- 状态：开放。
+- 诊断+修复（2026-08-28 晚）：**容量半边已根治**——trace 复盘（43 调用仅 3 次
+  触发、全是 snapshot、延迟整齐 12-14s）+读码钉死：非负载超限，是嵌套预算
+  自挤占——每 symbol worker 最坏向 detail executor 提 3 任务（quote+日线+30min），
+  5×3=15 > 旧额度 10 且无队列，上游慢时后提交被拒误标 CAPACITY_EXHAUSTED
+  （symbol 层 5 提交 ≤ 10 排除顶层溢出；deadline 路径标注正确排除误标）。
+  修复：detail max_outstanding 10→20 配平 + 执行器暴露配额属性 +
+  `test_on_demand_executor_budget.py` 钉死配平不变量；语义不变（容量拒绝
+  仍是诚实降级）。详见 market-data.md「已知故障与设计回应」。
+  **结构性半边诊断完成（2026-08-28 晚）**：晨间留存工具输出（consult 会话
+  8b0b5487，09:07:14）钉死机制——五个 ranked section 全部
+  `valid_projected_rows=0/returned=100`、`missing_timestamp_count=0`、reasons
+  全 `PROJECTED_ROWS_MISMATCH`（标识/时间戳字段齐全，唯行情数值字段缺失）。
+  根因：东财 clist 盘前（PRE_OPEN）对行情衍生字段 f3/f6 返回 fltt=2 缺失
+  占位 `"-"`，`_project_board/_project_equity` 整行投影失败 → coverage 门
+  （current_overview.py:822-837）any-reason 即全链拒。失败仅 08-28 09:07/
+  09:16 两条，同日 14:25 与前夜 23:19 同参数全过（calls.jsonl 七条）——
+  每交易日盘前确定性复现，非偶发；与读侧 `LATEST_COMPLETED_SESSION` 语义
+  自相矛盾（意图取上一完成交易日，却因盘前形态拒之门外）。实证：复现脚本
+  三段闭环（盘后基线全过/f3 或 f6 换 `"-"` 全 section 复现 valid=0/端到端
+  gaps 逐字一致），命令与回应方向见 market-data.md「已知故障与设计回应」。
+  施工仍排 W3-4。
+
+## BUG-003 ZSXQ 问询空返回（2026-08-28 二次诊断改写，原「停更」结论有误）
+
+- 发现：2026-08-28，CLI 持仓问询 read_ready_evidence 恒空。**首诊误判为「认知仓停更 22 天」
+  ——查的是仓库侧旧副本**（repo knowledge-base/runtime/cognition/zsxq_sources.jsonl，
+  103 篇停在 08-06）。生产真仓在 shared 根（~/.local/share/fin-analyse/shared/knowledge-base/
+  runtime/cognition/zsxq_sources.jsonl）：127 篇、最新 08-27、当天仍在写入——爬取/入库全活着。
+- 根因（真）：新鲜度窗口分级判据错——按栏目分（锐评 2 天、特刊 20 天），不按内容性质分。
+  锗 6 篇（最新 08-13）、钨 13 篇（最新 08-19）多在锐评/普通栏，2 天窗口全杀 →
+  g_context_no_relevant_items。见 BUG-006。
+- 附带发现：仓库侧 knowledge-base/ 存在生产 shared 根的陈旧副本，误导诊断；是否仍被
+  读取需核（a_share_name_map 等默认路径都指向 repo 侧）。
+- 状态：开放（并入 BUG-006 一并修；repo 侧陈旧副本单列核实项）。
+
+## BUG-006 ZSXQ/G 相关性选段三层缺陷（owner 2026-08-28 定调，部分已修）
+
+- 发现：持仓问询 read_ready_evidence 空。复现+读码定位三层：①read_ready_evidence 只传
+  tickers，而 position→topic 推断只在 positions 字段跑（runtime_context.py:1553）——ticker
+  的主题推断从未执行；②_POSITION_TOPIC_RULES 仅 6 条旧持仓词（钨/稀土/紫金/钼/锡/电池），
+  当前 5 只持仓零覆盖，「锗」「钽」不在 _TOPIC_KEYWORDS；③新鲜度按栏目一刀切。
+- 已修（2026-08-28）：ticker 同跑 _infer_position_topics；规则表补 002428/000962/601138/
+  002709/600879/605376 六条；关键词补锗/钽/稀有金属等。复现实证：同题 0 条 → 5 条
+  （含 08-13 锗特刊、08-27 锐评）。provider 测试 135 绿（semantic_state 37 败为并行 W2③
+  归档余波，先于此改动存在）。
+- 遗留（owner 已定方向，W3-4 实施）：窗口分级改按内容性质——锐评=2 个**交易日**（跳过
+  节假日，现实现疑似自然日需核）；星大派特刊加长；普通研报再加长但设上限（CC 建议：
+  特刊 30 天/普通研报 45 天，owner 拍板）；_EXCLUDED_COLUMNS 整体排除「普通」栏需按
+  研报分类放行；_POSITION_TOPIC_RULES 属「会变的选择」应配置化（家规 6）。
+- 状态：部分关闭（①②已修未提交；③开放排 W3-4）。
+- 修复进展（2026-08-28 晚，③实施，设计门已过）：①②已随 375e8ce1 入库
+  （原「未提交」状态作废）。③全链实施——单源窗口配置
+  `config/g_context_windows.json`（新缝 `guo_teacher_research/window_config.py`：
+  锐评=2 交易日、特刊 30 天、普通 45 天、历史 60 天；owner 未拍板数字落配置可改，
+  缺文件=内建默认、文件非法=响一声回默认）；锐评窗口交易日语义两层共用
+  （g_working_set 准入层 + runtime_context 选择层，日历无管辖权时段静默回落
+  自然日旧政策、工件缺失才响）；普通栏经 `classify_g_source` 全链放行
+  （非 QA teacher_original=general G 第三桶按相关性入预算；QA 仍排除
+  `g_source_ordinary_qa_excluded`；reference 层改按 source_classification 分流）；
+  `_POSITION_TOPIC_RULES` 配置化 `config/position_topic_rules.json`（进程级
+  快照、匹配零 IO）。codex-glm 盲评 12 发现全采纳（裁决落设计稿），测试
+  guo 152/scraper 661 绿。manifest 由 capture 链下次 publish 重生成，过渡期
+  sources_changed gap fail-closed；运行态随下次部署。设计稿合入即归档。
+- **过渡期结束确认（2026-08-29 08:51）**：ff7441e2 部署（08-28 晚）后历经
+  20:20 长跑 timeout→20:53 coalesced 退出、manifest 未重生的一夜；08-29
+  08:30 manifest 由 capture publish 重生（status=READY、data_gaps=[]，
+  `active_window={commentary_days:2, general_days:30}`＝新配置
+  `commentary_trading_days`/`special_report_days` 的投影，锐评 2 交易日 ✓
+  特刊 30 ✓）；canonical sha 与现源文件（index.json/priority_events.jsonl）
+  双双 match → sources_changed 不再触发；`_validated_manifest` 通过。
+  附诚实更正：08-28 晚两轮复查中 CC 以 raw bytes 误调 `_validated_manifest`
+  （其参数为 Mapping）得到恒 None，据此说「旧 manifest 被读侧拒绝、
+  fail-closed」不成立——真正的过渡判定是 canonical sha 比对，昨晚旧
+  manifest 是否显 gap 未被正确证实；本条以 08-29 上午正确姿势实测为准。
+  另：夜间 current 已前进至 319faf62（文章标签系统部署，非本条目操作），
+  poller 今晨轮次全绿。
+
+## BUG-004 read_margin_evidence 工具描述语义写反（账户两融 ≠ 全市场两融）
+
+- 发现：2026-08-28。server.py _TOOL_DESCRIPTIONS 写 "margin (两融) evidence **for the
+  account** and given instruments"，实际实现是全市场两融数据（fin_analyse/margin/eastmoney.py，
+  用户引入意图=大盘杠杆资金拥挤度预警，不用账户融资）。模型据此答「你融资余额为零，跳过」，
+  该能力从未被用于杠杆拥挤度分析。
+- 根因：描述文本在能力登记时写歪。
+- 修复：待办——描述改写为全市场两融语义（一句话改动，随下次 release 生效）。
+- 状态：开放。
+- 状态勘误（2026-08-28 晚）：已关闭——修复随 commit 9a70c149 入库
+  （描述改写 + test_tool_descriptions.py 钉死语义），生效随下次 release；
+  关闭详情记录在 BUG-007 条目末段（当日误记于彼处）。
+
+## BUG-005 问询模型编造「不调 G 的既定口径」（违反人格 G-first 规则）
+
+- 发现：2026-08-28。持仓问询（6 只具体标的）未调 read_g_context，答案自称「按既定口径，
+  组合整体回顾题用持仓+行情作答，不调 G」。人格文件（~/fin-data/consult-agent/AGENTS.md
+  §110/112/124）明确相反：具体标的/行业题相关**或不确定**都先调 G。同日另发现人格文件
+  是有的、规则是对的 → 模型在无强制约束处自行发明口径。
+- 根因：待核——该问询会话是否真正加载了 consult-agent 人格（若 cwd 不在 consult-agent
+  home，人格可能根本没进上下文）；codex/CC 两入口都要核。
+- 修复：待办——核对问询入口的人格注入路径；确认注入后若仍违规，人格加一行「数据缺口
+  必须报告为数据不可用，不得当成『不存在』陈述」。
+- 状态：开放（与 BUG-001 同模式：无数据/无约束处模型自行补——名字、口径都会编）。
+
+## BUG-007 知识根双轨：repo knowledge-base/ 旧副本 + 38 处模块级默认仍指仓库侧
+
+- 发现：2026-08-28（当日两次误诊同源）。生产真仓 = ~/.local/share/fin-analyse/shared/
+  knowledge-base/（runtime/knowledge_root.py 单一缝，FIN_KNOWLEDGE_BASE_ROOT 注入）；
+  但 repo knowledge-base/ 留有陈旧副本（articles 停 07-21、cognition 停 08-06），且
+  38 个文件含模块级默认指仓库侧（instrument_directory._DEFAULT_PATH、cognition/cli.py、
+  research_package、cross_article、admin/cli.py --kb-root 默认值等）。
+  后果：诊断/离线工具/未注 env 的路径读到旧副本——BUG-003 首诊「停更 22 天」即此因。
+- 修复方向：①repo 侧副本清出（数据不入 git 本就该如此，规则 3/8）；②模块默认全部
+  改走 knowledge_root 单缝（未注 env 时 fail-closed 而非回落 repo 副本）；③文档层
+  （AGENTS/诊断 runbook）标明唯一真根。
+- 状态：开放（①属 W2③ 归档清扫同类，②小改，③随手）。
+- 修复进展（2026-08-28 同日）：knowledge_root 增 default_knowledge_base_root()
+  （env → XDG shared 根 → 报错，永不回落 repo）；instrument_directory._DEFAULT_PATH
+  改走该缝（持仓名字解析/watchlist 共用）；555 测试绿，000657 解析实证走共享根。
+  遗留：其余 ~36 处旧链默认值机械替换（清单=「knowledge-base」模块级默认 grep）
+  随 W2③/W3；repo 副本清出按规则 4 备份协议另做。
+- 修复进展（2026-08-28 续）：005 根治——硬规则入 read_capabilities/server.py 工具描述
+  （G-first/相关性不确定默认调 G/空返回=数据不可用不得当「不存在」），规则不再依赖人格
+  文件加载，任何客户端任何 cwd 必达；46 测试绿。007 余量清扫——子代理 20 文件机械换缝
+  （cognition/cross_article/admin/market/knowledge_brain/gateway/runtime/decision 等），
+  2540 测试绿，env 覆盖实测改道。未换 3 处（priority_articles：repo reader 与生产 writer
+  schema 漂移被暴露，另立案；cdp_scraper KB_ROOT：测试 monkeypatch 依赖常量；
+  scraper/config：import 期 mkdir 副作用需重构）。遗留：shared index.json 的 path 仍是
+  repo 绝对路径 + repo knowledge-base/ 2143 个 git-tracked 文件清出（规则 4 协议）。
+- 状态：005 关闭（待 W2① 部署激活）；007 大部关闭，剩 scraper 三件套+repo 副本清出。
+- 修复（2026-08-28 关闭）：margin 描述改写为全市场两融语义（market-wide leverage
+  crowding，明示 NOT account-level）；其余五条对照审计无同类反向漂移（overview 的
+  breadth 承诺与 BUG-002 数据缺陷相关，非语义反向，留 BUG-002 处理）；新增
+  test_tool_descriptions.py 钉死关键语义（margin=market-wide、portfolio=user-confirmed
+  +G-first 硬规则、snapshot 缺口诚实规则、六工具闭集），今后描述漂移触发测试。
+  生效随下次 release。
+- 修复进展（2026-08-28 晚，余量再清）：scraper 缝收口——cdp_scraper 裸构造
+  fallback 改走 `default_knowledge_base_root()`（repo KB_ROOT 常量删除，死
+  monkeypatch 测试改显式 tmp 根）；scraper/config 五个路径常量改 PEP 562
+  惰性单缝（env→XDG shared→报错，永不回落 repo；import 期 mkdir 副作用
+  同时删除，写点各自 mkdir）；shared 根数据修复——index.json 887 条
+  + zsxq_sources 61 + priority_events/jobs 14 条 repo 绝对路径改指 shared 根
+  （owner-only 备份+manifest 于 `~/.local/share/fin-analyse/
+  path-repair-backup-20260828T134405`，改写后全部路径可解析，deep_read_artifacts
+  疑 hash 耦合未动、其 path 仅溯源无读路径——运行时按 kb_root 相对解析）。
+  污染对照实验：全套件跑前后 shared 树 7025 文件 sha256 diff=0，测试零生产写入。
+- 剩余：repo knowledge-base/ 2143 git-tracked 文件清出（规则 4 协议，待 owner
+  明确授权后执行）；priority_articles schema 漂移另立案不变。
+- 清出完成（2026-08-28 晚，owner 确认清单后执行）：git rm 2142 tracked
+  （articles/wiki/images/phase3/debug/index.json，~42M）+ 4392 ignored 本地
+  运行残留（runtime/** 25.6M；guidance_chains 等 444 只读锁位文件解锁后清），
+  保留 manual-annotations/（生产 poller 从 release 布局读取，
+  consume_zsxq_capture_folder.py:506——release 由 worktree checkout 生成，
+  必须 tracked）。引用闭包：生产链零引用（knowledge_root 单缝 + 全部单元 env
+  指 shared 根）；唯一直读者 test_d3_g_quality_benchmark `_REAL_KB` 有 skipif
+  门，删除后自动 skip（成为常跳测试，处置待拍板：改 tmp fixture 或按规则 12
+  删）。删除前全树备份
+  `~/.local/state/fin-analyse/kb-repo-removal-backup-20260828T200259/`
+  （0700/0600，tar sha256 `2bc31f13…`，manifest 记 tracked 2143+ignored
+  4392）。受影响面 202 绿 + 1 预期 skip。commit 228e4017。
+  附带待办（W3）：5 个 owner 手动脚本仍硬编码 repo KB 路径
+  （rebuild_name_map 写 repo KB、seed_shared_brain×2、report/sectors/
+  clean_comments cwd 相对默认），随 W3 换缝或按规则 12 退役。
+
+## BUG-008 L1 简报内容降级（W2④ 盲评判定 2026-08-28；主因代码缺陷非模型）
+
+- 证据：旧链 premarket 同日对照（实名持仓+最新收盘+两份中报数字，28 个数字）vs L1 三班
+  （12/0/4 个数字，全部 8-25 旧快照复算，零行情零现价零公司名，仅代码指代）。
+- 根因①：daily_workspace_generator.py:159 对 build_default_a_share_market_overview()
+  返回的**服务对象**直接 str() 渲染——prompt 里市场概览段是 90 字符的对象地址
+  （<AshareMarketOverviewService object at 0x...>），正确用法 service.read(Request)。
+- 根因②：_material_gaps 只判空字符串，对象 repr 非空→通过，data_gaps:[]——诚实缺口
+  机制被击穿，降级不显形（三班简报自己吐槽了对象引用但账本全绿）。
+- 其余：prompt 无交易日/as-of 锚点（简报自认「今日日期未知」）；知识检索三班全用
+  premarket 问题（run_daily_workspace_checkpoint.py 不传 query）；「较此前变化」栏目
+  三班空转；11:42/12:37 两次持仓快照读 INVALID（快照 10:54 即有效、现重放 READY，
+  根因未定位——时点恰逢当日持仓确认更新窗口，疑似替换竞态，待查）。
+- L1 真实增益（非降级项）：快（2 分 vs 10 分）、postmarket 旧链昨日失败而 L1 正常、
+  全程未编造数字。
+- 回炉点（优先级序）：修 overview 渲染（read() 调用）；_material_gaps 内容感知
+  （拒对象 repr，损坏必落 gap）；prompt 注入 as-of；快照 INVALID 竞态排查；
+  知识检索按班次传 query；持仓材料名称/现价补全；「较此前变化」栏目处置。
+- 状态：开放（W2 带缺陷闭环，回炉点排 W3-4 首位；①②半小时级可先行）。
+- 修复进展（2026-08-28 晚，文件层已改未部署）：①overview 渲染根治——provider
+  改调 `service.read(AshareMarketOverviewRequest)`，UNKNOWN 读数回落 None→gap；
+  ②`_material_gaps` 内容感知——含 "object at 0x" 的材料视为损坏：prompt 排除
+  +data_gaps 显形（`_material_usable` 单点判定，渲染与账本共用）；③prompt 注入
+  交易日+生成时刻时间锚点（简报不再自认日期未知）；④知识检索 query 改由
+  generator 按班次传入（`_ContextMaterialProvider` 变参闭包，premarket 钉死废除，
+  on_demand 用户问题同缝）。operations+scripts 787 测试绿。
+- 修复进展（2026-08-28，文件层已改未部署）：⑤持仓材料名称/现价补全——
+  `_render_portfolio` 弃裸 JSON/repr dump，改共享 `to_safe_dict()` 投影（同
+  MCP 读投影）；目录权威名补全（stored name 缺失或 code-like 才补，
+  `RuntimeAshareInstrumentDirectory` 缝，同 BUG-001 mcp_server 读投影）；
+  现价注入 `latest_price`/`latest_change_pct`（provider registry `get_quote`
+  fallback 链，失败降级显式 null 不炸材料；`quote_reader` 注入缝供测试）；
+  UNKNOWN 持仓读数 → None→typed gap（与 overview 同规则）；⑥「较此前变化」
+  栏目处置（owner 2026-08-28 拍板口径 A=留栏目+真基线）——carry_over 父
+  检查点正文（context 链已有、原被 `_render_prompt` 渲染时丢弃，即空转根因）
+  进 prompt 作对比基线；有基线要求给具体变化点，无基线（首班/上日盘后缺失）
+  整栏不要求。generator 测试密闭化（fake store/overview，22 测 0.5s，根除
+  两个 10s+ live 网络单测）；operations+scripts 791 绿。不动 L1 直调链路与
+  合同。
+- 剩余回炉点（W3-4）：盲评复验等部署后跑（快照 INVALID 竞态已由下方诊断
+  关闭；⑤⑥运行态随下次 release 生效）。
+- 诊断（2026-08-28 晚，竞态假说证伪，快照 INVALID 关闭诊断）：**非替换
+  竞态**——生产文件（~/.config/fin-analyse/actual-advisory-portfolio.v1.json）
+  10:54:25 发布后字节/权限/父目录 mtime 全程未变（mtime==ctime==10:54:25，
+  目录条目同刻定格）。真根因是 **schema 前向不兼容**：当日 thesis 持仓理由
+  落库改造（375e8ce1，11:05 提交）把位置 schema 7 键扩 8 键（+thesis），
+  10:54:25 确认更新即发布新形态（5 仓全带 thesis）；而白天全部读方运行态
+  停在 pre-thesis 代码（current → releases/13c791ca，09:26 切换，至今未升），
+  `_raw_position` 的 `set(value) != _POSITION_FIELDS` 严格键集校验把 thesis
+  判非法 → ValueError → `ACTUAL_ADVISORY_PORTFOLIO_INVALID`/snapshot=None。
+  四次失败同因：close 班 11:42:29 生成、postmarket 班 12:37:07 生成
+  （generated_via=l1-direct-v1，跑部署链代码，简报原文引用 UNKNOWN/INVALID）、
+  14:32/14:37 网关咨询读（actual_portfolio_unavailable）。「现重放 READY」=
+  含 375e8ce1 的代码新旧两形态都收。双向实证：同一生产文件，release
+  13c791ca 代码读 = UNKNOWN/INVALID（隔离 cwd 加载 release 源），当前仓库
+  代码读 = READY。设计教训：schema 演进没抬 schema_version（顶部仍
+  actual-advisory-portfolio.v1）+ 严格键集校验 + 运行态滞后 = 部署窗口内
+  全链确定性拒绝；向后兼容做了（旧文件新码可读），前向兼容没做（新文件
+  旧码必拒）。恢复条件：current 切到含 375e8ce1 的 release（现网咨询读
+  持仓仍会 INVALID，随下次部署自愈，无需改代码）。
+
+## BUG-009 priority_analysis_job_status schema 漂移：repo 读侧 0/39 全拒（BUG-007 另立案）
+
+- 发现（2026-08-28 晚）：BUG-007 换缝时暴露的「repo reader 与生产 writer 漂移」定量实判——
+  用 repo 解析器只读判生产三文件：events 348/348 过、jobs 348/348 过、
+  **status 0/39 全拒**（`set(data)!=REQUIRED_STATUS_FIELDS` + consumer 白名单双杀）。
+- 谁在写新字段：Hermes 侧深度阅读消费者，自称 `consumer=priority_analysis_consumer_v2`，
+  `delivery_target` 用 `feishu:oc_…`（带 chat id）格式；在 repo 10 字段契约外追加 6 个
+  结构化字段（result_status/article_analysis_status/data_gaps/operation_advice_blocked/
+  operation_advice_block_reason/portfolio_advice_status/result_classification），且分两代
+  （后 19 条多 result_classification）。该消费者在本机 repo/hermes profiles/consult-agent/
+  Windows 侧均无指令面残留——**已于 07-13 停写**（早于 08-27 旧 Hermes 入口停用，链路
+  大概率已随 rebaseline 退役；契约只在 repo 侧单方面冻结，写侧从未受约束）。
+- 谁读不懂：`PriorityJobStatus.from_dict`（严格键集）→ `PriorityJobStatusSink.list_statuses`
+  （**整文件原子拒绝**，一条坏记录毒化全部）→ `priority_health.check_priority_outbox`
+  → report.py 健康段恒显 `priority_status_outbox_unavailable` error。影响面=owner 健康报告
+  失真；咨询链不受影响（events/jobs 两读侧均为宽容 raw dict，348/348 实判全过）。
+- 对齐方案（只出方案不施工，owner 拍板后排期）：
+  - 方向1（推荐）读侧升级宽容：from_dict 改「必需 10 字段 + 已知扩展白名单（v2 的 6 字段
+    常量化入 repo + 测试钉死）」；consumer 白名单加 priority_analysis_consumer_v2、
+    delivery_target 允许 `feishu[:chat-id]`；模块 docstring 补写侧契约文档。若 D3 后
+    咨询链回归、v2 复活，无需再改。
+  - 方向2 历史数据降维：39 条 v2 记录按规则4 备份后改写/移档为 legacy 文件，status 文件
+    重接 repo 契约。读侧零改动；代价=改生产 durable 文件 + v2 复活即再漂移。
+  - 方向3 契约退役：若确认 v2 永不回来，status 段降级为「只读审计、读不懂=显式 gap」，
+    不再作 health 信号。最小改动，代价=推送健康可见性归零。
+  - 配套防御（任何方向都建议）：list_statuses 整文件原子拒绝改逐条 typed 隔离+坏条计数
+    显形（单条坏记录不应毒化整个文件——本次 0/39 的放大器）。
+- 待拍板点：v2 消费者是否还会回来（决定方向 1 vs 3）；status 文件 39 条 7 月陈记录
+  本身是否还有保留价值（已超 24h 新鲜度窗口数十倍）。
+- 状态：方案已出，不施工（owner 拍板后随 W3-4）。
+
+## BUG-010 测试基线三簇非绿（semantic_state 36 败 + route_config 1 败 + scraper 死补丁 12）
+
+- 诊断与处置（2026-08-28 晚，逐簇判定）：
+  ① **semantic_state 36 败＝环境问题，修环境**：全部 `semantic_state_sandbox_unsafe`
+  ← `_semantic_snapshot_child.py` 为 0664（本机 umask 002 下 git checkout 的产物），
+  被 `_require_snapshot_child` 的 022 位守卫拒绝（防组写入注入，守卫本身正确）。
+  `chmod g-w` 单文件即愈：125/125 绿。生产 release 无此问题（builder 有
+  permission convergence）；umask 002 的机器新 clone 需同样 g-w。
+  ② **route_config review workload 1 败＝测试 fixture 腐烂，修测试**（原猜
+  codex CLI 漂移不成立）：测试用字符串 replace 精确匹配 `codex_routes.yaml.example`
+  旧条目（opencode 未引号 URL），D-018/D-019 路由手术后 replace 静默空转、
+  断言 DID NOT RAISE。校验逻辑本身完好（codex_route_config.py:284-285）。
+  修法：改自含 inline 配置，与 example 演化解耦。16/16 绿。
+  ③ **scraper 死补丁 5 败 + 7 error＝W2③/BUG-007 缝改造余波，修测试**：
+  `browser.DEBUG_DIR`/`scraper.{ARTICLES_DIR,IMAGES_DIR,INDEX_FILE}` 五常量已改
+  `scraper.config` PEP 562 惰性单缝，测试仍 patch 旧模块属性 → AttributeError。
+  补丁目标批量改指 `fin_analyse.scraper.config.*`（惰性 __getattr__ 语义下
+  setattr/delattr 兼容）。scraper_incremental_v2 24/24、scraper_column 7/7 绿。
+  ④ **氦金样 3 败＝A 任务 KB 清出的连带（本会话引入，当场修）**：
+  test_helium_fin_codex_runtime 读 repo `knowledge-base/articles/` 氦文章
+  （无 skipif 门）。文章从 git 史（228e4017^）转测试 fixture
+  `tests/fixtures/guo_teacher_research/articles/20260708_01a99e429a3d.md`，
+  路径改指 fixture。3 绿 1 skip（CODEX_BIN 显式 opt-in 门，设计性跳过）。
+- 基线：guo_teacher_research 全目录 1208 passed / 0 failed（68 skipped 为
+  显式 opt-in 门）；全量套件终验见下条补记。
+- 状态：关闭。全量终验（2026-08-28 晚）：**5973 passed / 70 skipped（均显式
+  opt-in 门）/ 0 failed / 0 error**（9 分 16 秒）。
+
+## BUG-009 方法论规则注入被"锐评只取最新一条"结构性遮蔽（owner 2026-08-28 抱怨）
+
+- 症状：问询答案未出现「大涨大卖，小涨小卖，大跌大买，小跌小买」16字方针。
+- 取证：4 篇含原话的锐评（08-21/24/27/28）full+compact 全部抽出且落
+  methodology_rules「操作纪律」条目（25fbef60 方法论层）——产出层零丢失。
+- 根因：注入层——锐评窗口 2 交易日且只取最新一条（M1），methodology_rules
+  寄生在"该篇被选中"之上；跨文章方法论资产被单篇选择遮蔽，另需意图主题匹配。
+- 方向（W3-4 深化审计准入）：方法论投影改直接吃规则库/working-set 而非仅
+  已选候选；或多锐评的 methodology_rules 无关窗口聚合。
+- 状态：开放（排 W3-4 抱怨清单首位）。
+- **owner 撤项（2026-08-28 深夜）**：普通栏 G 准入与深化资格整体撤销——全库
+  质量审计（1202 篇）证实普通非QA 86% 为券商研报转载/总结（非老师原创），
+  结构上 337/339 完整。撤项后普通栏回 reference lane；58 篇已生成的普通栏
+  深化产物留库（惰性，不进 G 链）。BUG-006③ 其余成果（单源窗口配置/交易日
+  语义/topic 配置化）全部保留。general_admission_days 配置项随之移除。
+
+## BUG-010 cognition jsonl 权限漂移 0664（盲评顺带发现，2026-08-28）
+
+- 现象：生产 shared 根 `priority_events.jsonl`/`priority_analysis_jobs.jsonl`
+  实测 0664（组可读），违背 owner-only 数据约定（家规 3/规则4 口径）。
+- 根因：`_append_jsonl` 仅创建时 0600，已存在文件不修正；推测为早期
+  umask/工具写入遗留。
+- 修复方向：批量 fchmod 0600 + `_append_jsonl` 追加路径补 chmod 防复发；
+  顺带全库扫描同类漂移（P3，随手修，不阻塞任何链路）。
+- 状态：开放（P3）。
+
+## BUG-011 read_market_snapshot EASTMONEY 源解析失败/身份不匹配（2026-08-29 探针复核立案）
+
+- 现象：08-28（周四交易日）8 次 + 08-29 板 B 探针 12 次调用全带 gaps——
+  `EASTMONEY_RAW_SOURCE_PAYLOAD_PARSE_FAILED` + `EASTMONEY_RAW_IDENTITY_MISMATCH` +
+  `DUAL_SOURCE_QUOTE_INCOMPLETE` + `NON_CONTINUOUS_REFERENCE_QUOTE` +
+  `MARKET_SESSION_REFERENCE_ONLY`；交易日复现，非周末特有。
+- 根因：未诊断（Eastmoney 源 payload 解析失败/身份不匹配；与 BUG-002 容量半边
+  （已修）不同缝）。
+- 修复：待办——并入周一 08-31 BUG-002 盘前窗口同一 repro 复查，当场定修。
+- 状态：开放。
+
+## BUG-012 read_ready_evidence 恒 unavailable + 公告探针不触发工具（2026-08-29 探针复核立案）
+
+- 现象：08-28 trace 6/6 调用 `ready_evidence_unavailable`；08-29 探针「持仓公司
+  官方公告」未触发该工具（5 探针仅 G/方法论探针顺带调用 2 次，均 unavailable）。
+- 根因：未诊断（官方记录/ready evidence 装配链或工具描述问题；疑似与 BUG-007
+  数据根双轨相关，待查）。
+- 修复：待办——排 W3-4 或迁移后；先查 ready_evidence 装配链。
+- 状态：开放。

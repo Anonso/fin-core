@@ -1,0 +1,1567 @@
+schema_version: "1.0"
+project: fin-analyse
+capabilities:
+- id: admin.cognition.backfill
+  name: 认知回填
+  category: admin
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 从知识库 Markdown 回填 EvidenceItem 和 ReasoningTrace；管理工具，默认不进入运行时路由。
+  intent_examples:
+  - 回填认知数据
+  - 重跑认知回填
+  primary_entry:
+    type: mcp
+    name: backfill_cognition
+  input_schema:
+    limit:
+      type: integer
+      required: false
+    resume:
+      type: boolean
+      required: false
+    dry_run:
+      type: boolean
+      required: false
+  output_schema:
+    scanned: number
+    evidence_saved: number
+    labeled: number
+    teacher_original: number
+    research_report: number
+    ai_assisted: number
+    unknown: number
+    persona_eligible: number
+    persona_rejected: number
+    persona_gate_unknown: number
+    traces_created: number
+    skipped: number
+    errors: number
+    sample_trace_ids: list
+    llm_available: boolean
+  side_effect: admin_write
+  risk_level: high
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - limit
+  - resume
+  - dry_run
+  - evidence_saved
+  - traces_created
+  - persona_eligible
+  - persona_rejected
+  - errors
+- id: admin.cognition.priority_events
+  name: 优先级文章事件生成
+  category: admin
+  status: beta
+  visibility: internal
+  version: 1
+  summary: 扫描知识库文章并生成平台无关的优先级文章 outbox 事件，供 Hermes 等投递 adapter 消费。
+  intent_examples:
+  - 生成星大派推送事件
+  - 扫描9分文章推送候选
+  - 生成优先级文章outbox
+  primary_entry:
+    type: cli
+    command: fin-cognition priority-events
+  input_schema:
+    kb_root:
+      type: string
+      required: false
+    runtime_root:
+      type: string
+      required: false
+    limit:
+      type: integer
+      required: false
+    dry_run:
+      type: boolean
+      required: false
+  output_schema:
+    scanned: number
+    events_created: number
+    duplicates: number
+    skipped: number
+    dry_run: boolean
+    outbox_path: string
+  side_effect: admin_write
+  risk_level: high
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - limit
+  - dry_run
+  - events_created
+  - duplicates
+  - skipped
+  - outbox_path
+- id: admin.cognition.rebuild_persona
+  name: 重建老师 Persona
+  category: admin
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 重建指定老师 Persona；管理工具，默认不进入运行时路由。
+  intent_examples:
+  - 重建郭老师persona
+  - 刷新认知画像
+  primary_entry:
+    type: mcp
+    name: rebuild_cognitive_persona
+  input_schema:
+    teacher:
+      type: string
+      required: false
+  output_schema:
+    persona: object
+    pattern_count: number
+  side_effect: admin_write
+  risk_level: high
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - teacher
+  - persona_id
+  - pattern_count
+- id: admin.cognition.sample_traces
+  name: 抽样认知 Trace
+  category: admin
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 抽样查看 ReasoningTrace，供管理验收使用；默认不进入运行时路由。
+  intent_examples:
+  - 抽样trace
+  - 查看认知trace样本
+  primary_entry:
+    type: mcp
+    name: sample_cognitive_traces
+  input_schema:
+    limit:
+      type: integer
+      required: false
+    teacher:
+      type: string
+      required: false
+  output_schema:
+    teacher: string
+    count: number
+    traces: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: true
+  audit_fields:
+  - teacher
+  - count
+- id: briefing.premarket
+  name: 开盘前认知简报
+  category: briefing
+  status: stable
+  visibility: internal
+  version: 3
+  summary: 生成开盘前认知简报，聚合当日重点文章（T0+T1），按优先级排列，附带关键主题、行动提示和 morning_strategy 结构化盘前策略产物。
+  intent_examples:
+  - 开盘前简报
+  - 今天有什么重点
+  - 今日投研简报
+  - 盘前推送
+  primary_entry:
+    type: mcp
+    name: get_premarket_briefing
+  input_schema:
+    date:
+      type: string
+      required: false
+  output_schema:
+    date: string
+    requested_date: string
+    effective_date: string
+    fallback_used: boolean
+    freshness_warning: string
+    last_successful_scrape_at: string
+    last_article_created_at: string
+    count: number
+    t0_count: number
+    t1_count: number
+    themes: list
+    events: list
+    briefing: list
+    action_hint: string
+    action_items: list
+    market_note: string
+    morning_strategy: object
+    display_product: object
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - date
+  - requested_date
+  - effective_date
+  - fallback_used
+  - count
+  - t0_count
+- id: briefing.priority_scan
+  name: 重点文章扫描
+  category: briefing
+  status: stable
+  visibility: internal
+  version: 2
+  summary: 扫描知识库中的重点文章（星大派特刊/锐评/好问题 + 9分+ + 老师详细回复），返回本地优先级事件、摘要与深读提示。
+  intent_examples:
+  - 今天有什么重点
+  - 扫描重点文章
+  - 最近重要推送候选
+  - 有什么值得看的
+  primary_entry:
+    type: mcp
+    name: scan_priority_articles
+  input_schema:
+    date:
+      type: string
+      required: false
+    limit:
+      type: integer
+      required: false
+    include_summary:
+      type: boolean
+      required: false
+  output_schema:
+    count: number
+    t0_count: number
+    t1_count: number
+    scanned: number
+    skipped: number
+    events: list
+    hint: string
+    hermes_dispatch: object
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - date
+  - count
+  - t0_count
+- id: cache.reassessment.evidence
+  name: 缓存重估证据快照
+  category: system
+  status: beta
+  visibility: internal
+  version: 1
+  summary: 'Phase 4 只读证据快照：从现有 result_meta 信号聚合 exact replay hit 率与 intentional repeated-question
+    率，判断是否需要语义缓存 shadow evaluation。 只收集证据、不 serve 任何缓存；进程内聚合、重启清零。
+
+    '
+  intent_examples:
+  - 查看缓存重估证据
+  - 缓存重估指标
+  primary_entry:
+    type: mcp
+    name: fin_cache_reassessment_evidence
+  input_schema: {}
+  output_schema:
+    schema_version: string
+    total_consultations: number
+    idempotency_replay_count: number
+    idempotency_replay_rate: number
+    fresh_count: number
+    intentional_repeat_count: number
+    intentional_repeat_rate_of_fresh: number
+    continuity: object
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - total_consultations
+  - idempotency_replay_count
+  - intentional_repeat_count
+- id: cognition.cross_article_synthesis
+  name: 跨文章认知综合
+  category: cognition
+  status: beta
+  visibility: internal
+  version: 1
+  description: '对多篇星大派（特刊/锐评/合格好问题）文章进行跨文章认知综合。
+
+    自动聚类主题、集群内观点提取、跨集群 MoA 综合，输出板块方向、关注标的和风险盲区。
+
+    所有输出 advisory_only=true，不写入老师 Persona/pattern/trace。
+
+    '
+  summary: 跨文章认知综合 — 从多篇星大派文章中提取板块方向、关注标的和观点变化
+  intent_examples:
+  - 最近星大派关注什么
+  - 星大派对半导体怎么看
+  - 最近一个月星大派观点有没有变化
+  - 星大派最近提到了哪些公司
+  primary_entry:
+    type: mcp
+    name: get_cross_article_synthesis
+  side_effect: writes_audit
+  risk_level: medium
+  requires_confirmation: false
+  profile_sensitive: false
+  input_schema:
+    type: object
+    properties:
+      topic:
+        type: string
+        description: 按主题过滤（如"半导体"），空字符串=不过滤
+      since:
+        type: string
+        description: 起始日期（如"2026-06-01"），空字符串=不限
+      cluster_ids:
+        type: string
+        description: 逗号分隔的cluster ID列表，空字符串=所有
+      include_analyses:
+        type: boolean
+        description: 是否包含各cluster的详细分析
+  output_schema:
+    type: object
+    properties:
+      synthesis:
+        type: object
+        description: 综合报告或 null
+      clusters:
+        type: array
+        description: 所有 cluster 摘要
+      previous_synthesis_id:
+        type: string
+        description: 上一版本 synthesis ID
+      generated_at:
+        type: string
+        description: 生成时间
+      quality_flags:
+        type: object
+        description: cache_hit/degraded/stale/fallback/partial
+      suggested_signal_queries:
+        type: array
+        description: 'Top-level mirror of synthesis.suggested_signal_queries. G→Z
+          query intents for Hermes. FIN emits only query intent; Hermes executes Z
+          tools. tool_args must match current MCP signatures exactly: analyze_stock(company/ticker),
+          get_market_snapshot(ticker). company/ticker remain top-level metadata for
+          Hermes-side filtering.
+
+          '
+      bridge_contract:
+        type: object
+        description: 'FIN-Hermes bridge metadata. version=fin-hermes-gz-bridge/v1,
+          display_policy=g_first_z_attached, z_execution_owner=hermes, fin_embeds_z_results=false.
+
+          '
+      warnings:
+        type: array
+        description: 警告信息
+  audit_fields:
+  - synthesis_id
+  - generated_at
+  - quality_flags
+  - source_article_ids
+  - source_cluster_ids
+  - suggested_signal_queries
+  - bridge_contract
+- id: cognition.patterns
+  name: 认知模式查询
+  category: cognition
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 查看系统已学习到的老师认知模式。
+  intent_examples:
+  - 郭老师有哪些思维模式
+  - 老师投资风格
+  primary_entry:
+    type: mcp
+    name: get_cognitive_patterns
+  input_schema:
+    teacher:
+      type: string
+      required: false
+  output_schema:
+    teacher: string
+    count: number
+    patterns: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: true
+  audit_fields:
+  - teacher
+  - count
+- id: consultation.decision_support
+  name: FIN 统一投资咨询
+  category: agent
+  status: beta
+  visibility: public
+  version: 1
+  summary: 'FIN 面向用户的统一咨询入口。按问题语义选择解释或当下决策支持， 严格区分老师认知、系统证据、技术判断、PAPER 账户事实和用户确认的
+    真实持仓咨询上下文。general 当前市场解释读取日期锚定、延迟且仅供 参考的全市场概览，闭市日明确使用最近完成交易日；非 PAPER 当下决策 对 1～5
+    标的使用即时双源行情、完成日线和一次全标的战术 Agent。输出 仅供咨询，数据不足时明确未知，不生成订单或交易授权。
+
+    '
+  intent_examples:
+  - 解释今天市场主线
+  - 这只股票现在是否值得人工复核
+  - 比较两只股票的认知与技术条件
+  - 分析我的 PAPER 持仓风险
+  - 根据我已确认的真实持仓快照解释组合风险
+  - 根据我已确认的真实持仓快照分析一到五只关注标的现在是否值得人工复核
+  - 进一步解释这个方向的证据与缺口
+  primary_entry:
+    type: mcp
+    name: fin_consultation
+  input_schema:
+    command:
+      type: object
+      required: true
+      discriminator: action
+      actions:
+        consult:
+          required:
+          - question
+          optional:
+          - scope
+          - requested_profile
+          - requested_tactical_need
+          - trigger
+          - idempotency_key
+        follow_up:
+          required:
+          - continuation_token
+          - question
+          optional:
+          - idempotency_key
+        daily_workspace_open:
+          required: []
+          optional:
+          - trading_day_id
+          - trigger
+        daily_workspace_ask:
+          required:
+          - question
+          optional:
+          - trading_day_id
+          - trigger
+      description: '只接受由 action 判别的 consult|follow_up|daily_workspace_open| daily_workspace_ask。consult
+        的 scope 是 general|single_asset|multi_asset|portfolio 之一，仅用于提供显式 typed request
+        context；省略时为 general。FIN 同时提供当前可用的服务端绑定账户 context options（ADVISORY_REAL/PAPER），由一个
+        Agent 精确选择一项。question 保持原文，Gateway 和 FIN 都不从自由文本提取或改写 scope、focus_targets、positions
+        或账户事实；显式 typed scope/focus 也只约束 request context，不能建立账户事实。正式持仓的名称、 数量、状态和版本始终来自被选中的
+        FIN account owner。 纯实际持仓概览可展示正式快照中的全部持仓；MANUAL_REVIEW 必须由 Agent 明确 选择 1～5
+        个正式标的，FIN 不做隐藏选股或静默截断。问题中的数量、成本或价格 绝不成为账户事实。 requested_tactical_need 只是 AUTO|NOT_REQUESTED|EXPLAIN_METHOD|
+        CURRENT_ASSESSMENT 的目标提示；最终 profile、context 选择与回答由 Agent 在 FIN contract 内完成，行动资格和数据边界由
+        FIN 确定性校验； follow_up 只接受上一轮返回的 opaque continuation_token、新问题与可选 idempotency_key（同一消息重试复用），不接受
+        scope、positions、profile、account 或战术提示。 daily_workspace_open/daily_workspace_ask
+        是 Daily Decision Workspace（#2） 的命令面：V1 阶段 open 在无状态层时诚实返回 unavailable，ask
+        以当日工作区 语义委托同一咨询链。caller 不得传账户号、文件路径、principal、runtime、 模型、预算或执行控制。
+
+        '
+  output_schema:
+    schema_version: string
+    mode:
+      type: enum
+      values:
+      - ADVISORY
+      - ADVISORY_REAL
+      - PAPER_TRADING
+      required: true
+      nullable: false
+    action: string
+    status: string
+    problem:
+      type: object
+      nullable: true
+    analysis_profile: string
+    profile_reason: string
+    trigger: string
+    as_of: string
+    deadline_at:
+      type: string
+      nullable: true
+    answer: object
+    product:
+      type: object
+      nullable: true
+    served_via_proxy:
+      type: boolean
+      required: true
+      nullable: false
+    agent_contributions: object
+    decision_context: object
+    source_boundaries: object
+    freshness: object
+    data_gaps: array
+    provenance: object
+    safety: object
+    continuation_token:
+      type: string
+      required: true
+      nullable: true
+    result_meta:
+      type: object
+      required: true
+      nullable: false
+      properties:
+        generation:
+          type: enum
+          values:
+          - FRESH
+          - IDEMPOTENCY_REPLAY
+        continuity:
+          type: enum
+          values:
+          - NEW_CHAIN
+          - CONTINUED_CHAIN
+          - DEGRADED_FRESH
+        model_quality:
+          type: enum
+          values:
+          - PINNED
+          - DEGRADED
+          - UNKNOWN
+      description: 结论来源与链延续元数据；generation=IDEMPOTENCY_REPLAY 表示同一消息重试命中 原结论（as_of
+        为原结论时间）；continuity=CONTINUED_CHAIN 表示延续了同一 FIN semantic chain；continuity=DEGRADED_FRESH
+        表示本轮原本要求延续但 FIN 已知 实际转入 fresh 路径（不冒充 resume，也不表示上一轮已恢复）； model_quality=DEGRADED
+        表示本轮由配置标记的备用模型生成。
+  side_effect: delegates_child_audit
+  risk_level: high
+  requires_confirmation: false
+  profile_sensitive: true
+  audit_fields:
+  - schema_version
+  - action
+  - status
+  - analysis_profile
+  - as_of
+  - data_gaps
+  - safety
+- id: decision.verify_real_trade
+  name: 实盘验证风控检查
+  category: decision
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 小资金实盘验证风控检查。对拟实盘交易执行严格风控（单票≤15%、现金≥30%、回撤≤15%、必设止损）。S-011。
+  intent_examples:
+  - 这个能买吗
+  - 实盘验证
+  - 风控检查
+  - 风险检查
+  primary_entry:
+    type: mcp
+    name: verify_real_trade
+  input_schema:
+    company:
+      type: string
+      required: true
+    ticker:
+      type: string
+      required: false
+    confidence:
+      type: number
+      required: false
+    position_pct:
+      type: number
+      required: false
+    entry_price:
+      type: number
+      required: false
+    stop_loss:
+      type: number
+      required: false
+    signal_tier:
+      type: string
+      required: false
+  output_schema:
+    verdict: string
+    issues: list
+    warnings: list
+    requires_human_confirmation: boolean
+    mode: string
+    advisory_only: boolean
+  side_effect: read_only
+  risk_level: high
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - company
+  - verdict
+  - position_pct
+- id: feedback.record
+  name: 记录认知反馈
+  category: feedback
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 记录对认知分析、推理链或模式的人工反馈，用于后续进化。
+  intent_examples:
+  - 这个分析不像郭老师
+  - 反馈这个推理有问题
+  primary_entry:
+    type: mcp
+    name: record_cognitive_feedback
+  input_schema:
+    target_type:
+      type: string
+      required: true
+    target_id:
+      type: string
+      required: true
+    feedback_type:
+      type: string
+      required: true
+    note:
+      type: string
+      required: false
+  output_schema:
+    feedback: object
+  side_effect: writes_feedback
+  risk_level: medium
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - target_type
+  - target_id
+  - feedback_type
+  - feedback_id
+- id: guo.decision_guidance
+  name: 锅老师研究型决策指导
+  category: agent
+  status: beta
+  visibility: internal
+  version: 1
+  summary: 'FIN 内部可复用的锅老师认知产品。内部调用方提交带 action 判别字段的 typed command，FIN 生成可连续阅读、追问、关闭和反馈的决策指导产品。
+    输出始终保持 advisory-only，不产生交易副作用；Hermes 用户咨询统一经 consultation.decision_support 组合
+    G/Z/PAPER 后展示。
+
+    '
+  intent_examples:
+  - 我现在这些持仓最该先处理什么
+  - 盛和资源和北方稀土哪个更值得看
+  - 继续刚才的研究并补充风险条件
+  - 读取上一次决策指导的最新版本
+  - 这条建议方向错了
+  primary_entry:
+    type: mcp
+    name: guo_decision_guidance
+  input_schema:
+    command:
+      type: object
+      required: true
+      discriminator: action
+      actions:
+        ask:
+          required:
+          - question
+          optional:
+          - outcome_mode
+          - context
+          - idempotency_key
+        continue:
+          required:
+          - continuation_token
+          - question
+          optional:
+          - outcome_mode
+          - context
+          - idempotency_key
+        read:
+          required:
+          - continuation_token
+        close:
+          required:
+          - continuation_token
+        feedback:
+          required:
+          - continuation_token
+          - product_version
+          - item_id
+          - disposition
+          optional:
+          - note
+      description: '只接受 ask|continue|read|close|feedback 五种语义动作。context 是 general|single_asset|multi_asset|portfolio
+        之一；额外字段会被拒绝。
+
+        '
+  output_schema:
+    schema_version: string
+    action: string
+    status: string
+    problem:
+      type: object
+      nullable: true
+    outcome_mode:
+      type: string
+      nullable: true
+    contract:
+      type: object
+      nullable: true
+    product:
+      type: object
+      nullable: true
+    current_advice:
+      type: object
+      nullable: true
+    product_meta: object
+    continuation:
+      type: object
+      nullable: true
+    data_gaps: array
+    provenance: object
+    safety: object
+  side_effect: delegates_child_audit
+  risk_level: medium
+  requires_confirmation: false
+  profile_sensitive: true
+  audit_fields:
+  - schema_version
+  - action
+  - status
+  - problem
+  - data_gaps
+  - safety
+- id: knowledge.articles.deep_read
+  name: 文章深读产物读取
+  category: knowledge
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 只读返回知识库文章已有且与当前正文匹配的 research/advisory 深读产物；它不是 teacher cognition，不产生交易动作；缓存缺失、过期或无效时明确返回
+    unavailable，不触发同步生成。
+  intent_examples:
+  - 查看这篇文章已有的深读结果
+  - 这篇文章的深读核心观点是什么
+  - 查看文章深读摘要
+  - 读取完整文章深读产物
+  primary_entry:
+    type: mcp
+    name: deep_read_article
+  input_schema:
+    article_id:
+      type: string
+      required: true
+    detail:
+      type: enum
+      values:
+      - full
+      - summary
+      required: false
+  output_schema:
+    article_id: string
+    title: string
+    column: string
+    published_at: string
+    source_rank: string
+    unit_count: number
+    theme_count: number
+    suggestion_count: number
+    warnings: list
+    units: list
+    evidence_chains: list
+    theme_clusters: list
+    clocks: list
+    suggestions: list
+    core_theses: list
+    injectable_summary: string
+    usage_boundary: string
+    artifact_status: string
+    artifact_generated_at: string
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - article_id
+  - source_rank
+  - unit_count
+  - theme_count
+  - artifact_status
+- id: knowledge.articles.deep_read_availability
+  name: 文章深读产物可用率观测
+  category: knowledge
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 只读观测知识库文章的深读产物可用率：按文章分类为 READY / MISSING_ARTIFACT / STALE / CORRUPT / UNREADABLE
+    / UNKNOWN 并汇总；不触发生成、不写任何状态，用于发现 cache-miss 伪装成功。
+  intent_examples:
+  - 看看深读产物现在有多少可用
+  - 哪些文章的深读缓存过期了
+  - 深读产物可用率是多少
+  primary_entry:
+    type: mcp
+    name: deep_read_availability
+  input_schema:
+    article_ids:
+      type: list
+      required: true
+  output_schema:
+    total: number
+    ready: number
+    missing_artifact: number
+    stale: number
+    corrupt: number
+    unreadable: number
+    unknown: number
+    availability_rate: number
+    by_article: object
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - article_ids
+- id: knowledge.articles.recent
+  name: 近期文章列表
+  category: knowledge
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 列出知识库近期文章，可按日期、专栏、最低评分筛选。作为用户浏览文章内容的主入口。
+  intent_examples:
+  - 今天有什么文章
+  - 最近星大派特刊
+  - 8分以上的文章
+  - 最近一周的文章
+  primary_entry:
+    type: mcp
+    name: get_recent_articles
+  input_schema:
+    date:
+      type: string
+      required: false
+    column:
+      type: string
+      required: false
+    min_score:
+      type: number
+      required: false
+    limit:
+      type: integer
+      required: false
+  output_schema:
+    count: number
+    filters: object
+    columns_available: list
+    score_range: object
+    articles: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - date
+  - column
+  - min_score
+  - count
+- id: knowledge.query
+  name: 知识库查询
+  category: knowledge
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 查询知识库文章、公司历史观点，或基于知识库回答问题。
+  intent_examples:
+  - 找一下茅台的历史观点
+  - 搜索低空经济文章
+  - 知识库里怎么看新能源
+  primary_entry:
+    type: mcp
+    name: query_knowledge
+  input_schema:
+    query:
+      type: string
+      required: true
+    mode:
+      type: enum
+      values:
+      - auto
+      - articles
+      - company
+      - qa
+      required: false
+    window:
+      type: string
+      required: false
+  output_schema:
+    query_mode: string
+    count: number
+    results: list
+    status: string
+    answer: string
+    used_source_refs: list
+    data_gaps: list
+    source_boundary: string
+    documents_considered: number
+    window: string
+    advisory_only: boolean
+    execution_allowed: boolean
+    unavailable: boolean
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - mode
+  - fallback_used
+  - count
+  - data_gaps
+- id: portfolio.read
+  name: 持仓只读（用户已确认快照）
+  category: portfolio
+  status: beta
+  visibility: public
+  version: public/v1
+  summary: 读取用户已确认的实际持仓快照。仅展示既有快照；不修改、不发布、不核对。MCP 主入口为 read_actual_portfolio。失败原因以中文
+    consequence 字段返回，可直接面向用户展示。
+  intent_examples:
+  - 看看我当前的持仓
+  - 给我看下已确认的持仓快照
+  - 列出我已确认账户的持仓
+  primary_entry:
+    type: mcp
+    name: read_actual_portfolio
+  input_schema: {}
+  output_schema:
+    schema_version: string
+    status: string
+    values:
+    - REJECTED
+    - READY
+    - PARTIAL
+    - UNKNOWN
+    reason_codes: list
+    snapshot: object|null
+    consequence: string|null
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: true
+  audit_fields:
+  - status
+  - reason_codes
+  - snapshot_revision_when_present
+- id: portfolio.review
+  name: 持仓审核（观测事实接口）
+  category: portfolio
+  status: beta
+  visibility: public
+  version: 1
+  summary: 从观测事实（截图识别结果）审核持仓更新。模型提交 instrument/shares/可选值，FIN 规范化代码、处理零股行、追问缺失信息，返回可读预览。用户确认后
+    CAS 发布。
+  intent_examples:
+  - 按照这张截图更新我的持仓
+  - 用这份清单替换当前持仓
+  - 确认更新持仓
+  primary_entry:
+    type: mcp
+    name: review_actual_portfolio
+  input_schema:
+    command:
+      type: object
+      required: true
+    action:
+      type: string
+      required: true
+      values:
+      - review
+      - confirm
+    observed_at:
+      type: string
+      required: false
+    cash_available:
+      type: number
+      required: false
+    net_assets:
+      type: number
+      required: false
+    margin_debt:
+      type: number
+      required: false
+    positions:
+      type: array
+      required: false
+      item_fields:
+      - instrument
+      - shares
+      - average_cost
+      - snapshot_price
+      - market_value
+  output_schema:
+    schema_version: string
+    status: string
+    reason_codes: list
+    question: string|null
+    readable_preview: string|null
+    ignored_observations: list
+    corrected_observations: list
+    candidate_revision: string|null
+    current_revision: string|null
+    snapshot_ref: string|null
+    confirmation_phrase: string|null
+  side_effect: writes_runtime
+  risk_level: medium
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - status
+  - candidate_revision
+  - current_revision
+  - snapshot_ref
+- id: project_memory.accept
+  name: 项目记忆候选转正
+  category: admin
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 将用户确认过的辅助记忆候选移入 Git 外状态目录并更新索引；调用前必须确认。
+  intent_examples:
+  - 确认这条候选记忆
+  - 把候选记忆转成 pitfall
+  primary_entry:
+    type: mcp
+    name: memory_accept
+  input_schema:
+    candidate_path:
+      type: string
+      required: true
+    target_type:
+      type: enum
+      values:
+      - core
+      - decision
+      - pitfall
+      - boundary
+      - session
+      required: true
+    accepted_by:
+      type: string
+      required: false
+  output_schema:
+    memory: object
+  side_effect: modifies_project_memory
+  risk_level: medium
+  requires_confirmation: true
+  profile_sensitive: false
+  audit_fields:
+  - candidate_path
+  - target_type
+  - accepted_by
+- id: project_memory.search
+  name: 项目记忆搜索
+  category: admin
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 搜索 Git 外的 fin-analyse 辅助历史记忆；不得覆盖 AGENTS、NOW、源码或当前运行证据。
+  intent_examples:
+  - 查一下 ZSXQ 抓取坑
+  - 项目里 Hermes 和 CC 边界是什么
+  - 搜索 capability contract 规则
+  primary_entry:
+    type: mcp
+    name: memory_search
+  input_schema:
+    query:
+      type: string
+      required: true
+    memory_type:
+      type: string
+      required: false
+    limit:
+      type: integer
+      required: false
+    include_candidates:
+      type: boolean
+      required: false
+  output_schema:
+    query: string
+    count: number
+    results: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - query
+  - count
+  - memory_type
+- id: project_memory.suggest
+  name: 项目记忆候选生成
+  category: admin
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 在 Git 外生成待确认的 fin-analyse 辅助记忆候选；不创建项目计划或当前事实。
+  intent_examples:
+  - 把这个踩坑保存为候选记忆
+  - 建议新增一条架构决策记忆
+  primary_entry:
+    type: mcp
+    name: memory_suggest
+  input_schema:
+    kind:
+      type: enum
+      values:
+      - core
+      - decision
+      - pitfall
+      - boundary
+      - session
+      required: true
+    title:
+      type: string
+      required: true
+    content:
+      type: string
+      required: true
+    source:
+      type: string
+      required: false
+    scope:
+      type: string
+      required: false
+    tags:
+      type: string
+      required: false
+  output_schema:
+    candidate_path: string
+    id: string
+    next_step: string
+  side_effect: writes_candidate_file
+  risk_level: medium
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - kind
+  - title
+  - candidate_path
+  - source
+- id: reflection.weekly_learning
+  name: 每周选股逻辑学习
+  category: reflection
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 回顾本周评分最高的公司，提取选股审美规律，总结共性特征和系统性偏好。元认知学习能力。
+  intent_examples:
+  - 本周学到了什么
+  - 选股审美有什么变化
+  - 最近哪些公司表现好
+  - 系统有什么发现
+  primary_entry:
+    type: mcp
+    name: get_weekly_learning
+  input_schema: {}
+  output_schema:
+    period: string
+    start_date: string
+    end_date: string
+    top_companies: list
+    common_patterns: list
+    selection_criteria: object
+    learned_insights: list
+    confidence: number
+    methodology_note: string
+  side_effect: writes_audit
+  risk_level: medium
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - period
+  - confidence
+- id: stock.analyze
+  name: 个股综合分析
+  category: stock
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 综合知识库、信号、行情、估值、资金、吃鱼阶段、催化和风险分析单只股票。
+  intent_examples:
+  - 分析贵州茅台
+  - XX能买吗
+  - 帮我看下宁德时代风险
+  primary_entry:
+    type: mcp
+    name: analyze_stock
+  fallback_entries:
+  - type: service
+    name: AnalysisService.analyze_stock
+  - type: service
+    name: AnalysisService.smart_analyze
+  input_schema:
+    company:
+      type: string
+      required: false
+    ticker:
+      type: string
+      required: false
+    question:
+      type: string
+      required: false
+    focus:
+      type: list
+      required: false
+    window:
+      type: string
+      required: false
+  output_schema:
+    stance: string
+    confidence: number
+    catalysts: list
+    risks: list
+    fish_theory: object
+    data_gaps: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: true
+  audit_fields:
+  - tools_used
+  - fallback_used
+  - confidence
+  - data_gaps
+- id: stock.compare
+  name: 多股对比
+  category: stock
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 对比多只股票的知识库信号、置信度、评分和提及度。
+  intent_examples:
+  - 对比茅台和五粮液
+  - 宁德时代和比亚迪哪个好
+  primary_entry:
+    type: mcp
+    name: compare_stocks
+  input_schema:
+    tickers:
+      type: string
+      required: true
+    window:
+      type: string
+      required: false
+  output_schema:
+    results: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: true
+  audit_fields:
+  - targets
+  - confidence
+  - data_gaps
+- id: stock.graph
+  name: 公司关联图谱
+  category: graph
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 查询公司关联图谱；未提供公司名时返回全局图谱统计。
+  intent_examples:
+  - 宁德相关公司
+  - 知识图谱统计
+  - 公司关系图
+  primary_entry:
+    type: mcp
+    name: get_company_graph
+  input_schema:
+    name:
+      type: string
+      required: false
+    depth:
+      type: integer
+      required: false
+    window:
+      type: string
+      required: false
+  output_schema:
+    graph_stats: object
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - node_count
+  - edge_count
+  - data_gaps
+- id: stock.industry_chain
+  name: 产业链位置分析
+  category: stock
+  status: stable
+  visibility: internal
+  version: 1
+  summary: LLM 驱动的产业链位置动态分析：公司在产业链中的位置、战略重要度、替代难度、议价能力、护城河分析。不依赖静态知识图谱。
+  intent_examples:
+  - 分析中稀有色在产业链中的位置
+  - 这个公司卡脖子吗
+  - XX的议价能力怎么样
+  - 宁德时代的上游有哪些
+  primary_entry:
+    type: mcp
+    name: analyze_industry_chain
+  input_schema:
+    company:
+      type: string
+      required: true
+    ticker:
+      type: string
+      required: false
+  output_schema:
+    company: string
+    ticker: string
+    industry: string
+    chain_segment: string
+    role: string
+    key_products: list
+    key_customers: list
+    key_suppliers: list
+    strategic_importance: number
+    substitution_difficulty: string
+    bargaining_power: string
+    moat_summary: string
+    confidence: number
+    evidence_sources: list
+    data_gaps: list
+    failure_conditions: list
+    catalysts: list
+    methodology_note: string
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - company
+  - ticker
+  - confidence
+  - data_gaps
+- id: stock.market_snapshot
+  name: 市场快照
+  category: market
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 获取股票技术指标、估值、资金流等客观市场数据快照。
+  intent_examples:
+  - 行情快照600036
+  - 茅台估值怎么样
+  - 看下资金流
+  primary_entry:
+    type: mcp
+    name: get_market_snapshot
+  input_schema:
+    ticker:
+      type: string
+      required: true
+  output_schema:
+    ticker: string
+    price: number
+    rsi14: number
+    pe: number
+    flow_score: number
+    cache_status: string
+    cache_session: string
+    cache_hit: boolean
+    data_freshness: object
+    data_gaps: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - provider
+  - fallback_used
+  - data_gaps
+  - cache_status
+  - cache_hit
+- id: system.decision_warnings
+  name: 决策警告聚合
+  category: system
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 聚合外部感官数据警告（数据源健康、市场异动、知识覆盖缺口等）。所有警告 advisory-only，需人工确认。S-010C。
+  intent_examples:
+  - 有什么风险
+  - 需要注意什么
+  - 数据可靠吗
+  - 决策警告
+  primary_entry:
+    type: mcp
+    name: get_decision_warnings
+  input_schema:
+    company:
+      type: string
+      required: false
+    ticker:
+      type: string
+      required: false
+  output_schema:
+    company: string
+    ticker: string
+    total_warnings: number
+    critical: number
+    high: number
+    medium: number
+    low: number
+    warnings: list
+    advisory_only: boolean
+    human_confirmation_required: boolean
+    note: string
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - total_warnings
+  - critical
+  - high
+- id: system.health
+  name: 系统健康
+  category: system
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 获取行情数据源健康状态，包括 provider 可用性、断路状态、数据新鲜度、字段完整度和 drift 检测。S-010C 增强。
+  intent_examples:
+  - 系统健康
+  - 行情数据源状态
+  - 为什么行情不可用
+  - 数据质量
+  primary_entry:
+    type: mcp
+    name: get_provider_health
+  input_schema: {}
+  output_schema:
+    providers: object
+    quality_scores: object
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - provider_status
+  - degraded_providers
+- id: system.verification_config
+  name: 实盘验证配置
+  category: system
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 获取小资金实盘验证的风险限制参数。S-011。
+  intent_examples:
+  - 验证参数
+  - 风控配置
+  - 仓位限制
+  primary_entry:
+    type: mcp
+    name: get_verification_config
+  input_schema: {}
+  output_schema:
+    config: object
+    mode: string
+    advisory_only: boolean
+    note: string
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - mode
+- id: topics.hot
+  name: 热点主题
+  category: topics
+  status: stable
+  visibility: internal
+  version: 1
+  summary: 获取近期热门话题或标签，按提及频率和信号强度排序。
+  intent_examples:
+  - 最近什么话题热
+  - 热门主题
+  - 最近关注哪些板块
+  primary_entry:
+    type: mcp
+    name: get_hot_topics
+  input_schema:
+    window:
+      type: string
+      required: false
+    limit:
+      type: integer
+      required: false
+  output_schema:
+    window: string
+    topics: list
+  side_effect: read_only
+  risk_level: low
+  requires_confirmation: false
+  profile_sensitive: false
+  audit_fields:
+  - window
+  - count
+- id: watchlist.write
+  name: 自选股更新（Hermes 写路径）
+  category: portfolio
+  status: beta
+  visibility: public
+  version: 1
+  summary: Feishu/Hermes 的自选股唯一写入口。list 零写读取；preview 解析 1-10 个有序 add/remove 操作（代码逐字或目录
+    canonical 名称逐字节一致），返回机器候选 token 与用户可见确认短语，零写；apply 只接受候选 token——FIN 校验 HMAC 签名、身份绑定、TTL
+    与新 turn 要求后逐条 CAS 写入。操作员/手动路径仍由 scripts/manage_user_watchlist.py 独立承担，二者共享同一 resolve/CAS
+    语义。
+  intent_examples:
+  - 更新我的自选股，增加贵州茅台
+  - 把 600519 加进自选股
+  - 从自选股里删掉新希望
+  - 确认更新自选股
+  primary_entry:
+    type: mcp
+    name: update_user_watchlist
+  input_schema:
+    command:
+      type: object
+      required: true
+    action:
+      type: string
+      required: true
+      values:
+      - list
+      - preview
+      - apply
+    operations:
+      type: array
+      required: false
+      min_items: 1
+      max_items: 10
+      item_fields:
+      - action (add|remove)
+      - ref
+    token:
+      type: string
+      required: false
+  output_schema:
+    schema_version: string
+    status: string
+    reason_codes: list
+    operations: list
+    confirmation_phrase: string|null
+    candidate_token: string|null
+    outcomes: list
+    entries: list
+    revision: string|null
+  side_effect: writes_runtime
+  risk_level: medium
+  requires_confirmation: true
+  profile_sensitive: true
+  audit_fields:
+  - status
+  - operations
+  - outcomes
+  - revision

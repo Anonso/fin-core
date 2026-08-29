@@ -1,0 +1,47 @@
+# Install as ~/fin-data/codex_routes.yaml with directory mode 0700 and file mode 0600.
+# Route order is declaration order. Auth material lives outside this file:
+# each codex-provider route points at an owner-only auth.json (key_path picks
+# the field).  Current shape after D-018/D-019 (2026-08-28): consultation-only,
+# official bigmodel GLM anchor first, opencode deepseek fallback second; the
+# GPT/relay routes (direct-primary, codex-proxy-a/b) were deleted by owner
+# decision and review workload has no enabled route.
+schema_version: fin.codex-routes/v2
+reasoning:
+  effort: max
+routes:
+  - id: codex-glm
+    enabled: true
+    adapter: codex-provider
+    workloads: [consultation]
+    probe_timeout_seconds: 60
+    attempt_timeout_seconds: 900
+    api:
+      base_url: "https://open.bigmodel.cn/api/v1"
+    auth:
+      path: /home/ypk/fin-data/codex-routes/codex-glm/auth.json
+      key_path: [glm_api_key]
+    model_catalog: /home/ypk/fin-data/codex-routes/codex-glm/models.json
+    model:
+      id: glm-5.3
+      quality: pinned
+  - id: codex-open
+    enabled: true
+    adapter: codex-provider
+    workloads: [consultation]
+    probe_timeout_seconds: 60
+    attempt_timeout_seconds: 900
+    api:
+      base_url: "https://opencode.ai/zen/go/v1"
+    auth:
+      path: /home/ypk/.local/share/opencode/auth.json
+      key_path: [opencode-go, key]
+    model_catalog: /home/ypk/.codex/models.json
+    model:
+      id: deepseek-v4-pro
+      quality: degraded
+probe:
+  reachable_ttl_seconds: 1800
+cooldown:
+  step_seconds: 900
+  max_seconds: 3600
+  half_open_lease_seconds: 300

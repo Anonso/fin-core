@@ -1,0 +1,31 @@
+id: topics.hot
+name: 热点主题
+category: topics
+status: stable
+visibility: internal
+version: 1
+summary: 获取近期热门话题或标签，按提及频率和信号强度排序。
+intent_examples:
+- 最近什么话题热
+- 热门主题
+- 最近关注哪些板块
+primary_entry:
+  type: mcp
+  name: get_hot_topics
+input_schema:
+  window:
+    type: string
+    required: false
+  limit:
+    type: integer
+    required: false
+output_schema:
+  window: string
+  topics: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- window
+- count

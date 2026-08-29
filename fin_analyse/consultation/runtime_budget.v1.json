@@ -1,0 +1,14 @@
+{
+  "schema_version": "fin.consultation-runtime-budget/v1",
+  "total_deadline_seconds": 3600,
+  "direct_primary_minimum_seconds": 30,
+  "direct_primary_maximum_seconds": 3300,
+  "scheduled_primary_maximum_seconds": 900,
+  "proxy_discovery_minimum_seconds": 10,
+  "proxy_run_minimum_seconds": 32,
+  "tactical_g_stage_max_seconds": 75,
+  "tactical_terminal_reserve_seconds": 10,
+  "transport_margin_seconds": 60,
+  "hermes_sequential_call_timeout_seconds": 3660,
+  "hermes_outer_timeout_seconds": 3720
+}

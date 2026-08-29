@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fin-analyse.local/schemas/actual-advisory-portfolio.v1.json",
+  "title": "User-confirmed Actual Advisory Portfolio V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "confirmation",
+    "source_kind",
+    "positions_complete",
+    "account_alias",
+    "as_of",
+    "net_assets",
+    "available_cash",
+    "margin_debt",
+    "positions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "actual-advisory-portfolio.v1"
+    },
+    "confirmation": {
+      "const": "USER_CONFIRMED"
+    },
+    "source_kind": {
+      "enum": [
+        "USER_CONFIRMED_BROKER_SCREENSHOT",
+        "USER_CONFIRMED_MANUAL"
+      ]
+    },
+    "positions_complete": {
+      "const": true
+    },
+    "account_alias": {
+      "$ref": "#/$defs/text"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "net_assets": {
+      "$ref": "#/$defs/optionalDecimal"
+    },
+    "available_cash": {
+      "$ref": "#/$defs/optionalDecimal"
+    },
+    "margin_debt": {
+      "$ref": "#/$defs/optionalDecimal"
+    },
+    "positions": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/position"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "decimal": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,4})?$"
+    },
+    "optionalDecimal": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/decimal"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "optionalShares": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "name",
+        "total_shares",
+        "sellable_shares",
+        "average_cost",
+        "snapshot_price",
+        "market_value"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "pattern": "^[0-9]{6}\\.(?:SH|SZ|BJ)$"
+        },
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "total_shares": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sellable_shares": {
+          "$ref": "#/$defs/optionalShares"
+        },
+        "average_cost": {
+          "$ref": "#/$defs/optionalDecimal"
+        },
+        "snapshot_price": {
+          "$ref": "#/$defs/optionalDecimal"
+        },
+        "market_value": {
+          "$ref": "#/$defs/optionalDecimal"
+        },
+        "thesis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

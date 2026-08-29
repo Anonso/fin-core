@@ -1,0 +1,92 @@
+# LLM 能力映射（不保存 key 或 URL 实值）
+# 实值统一来自 FIN_LLM_ENV_FILE 指向的 owner-only 环境文件。
+
+models:
+  # GLM-5.3 (官方 bigmodel coding plan，CC 同款凭据) - 难题质量锚（T0）
+  glm53:
+    provider: openai_compatible
+    model: glm-5.3
+    api_key: ${GLM_API_KEY}
+    base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
+    enabled: true
+
+  # GLM-5.3-Flash (官方 bigmodel coding plan，同款凭据) - 简单任务吞吐锚（T1）
+  glm53_flash:
+    provider: openai_compatible
+    model: glm-5.3-flash
+    api_key: ${GLM_API_KEY}
+    base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
+    enabled: true
+
+  # 通义千问 Qwen3.6-35B (硅基流动 SiliconFlow)
+  qwen:
+    provider: openai_compatible
+    model: Qwen/Qwen3.6-35B-A3B
+    api_key: ${SILICONFLOW_API_KEY}
+    base_url: ${SILICONFLOW_BASE_URL}
+    enabled: true
+
+  # DeepSeek V4 Pro remains the legacy standalone backend for non-ZSXQ callers.
+  deepseek:
+    provider: openai_compatible
+    model: deepseek-v4-pro
+    api_key: ${DEEPSEEK_API_KEY}
+    base_url: ${DEEPSEEK_BASE_URL}
+    reasoning_effort: max
+    enabled: true
+
+  # 小米 MiMo n-v2.5 - 识图链末位兜底（owner 2026-08-28 重排；原生识图，OpenAI 兼容）
+  # 用法参考 https://mimo.mi.com/docs/zh-CN/quick-start/usage-guide/multimodal-understanding/image-understanding
+  mimo:
+    provider: openai_compatible
+    model: mimo-v2.5
+    api_key: ${MIMO_API_KEY}
+    base_url: ${MIMO_BASE_URL}
+    enabled: true
+
+  # 智谱 GLM-4.6V-Flash（免费额度）- 识图链第二优先（OpenAI 兼容）
+  # 官方 key 2026-08-28 起存于 llm.env GLM_VISION_API_KEY（旧 key 已 401 失效）
+  glm-vision:
+    provider: openai_compatible
+    model: glm-4.6v-flash
+    api_key: ${GLM_VISION_API_KEY}
+    base_url: "https://open.bigmodel.cn/api/paas/v4"
+    timeout: 90
+    enabled: true
+
+  # 自定义 - 任意 OpenAI 兼容端点 (Ollama/vLLM/硅基流动等)
+  custom:
+    provider: openai_compatible
+    model: llama-3
+    api_key: ${CUSTOM_LLM_API_KEY}
+    base_url: ${CUSTOM_LLM_BASE_URL}
+    enabled: false
+
+  # 视觉模型 (图片→结构化数据提取)
+  vision:
+    provider: openai_compatible
+    model: Qwen/Qwen3-VL-30B-A3B-Instruct
+    api_key: ${SILICONFLOW_API_KEY}
+    base_url: ${SILICONFLOW_BASE_URL}
+    enabled: true
+
+# 消费方候选顺序（家规规则 6：会变的选择进配置不写死代码）。
+# t0 = 难题质量锚（先用 glm5.3）；t1 = 简单任务吞吐（先用 glm5.3-flash）。
+# 名字必须是 models 下的条目；段缺失/非法时消费方回退各自硬编码缺省序。
+priorities:
+  t0: [glm53, deepseek, qwen]
+  t1: [glm53_flash, deepseek, qwen]
+
+# 识图 fallback 链（owner 2026-08-28 拍板重排：glm5.3-flash → GLM-4.6V-Flash 免费 → 硅基流动 → mimo）
+# 条目必须是 models 下的 key：缺失/禁用/未解析 ${}/熔断打开的条目跳过，保序去重；
+# 段或 chain 键缺失/非法时代码回退现状缺省序（mimo → glm-vision → vision，配置缺失=行为不变）。
+# glm53_flash 走 coding 端点已探针验证收图（2026-08-28）；全部失败落 OCR 终兜底。
+vision:
+  chain: [glm53_flash, glm-vision, vision, mimo]
+
+# 交叉验证设置
+cross_validation:
+  # 最少需要几个模型达成一致
+  min_agreement: 2
+  # 达成一致时的置信度 boost
+  agreement_boost: 0.1

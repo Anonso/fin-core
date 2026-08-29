@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""finq — FIN 使用日志一行式记录（家规规则 10：使用日志是唯一功能准入队列的数据源）。
+
+用法:
+    finq "问题"            # 只记问题
+    finq "问题" y          # 问题 + 满意
+    finq "问题" n "哪里不最优"
+
+每次追加一行 JSON 到 ``$XDG_STATE_HOME/fin-analyse/usage-log/usage.jsonl``
+（缺省 ``~/.local/state/...``），目录/文件 owner-only。D3 终态验收的
+「连续 3 天每天 ≥2 真实提问」由该文件供数；不做统计子命令（规则 6，
+需要时再建）。
+"""
+from __future__ import annotations
+
+import datetime
+import json
+import os
+import pathlib
+import sys
+
+
+def main(argv: list[str]) -> int:
+    if not 1 <= len(argv) <= 3:
+        print(__doc__, file=sys.stderr)
+        return 64
+    question = argv[0]
+    satisfied = argv[1] if len(argv) > 1 else ""
+    not_best = argv[2] if len(argv) > 2 else ""
+    if satisfied and satisfied not in {"y", "n"}:
+        print("第二个参数只接受 y 或 n", file=sys.stderr)
+        return 64
+    state_root = os.environ.get(
+        "XDG_STATE_HOME", str(pathlib.Path.home() / ".local" / "state")
+    )
+    log_path = (
+        pathlib.Path(state_root) / "fin-analyse" / "usage-log" / "usage.jsonl"
+    )
+    log_dir = log_path.parent
+    log_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(log_dir.parent, 0o700)  # fin-analyse 中间层一并收紧
+    record = {
+        "ts": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "q": question,
+        "satisfied": satisfied or None,
+        "not_best": not_best or None,
+    }
+    with log_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    os.chmod(log_path, 0o600)
+    print(f"logged {record['ts']}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

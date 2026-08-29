@@ -1,0 +1,39 @@
+id: project_memory.search
+name: 项目记忆搜索
+category: admin
+status: stable
+visibility: internal
+version: 1
+summary: 搜索 Git 外的 fin-analyse 辅助历史记忆；不得覆盖 AGENTS、NOW、源码或当前运行证据。
+intent_examples:
+- 查一下 ZSXQ 抓取坑
+- 项目里 Hermes 和 CC 边界是什么
+- 搜索 capability contract 规则
+primary_entry:
+  type: mcp
+  name: memory_search
+input_schema:
+  query:
+    type: string
+    required: true
+  memory_type:
+    type: string
+    required: false
+  limit:
+    type: integer
+    required: false
+  include_candidates:
+    type: boolean
+    required: false
+output_schema:
+  query: string
+  count: number
+  results: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- query
+- count
+- memory_type

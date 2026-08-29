@@ -1,0 +1,52 @@
+id: decision.verify_real_trade
+name: 实盘验证风控检查
+category: decision
+status: stable
+visibility: internal
+version: 1
+summary: 小资金实盘验证风控检查。对拟实盘交易执行严格风控（单票≤15%、现金≥30%、回撤≤15%、必设止损）。S-011。
+intent_examples:
+- 这个能买吗
+- 实盘验证
+- 风控检查
+- 风险检查
+primary_entry:
+  type: mcp
+  name: verify_real_trade
+input_schema:
+  company:
+    type: string
+    required: true
+  ticker:
+    type: string
+    required: false
+  confidence:
+    type: number
+    required: false
+  position_pct:
+    type: number
+    required: false
+  entry_price:
+    type: number
+    required: false
+  stop_loss:
+    type: number
+    required: false
+  signal_tier:
+    type: string
+    required: false
+output_schema:
+  verdict: string
+  issues: list
+  warnings: list
+  requires_human_confirmation: boolean
+  mode: string
+  advisory_only: boolean
+side_effect: read_only
+risk_level: high
+requires_confirmation: true
+profile_sensitive: true
+audit_fields:
+- company
+- verdict
+- position_pct

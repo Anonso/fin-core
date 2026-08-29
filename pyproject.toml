@@ -1,0 +1,118 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fin-analyse"
+version = "0.1.0"
+description = "FIN keep-set: consult read-seams, Daily delivery, ZSXQ capture ingest, deep-read (migrated per docs/migration-manifest.md)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Author", email = "author@example.com" },
+]
+keywords = ["finance", "knowledge-base", "market-data"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "akshare>=1.15",
+    "anthropic>=0.100",
+    "baostock>=0.8",
+    "click>=8.1",
+    "easyquotation>=0.7",
+    "httpx>=0.27",
+    "jsonschema>=4.20",
+    "mcp>=1.0",
+    "mootdx>=0.9.11",
+    "openai>=1.50",
+    "pillow>=10.0",
+    "playwright>=1.45",
+    "pydantic>=2.5",
+    "pytesseract>=0.3",
+    "pyyaml>=6.0",
+    "requests>=2.31",
+    "yfinance>=0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "mypy",
+    "ruff",
+]
+
+[project.scripts]
+fin-cognition = "fin_analyse.cognition.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fin_analyse*"]
+
+[tool.setuptools.package-data]
+"fin_analyse.consultation" = ["runtime_budget.v1.json"]
+"fin_analyse.runtime" = ["hermes_managed_assets.v1.json"]
+"fin_analyse.market" = ["market_evidence_plan.v1.json"]
+"fin_analyse.guo_teacher_research" = ["consultation-advisory-prompt.v1.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v -ra --strict-markers --strict-config --import-mode=importlib --timeout=30 -m \"not (network or integration or llm or runtime_state)\" -W ignore::pytest.PytestRemovedIn10Warning"
+markers = [
+    "integration: tests that require live external services (API, network)",
+    "network: tests that require network access",
+    "llm: tests that call live LLM APIs",
+    "runtime_state: tests that audit explicitly configured mutable local runtime state",
+    "slow: tests that take more than 5 seconds",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "W",   # pycodestyle warnings
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "pytest-timeout>=2.4.0",
+]

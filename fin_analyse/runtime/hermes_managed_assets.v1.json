@@ -1,0 +1,96 @@
+{
+  "schema_version": "fin.hermes-managed-assets/v1",
+  "assets": [
+    {
+      "artifact_id": "profile-config",
+      "source_relative": "hermes-migration/profile-config/config.yaml",
+      "target_kind": "owner_yaml",
+      "target_relative": ".hermes/profiles/fin/config.yaml",
+      "renderer_id": "profile_config_overlay",
+      "checker_id": "profile_config_overlay",
+      "instances": []
+    },
+    {
+      "artifact_id": "global-mcp-discovery",
+      "source_relative": "hermes-migration/profile-config/config.yaml",
+      "target_kind": "owner_yaml",
+      "target_relative": ".hermes/config.yaml",
+      "renderer_id": "global_mcp_projection",
+      "checker_id": "global_mcp_projection",
+      "instances": []
+    },
+    {
+      "artifact_id": "consultation-host-plugin",
+      "source_relative": "hermes-migration/plugins/fin-consultation-first-tool",
+      "target_kind": "owner_symlink",
+      "target_relative": ".hermes/profiles/fin/plugins/fin-consultation-first-tool",
+      "renderer_id": "release_symlink",
+      "checker_id": "release_symlink",
+      "instances": []
+    },
+    {
+      "artifact_id": "profile-soul",
+      "source_relative": "hermes-migration/profile-memory/SOUL.md",
+      "target_kind": "owner_file",
+      "target_relative": ".hermes/profiles/fin/SOUL.md",
+      "renderer_id": "create_exact_file",
+      "checker_id": "exact_file",
+      "instances": []
+    },
+    {
+      "artifact_id": "profile-memory",
+      "source_relative": "hermes-migration/profile-memory/MEMORY.md",
+      "target_kind": "owner_file",
+      "target_relative": ".hermes/profiles/fin/memories/MEMORY.md",
+      "renderer_id": "create_exact_file",
+      "checker_id": "exact_file",
+      "instances": []
+    },
+    {
+      "artifact_id": "profile-user",
+      "source_relative": "hermes-migration/profile-memory/USER.md",
+      "target_kind": "owner_file",
+      "target_relative": ".hermes/profiles/fin/memories/USER.md",
+      "renderer_id": "create_exact_file",
+      "checker_id": "exact_file",
+      "instances": []
+    },
+    {
+      "artifact_id": "fin-skills",
+      "source_relative": "hermes-migration/skills/fin-analyse",
+      "target_kind": "owner_tree",
+      "target_relative": ".hermes/profiles/fin/skills/fin-analyse",
+      "renderer_id": "create_exact_tree",
+      "checker_id": "exact_tree",
+      "instances": [
+        "fin-analyse-consultation/SKILL.md",
+        "fin-analyse-ops/SKILL.md"
+      ]
+    },
+    {
+      "artifact_id": "daily-workspace-units",
+      "source_relative": "scripts/render_daily_workspace_services.py",
+      "target_kind": "owner_systemd_set",
+      "target_relative": ".config/systemd/user",
+      "renderer_id": "daily_workspace_units",
+      "checker_id": "daily_workspace_units",
+      "instances": [
+        "prepare",
+        "delivery"
+      ]
+    },
+    {
+      "artifact_id": "zsxq-ingest-units",
+      "source_relative": "scripts/zsxq_windows_incremental_scheduler.py",
+      "target_kind": "owner_systemd_set",
+      "target_relative": ".config/systemd/user",
+      "renderer_id": "zsxq_ingest_units",
+      "checker_id": "zsxq_ingest_units",
+      "instances": [
+        "fin-zsxq-capture-consumer@.service",
+        "fin-zsxq-capture-poller.service",
+        "fin-zsxq-capture-poller.timer"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+id: knowledge.articles.recent
+name: 近期文章列表
+category: knowledge
+status: stable
+visibility: internal
+version: 1
+summary: 列出知识库近期文章，可按日期、专栏、最低评分筛选。作为用户浏览文章内容的主入口。
+intent_examples:
+- 今天有什么文章
+- 最近星大派特刊
+- 8分以上的文章
+- 最近一周的文章
+primary_entry:
+  type: mcp
+  name: get_recent_articles
+input_schema:
+  date:
+    type: string
+    required: false
+  column:
+    type: string
+    required: false
+  min_score:
+    type: number
+    required: false
+  limit:
+    type: integer
+    required: false
+output_schema:
+  count: number
+  filters: object
+  columns_available: list
+  score_range: object
+  articles: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- date
+- column
+- min_score
+- count

@@ -1,0 +1,34 @@
+id: stock.graph
+name: 公司关联图谱
+category: graph
+status: stable
+visibility: internal
+version: 1
+summary: 查询公司关联图谱；未提供公司名时返回全局图谱统计。
+intent_examples:
+- 宁德相关公司
+- 知识图谱统计
+- 公司关系图
+primary_entry:
+  type: mcp
+  name: get_company_graph
+input_schema:
+  name:
+    type: string
+    required: false
+  depth:
+    type: integer
+    required: false
+  window:
+    type: string
+    required: false
+output_schema:
+  graph_stats: object
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- node_count
+- edge_count
+- data_gaps

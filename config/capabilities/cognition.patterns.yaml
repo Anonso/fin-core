@@ -1,0 +1,28 @@
+id: cognition.patterns
+name: 认知模式查询
+category: cognition
+status: stable
+visibility: internal
+version: 1
+summary: 查看系统已学习到的老师认知模式。
+intent_examples:
+- 郭老师有哪些思维模式
+- 老师投资风格
+primary_entry:
+  type: mcp
+  name: get_cognitive_patterns
+input_schema:
+  teacher:
+    type: string
+    required: false
+output_schema:
+  teacher: string
+  count: number
+  patterns: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: true
+audit_fields:
+- teacher
+- count

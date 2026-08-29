@@ -1,0 +1,33 @@
+id: reflection.weekly_learning
+name: 每周选股逻辑学习
+category: reflection
+status: stable
+visibility: internal
+version: 1
+summary: 回顾本周评分最高的公司，提取选股审美规律，总结共性特征和系统性偏好。元认知学习能力。
+intent_examples:
+- 本周学到了什么
+- 选股审美有什么变化
+- 最近哪些公司表现好
+- 系统有什么发现
+primary_entry:
+  type: mcp
+  name: get_weekly_learning
+input_schema: {}
+output_schema:
+  period: string
+  start_date: string
+  end_date: string
+  top_companies: list
+  common_patterns: list
+  selection_criteria: object
+  learned_insights: list
+  confidence: number
+  methodology_note: string
+side_effect: writes_audit
+risk_level: medium
+requires_confirmation: true
+profile_sensitive: true
+audit_fields:
+- period
+- confidence

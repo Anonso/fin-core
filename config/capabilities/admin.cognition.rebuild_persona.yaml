@@ -1,0 +1,28 @@
+id: admin.cognition.rebuild_persona
+name: 重建老师 Persona
+category: admin
+status: stable
+visibility: internal
+version: 1
+summary: 重建指定老师 Persona；管理工具，默认不进入运行时路由。
+intent_examples:
+- 重建郭老师persona
+- 刷新认知画像
+primary_entry:
+  type: mcp
+  name: rebuild_cognitive_persona
+input_schema:
+  teacher:
+    type: string
+    required: false
+output_schema:
+  persona: object
+  pattern_count: number
+side_effect: admin_write
+risk_level: high
+requires_confirmation: true
+profile_sensitive: true
+audit_fields:
+- teacher
+- persona_id
+- pattern_count

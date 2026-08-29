@@ -1,0 +1,95 @@
+id: guo.decision_guidance
+name: 锅老师研究型决策指导
+category: agent
+status: beta
+visibility: internal
+version: 1
+summary: >
+  FIN 内部可复用的锅老师认知产品。内部调用方提交带 action 判别字段的
+  typed command，FIN 生成可连续阅读、追问、关闭和反馈的决策指导产品。
+  输出始终保持 advisory-only，不产生交易副作用；Hermes 用户咨询统一经
+  consultation.decision_support 组合 G/Z/PAPER 后展示。
+intent_examples:
+  - 我现在这些持仓最该先处理什么
+  - 盛和资源和北方稀土哪个更值得看
+  - 继续刚才的研究并补充风险条件
+  - 读取上一次决策指导的最新版本
+  - 这条建议方向错了
+primary_entry:
+  type: mcp
+  name: guo_decision_guidance
+input_schema:
+  command:
+    type: object
+    required: true
+    discriminator: action
+    actions:
+      ask:
+        required:
+          - question
+        optional:
+          - outcome_mode
+          - context
+          - idempotency_key
+      continue:
+        required:
+          - continuation_token
+          - question
+        optional:
+          - outcome_mode
+          - context
+          - idempotency_key
+      read:
+        required:
+          - continuation_token
+      close:
+        required:
+          - continuation_token
+      feedback:
+        required:
+          - continuation_token
+          - product_version
+          - item_id
+          - disposition
+        optional:
+          - note
+    description: >
+      只接受 ask|continue|read|close|feedback 五种语义动作。context 是
+      general|single_asset|multi_asset|portfolio 之一；额外字段会被拒绝。
+output_schema:
+  schema_version: string
+  action: string
+  status: string
+  problem:
+    type: object
+    nullable: true
+  outcome_mode:
+    type: string
+    nullable: true
+  contract:
+    type: object
+    nullable: true
+  product:
+    type: object
+    nullable: true
+  current_advice:
+    type: object
+    nullable: true
+  product_meta: object
+  continuation:
+    type: object
+    nullable: true
+  data_gaps: array
+  provenance: object
+  safety: object
+side_effect: delegates_child_audit
+risk_level: medium
+requires_confirmation: false
+profile_sensitive: true
+audit_fields:
+  - schema_version
+  - action
+  - status
+  - problem
+  - data_gaps
+  - safety

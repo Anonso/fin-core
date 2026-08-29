@@ -1,0 +1,51 @@
+id: stock.analyze
+name: 个股综合分析
+category: stock
+status: stable
+visibility: internal
+version: 1
+summary: 综合知识库、信号、行情、估值、资金、吃鱼阶段、催化和风险分析单只股票。
+intent_examples:
+- 分析贵州茅台
+- XX能买吗
+- 帮我看下宁德时代风险
+primary_entry:
+  type: mcp
+  name: analyze_stock
+fallback_entries:
+- type: service
+  name: AnalysisService.analyze_stock
+- type: service
+  name: AnalysisService.smart_analyze
+input_schema:
+  company:
+    type: string
+    required: false
+  ticker:
+    type: string
+    required: false
+  question:
+    type: string
+    required: false
+  focus:
+    type: list
+    required: false
+  window:
+    type: string
+    required: false
+output_schema:
+  stance: string
+  confidence: number
+  catalysts: list
+  risks: list
+  fish_theory: object
+  data_gaps: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: true
+audit_fields:
+- tools_used
+- fallback_used
+- confidence
+- data_gaps

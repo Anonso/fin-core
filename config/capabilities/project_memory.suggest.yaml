@@ -1,0 +1,51 @@
+id: project_memory.suggest
+name: 项目记忆候选生成
+category: admin
+status: stable
+visibility: internal
+version: 1
+summary: 在 Git 外生成待确认的 fin-analyse 辅助记忆候选；不创建项目计划或当前事实。
+intent_examples:
+- 把这个踩坑保存为候选记忆
+- 建议新增一条架构决策记忆
+primary_entry:
+  type: mcp
+  name: memory_suggest
+input_schema:
+  kind:
+    type: enum
+    values:
+    - core
+    - decision
+    - pitfall
+    - boundary
+    - session
+    required: true
+  title:
+    type: string
+    required: true
+  content:
+    type: string
+    required: true
+  source:
+    type: string
+    required: false
+  scope:
+    type: string
+    required: false
+  tags:
+    type: string
+    required: false
+output_schema:
+  candidate_path: string
+  id: string
+  next_step: string
+side_effect: writes_candidate_file
+risk_level: medium
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- kind
+- title
+- candidate_path
+- source

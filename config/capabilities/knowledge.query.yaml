@@ -1,0 +1,52 @@
+id: knowledge.query
+name: 知识库查询
+category: knowledge
+status: stable
+visibility: internal
+version: 1
+summary: 查询知识库文章、公司历史观点，或基于知识库回答问题。
+intent_examples:
+- 找一下茅台的历史观点
+- 搜索低空经济文章
+- 知识库里怎么看新能源
+primary_entry:
+  type: mcp
+  name: query_knowledge
+input_schema:
+  query:
+    type: string
+    required: true
+  mode:
+    type: enum
+    values:
+    - auto
+    - articles
+    - company
+    - qa
+    required: false
+  window:
+    type: string
+    required: false
+output_schema:
+  query_mode: string
+  count: number
+  results: list
+  status: string
+  answer: string
+  used_source_refs: list
+  data_gaps: list
+  source_boundary: string
+  documents_considered: number
+  window: string
+  advisory_only: boolean
+  execution_allowed: boolean
+  unavailable: boolean
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- mode
+- fallback_used
+- count
+- data_gaps

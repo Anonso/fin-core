@@ -1,0 +1,159 @@
+id: consultation.decision_support
+name: FIN 统一投资咨询
+category: agent
+status: beta
+visibility: public
+version: 1
+summary: >
+  FIN 面向用户的统一咨询入口。按问题语义选择解释或当下决策支持，
+  严格区分老师认知、系统证据、技术判断、PAPER 账户事实和用户确认的
+  真实持仓咨询上下文。general 当前市场解释读取日期锚定、延迟且仅供
+  参考的全市场概览，闭市日明确使用最近完成交易日；非 PAPER 当下决策
+  对 1～5 标的使用即时双源行情、完成日线和一次全标的战术 Agent。输出
+  仅供咨询，数据不足时明确未知，不生成订单或交易授权。
+intent_examples:
+  - 解释今天市场主线
+  - 这只股票现在是否值得人工复核
+  - 比较两只股票的认知与技术条件
+  - 分析我的 PAPER 持仓风险
+  - 根据我已确认的真实持仓快照解释组合风险
+  - 根据我已确认的真实持仓快照分析一到五只关注标的现在是否值得人工复核
+  - 进一步解释这个方向的证据与缺口
+primary_entry:
+  type: mcp
+  name: fin_consultation
+input_schema:
+  command:
+    type: object
+    required: true
+    discriminator: action
+    actions:
+      consult:
+        required:
+          - question
+        optional:
+          - scope
+          - requested_profile
+          - requested_tactical_need
+          - trigger
+          - idempotency_key
+      follow_up:
+        required:
+          - continuation_token
+          - question
+        optional:
+          - idempotency_key
+      daily_workspace_open:
+        required: []
+        optional:
+          - trading_day_id
+          - trigger
+      daily_workspace_ask:
+        required:
+          - question
+        optional:
+          - trading_day_id
+          - trigger
+    description: >
+      只接受由 action 判别的 consult|follow_up|daily_workspace_open|
+      daily_workspace_ask。consult 的 scope 是
+      general|single_asset|multi_asset|portfolio 之一，仅用于提供显式 typed
+      request context；省略时为 general。FIN 同时提供当前可用的服务端绑定账户
+      context options（ADVISORY_REAL/PAPER），由一个 Agent 精确选择一项。question 保持原文，Gateway 和 FIN
+      都不从自由文本提取或改写 scope、focus_targets、positions 或账户事实；显式
+      typed scope/focus 也只约束 request context，不能建立账户事实。正式持仓的名称、
+      数量、状态和版本始终来自被选中的 FIN account owner。
+      纯实际持仓概览可展示正式快照中的全部持仓；MANUAL_REVIEW 必须由 Agent 明确
+      选择 1～5 个正式标的，FIN 不做隐藏选股或静默截断。问题中的数量、成本或价格
+      绝不成为账户事实。
+      requested_tactical_need 只是 AUTO|NOT_REQUESTED|EXPLAIN_METHOD|
+      CURRENT_ASSESSMENT 的目标提示；最终 profile、context 选择与回答由 Agent 在
+      FIN contract 内完成，行动资格和数据边界由 FIN 确定性校验；
+      follow_up 只接受上一轮返回的 opaque continuation_token、新问题与可选
+      idempotency_key（同一消息重试复用），不接受 scope、positions、profile、account
+      或战术提示。
+      daily_workspace_open/daily_workspace_ask 是 Daily Decision Workspace（#2）
+      的命令面：V1 阶段 open 在无状态层时诚实返回 unavailable，ask 以当日工作区
+      语义委托同一咨询链。caller 不得传账户号、文件路径、principal、runtime、
+      模型、预算或执行控制。
+output_schema:
+  schema_version: string
+  mode:
+    type: enum
+    values:
+      - ADVISORY
+      - ADVISORY_REAL
+      - PAPER_TRADING
+    required: true
+    nullable: false
+  action: string
+  status: string
+  problem:
+    type: object
+    nullable: true
+  analysis_profile: string
+  profile_reason: string
+  trigger: string
+  as_of: string
+  deadline_at:
+    type: string
+    nullable: true
+  answer: object
+  product:
+    type: object
+    nullable: true
+  served_via_proxy:
+    type: boolean
+    required: true
+    nullable: false
+  agent_contributions: object
+  decision_context: object
+  source_boundaries: object
+  freshness: object
+  data_gaps: array
+  provenance: object
+  safety: object
+  continuation_token:
+    type: string
+    required: true
+    nullable: true
+  result_meta:
+    type: object
+    required: true
+    nullable: false
+    properties:
+      generation:
+        type: enum
+        values:
+          - FRESH
+          - IDEMPOTENCY_REPLAY
+      continuity:
+        type: enum
+        values:
+          - NEW_CHAIN
+          - CONTINUED_CHAIN
+          - DEGRADED_FRESH
+      model_quality:
+        type: enum
+        values:
+          - PINNED
+          - DEGRADED
+          - UNKNOWN
+    description: >-
+      结论来源与链延续元数据；generation=IDEMPOTENCY_REPLAY 表示同一消息重试命中
+      原结论（as_of 为原结论时间）；continuity=CONTINUED_CHAIN 表示延续了同一 FIN
+      semantic chain；continuity=DEGRADED_FRESH 表示本轮原本要求延续但 FIN 已知
+      实际转入 fresh 路径（不冒充 resume，也不表示上一轮已恢复）；
+      model_quality=DEGRADED 表示本轮由配置标记的备用模型生成。
+side_effect: delegates_child_audit
+risk_level: high
+requires_confirmation: false
+profile_sensitive: true
+audit_fields:
+  - schema_version
+  - action
+  - status
+  - analysis_profile
+  - as_of
+  - data_gaps
+  - safety

@@ -1,0 +1,39 @@
+id: project_memory.accept
+name: 项目记忆候选转正
+category: admin
+status: stable
+visibility: internal
+version: 1
+summary: 将用户确认过的辅助记忆候选移入 Git 外状态目录并更新索引；调用前必须确认。
+intent_examples:
+- 确认这条候选记忆
+- 把候选记忆转成 pitfall
+primary_entry:
+  type: mcp
+  name: memory_accept
+input_schema:
+  candidate_path:
+    type: string
+    required: true
+  target_type:
+    type: enum
+    values:
+    - core
+    - decision
+    - pitfall
+    - boundary
+    - session
+    required: true
+  accepted_by:
+    type: string
+    required: false
+output_schema:
+  memory: object
+side_effect: modifies_project_memory
+risk_level: medium
+requires_confirmation: true
+profile_sensitive: false
+audit_fields:
+- candidate_path
+- target_type
+- accepted_by

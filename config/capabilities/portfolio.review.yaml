@@ -1,0 +1,66 @@
+id: portfolio.review
+name: 持仓审核（观测事实接口）
+category: portfolio
+status: beta
+visibility: public
+version: 1
+summary: 从观测事实（截图识别结果）审核持仓更新。模型提交 instrument/shares/可选值，FIN 规范化代码、处理零股行、追问缺失信息，返回可读预览。用户确认后 CAS 发布。
+intent_examples:
+  - 按照这张截图更新我的持仓
+  - 用这份清单替换当前持仓
+  - 确认更新持仓
+primary_entry:
+  type: mcp
+  name: review_actual_portfolio
+input_schema:
+  command:
+    type: object
+    required: true
+  action:
+    type: string
+    required: true
+    values:
+      - review
+      - confirm
+  observed_at:
+    type: string
+    required: false
+  cash_available:
+    type: number
+    required: false
+  net_assets:
+    type: number
+    required: false
+  margin_debt:
+    type: number
+    required: false
+  positions:
+    type: array
+    required: false
+    item_fields:
+      - instrument
+      - shares
+      - average_cost
+      - snapshot_price
+      - market_value
+output_schema:
+  schema_version: string
+  status: string
+  reason_codes: list
+  question: string|null
+  readable_preview: string|null
+  ignored_observations: list
+  corrected_observations: list
+  candidate_revision: string|null
+  current_revision: string|null
+  snapshot_ref: string|null
+  confirmation_phrase: string|null
+side_effect: writes_runtime
+risk_level: medium
+requires_confirmation: true
+profile_sensitive: true
+audit_fields:
+  - status
+  - candidate_revision
+  - current_revision
+  - snapshot_ref

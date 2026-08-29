@@ -1,0 +1,49 @@
+id: briefing.premarket
+name: 开盘前认知简报
+category: briefing
+status: stable
+visibility: internal
+version: 3
+summary: 生成开盘前认知简报，聚合当日重点文章（T0+T1），按优先级排列，附带关键主题、行动提示和 morning_strategy 结构化盘前策略产物。
+intent_examples:
+- 开盘前简报
+- 今天有什么重点
+- 今日投研简报
+- 盘前推送
+primary_entry:
+  type: mcp
+  name: get_premarket_briefing
+input_schema:
+  date:
+    type: string
+    required: false
+output_schema:
+  date: string
+  requested_date: string
+  effective_date: string
+  fallback_used: boolean
+  freshness_warning: string
+  last_successful_scrape_at: string
+  last_article_created_at: string
+  count: number
+  t0_count: number
+  t1_count: number
+  themes: list
+  events: list
+  briefing: list
+  action_hint: string
+  action_items: list
+  market_note: string
+  morning_strategy: object
+  display_product: object
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- date
+- requested_date
+- effective_date
+- fallback_used
+- count
+- t0_count

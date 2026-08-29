@@ -1,0 +1,42 @@
+id: briefing.priority_scan
+name: 重点文章扫描
+category: briefing
+status: stable
+visibility: internal
+version: 2
+summary: 扫描知识库中的重点文章（星大派特刊/锐评/好问题 + 9分+ + 老师详细回复），返回本地优先级事件、摘要与深读提示。
+intent_examples:
+- 今天有什么重点
+- 扫描重点文章
+- 最近重要推送候选
+- 有什么值得看的
+primary_entry:
+  type: mcp
+  name: scan_priority_articles
+input_schema:
+  date:
+    type: string
+    required: false
+  limit:
+    type: integer
+    required: false
+  include_summary:
+    type: boolean
+    required: false
+output_schema:
+  count: number
+  t0_count: number
+  t1_count: number
+  scanned: number
+  skipped: number
+  events: list
+  hint: string
+  hermes_dispatch: object
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- date
+- count
+- t0_count

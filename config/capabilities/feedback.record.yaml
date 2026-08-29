@@ -1,0 +1,37 @@
+id: feedback.record
+name: 记录认知反馈
+category: feedback
+status: stable
+visibility: internal
+version: 1
+summary: 记录对认知分析、推理链或模式的人工反馈，用于后续进化。
+intent_examples:
+- 这个分析不像郭老师
+- 反馈这个推理有问题
+primary_entry:
+  type: mcp
+  name: record_cognitive_feedback
+input_schema:
+  target_type:
+    type: string
+    required: true
+  target_id:
+    type: string
+    required: true
+  feedback_type:
+    type: string
+    required: true
+  note:
+    type: string
+    required: false
+output_schema:
+  feedback: object
+side_effect: writes_feedback
+risk_level: medium
+requires_confirmation: true
+profile_sensitive: true
+audit_fields:
+- target_type
+- target_id
+- feedback_type
+- feedback_id

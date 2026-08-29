@@ -1,0 +1,31 @@
+id: admin.cognition.sample_traces
+name: 抽样认知 Trace
+category: admin
+status: stable
+visibility: internal
+version: 1
+summary: 抽样查看 ReasoningTrace，供管理验收使用；默认不进入运行时路由。
+intent_examples:
+- 抽样trace
+- 查看认知trace样本
+primary_entry:
+  type: mcp
+  name: sample_cognitive_traces
+input_schema:
+  limit:
+    type: integer
+    required: false
+  teacher:
+    type: string
+    required: false
+output_schema:
+  teacher: string
+  count: number
+  traces: list
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: true
+audit_fields:
+- teacher
+- count

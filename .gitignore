@@ -1,0 +1,29 @@
+# --- secrets & local credentials (never enter git; see AGENTS.md 规则 3) ---
+.env
+*.env
+!*.env.example
+config/llm.env
+config/codex_routes.yaml
+
+# --- python build & runtime artifacts ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- data & runtime state (data lives outside repos: fin-data / XDG state) ---
+knowledge-base/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.db
+
+# --- editors / OS ---
+.DS_Store

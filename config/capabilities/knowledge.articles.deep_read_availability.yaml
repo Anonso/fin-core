@@ -1,0 +1,34 @@
+id: knowledge.articles.deep_read_availability
+name: 文章深读产物可用率观测
+category: knowledge
+status: stable
+visibility: internal
+version: 1
+summary: 只读观测知识库文章的深读产物可用率：按文章分类为 READY / MISSING_ARTIFACT / STALE / CORRUPT / UNREADABLE / UNKNOWN 并汇总；不触发生成、不写任何状态，用于发现 cache-miss 伪装成功。
+intent_examples:
+- 看看深读产物现在有多少可用
+- 哪些文章的深读缓存过期了
+- 深读产物可用率是多少
+primary_entry:
+  type: mcp
+  name: deep_read_availability
+input_schema:
+  article_ids:
+    type: list
+    required: true
+output_schema:
+  total: number
+  ready: number
+  missing_artifact: number
+  stale: number
+  corrupt: number
+  unreadable: number
+  unknown: number
+  availability_rate: number
+  by_article: object
+side_effect: read_only
+risk_level: low
+requires_confirmation: false
+profile_sensitive: false
+audit_fields:
+- article_ids
