@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sanitized ZSXQ timeline identity contract</title>
+  </head>
+  <body>
+    <article data-topic-id="123456789">
+      <a href="/group/15522441811252/topic/123456789">matching native topic</a>
+    </article>
+
+    <!-- Decoys: none may independently establish timeline identity. -->
+    <div class="topic">
+      <a href="/topic/123456789">generic topic link</a>
+    </div>
+    <article data-topic-id="456789123">
+      <a href="/group/15522441811252/topic/789123456">mismatched topic ids</a>
+      <a href="/group/999/topic/456789123">different group</a>
+    </article>
+  </body>
+</html>

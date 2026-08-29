@@ -1,0 +1,34 @@
+{
+  "ask_dump": "{\"action\":\"ask\",\"context\":{\"horizon\":null,\"kind\":\"general\",\"topic\":null,\"user_notes\":null},\"idempotency_key\":\"fin.turn-idempotency/v1:88822f4583bfba12158856549f46f28ea5639ba71c40b4770efb2b1c1d5df537\",\"outcome_mode\":\"answer\",\"question\":\"我持有 100 股雅克科技，现在应该卖出吗？\"}",
+  "ask_projection": "{\"context_classification\":\"user_context_not_evidence\",\"context_data_gaps\":[],\"context_options\":[{\"context\":{\"horizon\":null,\"kind\":\"general\",\"topic\":null,\"user_notes\":null},\"data_gaps\":[],\"option_id\":\"7ba712c1b2e9b7bc33978c954e5b5bee9eddab8ac956112c4c48b9ad083cfece\",\"owner\":\"REQUEST_CONTEXT\"}],\"daily_workspace_context\":null,\"parent_contract_id\":null,\"principal_namespace\":\"test\",\"prior_consultation_context\":null,\"prior_investment_memory\":null,\"question\":\"我持有 100 股雅克科技，现在应该卖出吗？\",\"schema_version\":\"fin.consultation-input/v1\",\"snapshot_hash\":\"1c38e4ea430dd6d384d712e189807dff4a596ac0fc0af6d2e20488ee06e4038e\"}",
+  "ask_schema_fields": [
+    "action",
+    "context",
+    "idempotency_key",
+    "outcome_mode",
+    "question"
+  ],
+  "ask_snapshot_hash": "1c38e4ea430dd6d384d712e189807dff4a596ac0fc0af6d2e20488ee06e4038e",
+  "continue_dump": "{\"action\":\"continue\",\"context\":null,\"continuation_token\":\"frozen-token-1\",\"idempotency_key\":\"fin.turn-idempotency/v1:fb684d04e331b0604c867f8123a422774e9fcf99596bb7080f66e558c0246e3d\",\"outcome_mode\":\"answer\",\"process_guidance\":null,\"question\":\"后续怎么看？\"}",
+  "continue_projection": "{\"context_classification\":\"user_context_not_evidence\",\"context_data_gaps\":[],\"context_options\":[{\"context\":{\"horizon\":null,\"kind\":\"general\",\"topic\":null,\"user_notes\":null},\"data_gaps\":[],\"option_id\":\"7ba712c1b2e9b7bc33978c954e5b5bee9eddab8ac956112c4c48b9ad083cfece\",\"owner\":\"REQUEST_CONTEXT\"}],\"daily_workspace_context\":null,\"parent_contract_id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"principal_namespace\":\"test\",\"prior_consultation_context\":null,\"prior_investment_memory\":null,\"question\":\"后续怎么看？\",\"schema_version\":\"fin.consultation-input/v1\",\"snapshot_hash\":\"a0f670f9fa7b0f60dca31beb9237a85591d61d7aa20a2f6ba1beb7983f180d09\"}",
+  "continue_schema_fields": [
+    "action",
+    "context",
+    "continuation_token",
+    "idempotency_key",
+    "outcome_mode",
+    "process_guidance",
+    "question"
+  ],
+  "continue_snapshot_hash": "a0f670f9fa7b0f60dca31beb9237a85591d61d7aa20a2f6ba1beb7983f180d09",
+  "frozen_from": "a8894b74",
+  "provenance": {
+    "base_sha": "a8894b74ac1e58879bca70abeac8bce234ac0df1",
+    "generator_invocation": "python tests/guo_teacher_research/fixtures/frozen_origin_bytes_generator.py <a8894b74-checkout-dir> tests/guo_teacher_research/fixtures/frozen_origin_bytes_a8894b74.json",
+    "generator_sha256": "347c93dd91ae4973f7d2895cfb71fef0bb1ddbd21c89d82052d1103cd5891d97"
+  },
+  "stored_projection": {
+    "payload_json": "{\"product_version\":1,\"response_projection\":{\"as_of\":1786113600.0,\"continuity_degraded\":false,\"data_gaps\":[],\"provenance\":{\"consultation_context_proof\":{\"option_id\":\"7ba712c1b2e9b7bc33978c954e5b5bee9eddab8ac956112c4c48b9ad083cfece\",\"owner\":\"REQUEST_CONTEXT\",\"verified_at\":\"2026-08-07T14:40:00+00:00\"},\"subject_receipts\":[]}},\"status\":\"completed\"}",
+    "product_json": "{\"action_readiness\":\"NOT_EVALUATED\",\"analysis_profile\":\"EXPLAIN\",\"answer_summary\":\"当前证据不足，暂不形成方向判断。\",\"claims\":[{\"claim_kind\":\"SUMMARY\",\"derivation\":\"UNKNOWN\",\"g_position\":\"not_applicable\",\"g_source_refs\":[],\"market_overview_receipt_indices\":[],\"market_snapshot_receipts\":[],\"teacher_cognition_source_refs\":[],\"text\":\"当前证据不足，暂不形成方向判断。\",\"uses_selected_context\":false}],\"confidence_boundary\":{\"advisory_only\":true,\"execution_allowed\":false,\"human_confirmation_required\":true},\"context_binding\":{\"account_mode\":\"UNSPECIFIED\",\"account_snapshot_ref\":null,\"account_status\":\"NOT_REQUIRED\",\"account_valid_until\":null,\"scope_kind\":\"general\",\"selected_context_option_id\":\"7ba712c1b2e9b7bc33978c954e5b5bee9eddab8ac956112c4c48b9ad083cfece\",\"subjects\":[]},\"contract_id\":\"consultation_product\",\"contract_version\":\"v1\",\"decision_basis\":[],\"disposition\":\"OBSERVE\",\"headline\":\"当前证据不足，暂不形成方向判断。\",\"invalidation_conditions\":[],\"manual_review_targets\":[],\"market_overview_references\":[],\"market_snapshot_references\":[],\"no_action\":true,\"shared_brain_references\":[],\"source_attribution\":[{\"claim_index\":0,\"claim_kind\":\"SUMMARY\",\"derivation\":\"UNKNOWN\",\"evidence_dates\":[],\"source_classes\":[]}],\"source_boundary_statement\":\"老师认知、市场参考与所选用户/账户上下文保持原始来源分类；用户与账户上下文不是投资证据，任何操作仍需人工确认。\",\"teacher_cognition_references\":[],\"unknowns\":[],\"watch_conditions\":[]}"
+  }
+}

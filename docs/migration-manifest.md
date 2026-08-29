@@ -28,6 +28,23 @@
 - **[project.scripts] 只留 fin-cognition**：其余五个入口模块（knowledge/ingestion/admin/project_sync/codex_route_admin 的 cli）不在 keep-set。
 - **留馆（老仓，不迁）**：release 机器（build/prepare_fin_release、canary）、gateway 与 Hermes 集成（apply_fin_hermes_external_integration、heal_gateway_once、codex_*.sh）、Windows capture 链（zsxq_windows_incremental_scheduler 等）、旧咨询链（consultation agent_module/gateway handlers/moa/signals/analysis 栈）、workflow 机器（dev-orchestrator/opsx/fix-bug、worktree 工具）、repo `knowledge-base/`（F1：68K 无读方旧副本，步 6 绝根；canonical KB=190M XDG-shared 根，`knowledge_root.py` fail-closed）。
 
+## 施工步 4 记录（2026-08-29，测试全绿 = 2839 过 / 2 跳过 env 门控 / 35 去选 marker）
+
+- **依赖钉版**：`mcp>=1.0,<2`（2.x 改名 FastMCP，API 破坏）；`playwright==1.60.0`
+  （对齐老仓 lock，浏览器 build 匹配）；`baostock` 补声明。
+- **测试精选二次修剪**（测的是留馆机器，静态 import 判不出来）：
+  删 12 个测试文件（release 机器 205 败、codex proxy/runbook/Windows capture、
+  CLI 子进程类、单入口整仓卫生读 Makefile/catalog）+ `test_capture_ingest` 内
+  引用留馆 `scripts/import_zsxq_capture.py` 的一个函数；
+  两个 migration 卫生测试做「文件在场才断言」适配（护栏对象部分留馆）。
+- **fixture 数据**：tests/ 下 16 个非 .py 文件必须随迁（replay/raw 类测试吃数据）。
+- **delete-list 复活一件**：`_semantic_snapshot_child.py` 被老仓 delete-list 误标死，
+  实为 semantic_state 沙箱运行时必需（老仓在用）——随迁。
+- **umask 陷阱（步 5 必读）**：agent shell 快照默认 `umask 077`，`uv sync`/tar 解包
+  产物全 600/664 → semantic_state 沙箱检查（拒组可写）、playwright driver 执行位
+  全被误拒。venv 与拷贝树必须归一 644/755（本仓已做）；步 5 单元渲染时对
+  fin-core 树做同样核对。
+
 ## 过渡期事实
 
 - 状态源：本仓 `docs/pm/NOW.md` 为过渡快照，cutover（迁移步 5）前权威在老仓

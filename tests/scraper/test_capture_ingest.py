@@ -116,67 +116,6 @@ def test_ingest_parser_accepts_scheduled_windows_capture(tmp_path):
     assert parsed.trigger == "schedule"
 
 
-def test_public_script_uses_one_account_ledger_across_home_changes(tmp_path):
-    from datetime import datetime
-
-    from fin_analyse.scraper.cdp_scraper import TZ
-
-    artifact_path = write_artifact(tmp_path, build_artifact_payload(datetime.now(TZ)))
-    kb_root = tmp_path / "knowledge-base"
-    kb_root.mkdir()
-    (kb_root / "index.json").write_text(
-        json.dumps({"articles": [], "total": 0, "updated": ""}),
-        encoding="utf-8",
-    )
-    account_home = tmp_path / "account-home"
-    script = Path(__file__).resolve().parents[2] / "scripts/import_zsxq_capture.py"
-    bootstrap = (
-        "import os,pwd,runpy,sys,types;"
-        "pwd.getpwuid=lambda _uid: types.SimpleNamespace("
-        "pw_dir=os.environ['TEST_ACCOUNT_HOME']);"
-        "sys.argv=sys.argv[1:];"
-        "runpy.run_path(sys.argv[0],run_name='__main__')"
-    )
-    command = [
-        sys.executable,
-        "-c",
-        bootstrap,
-        str(script),
-        "--artifact",
-        str(artifact_path),
-        "--knowledge-base-root",
-        str(kb_root),
-    ]
-    base_env = os.environ.copy()
-    base_env["TEST_ACCOUNT_HOME"] = str(account_home)
-
-    first = subprocess.run(
-        command,
-        cwd=script.parents[1],
-        env={**base_env, "HOME": str(tmp_path / "home-a")},
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    second = subprocess.run(
-        command,
-        cwd=script.parents[1],
-        env={**base_env, "HOME": str(tmp_path / "home-b")},
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    assert first.returncode == 4, first.stdout + first.stderr
-    assert second.returncode == 64, second.stdout + second.stderr
-    assert json.loads(second.stdout)["status"] == "duplicate"
-    runtime_db = account_home / ".local/state/fin-analyse/zsxq-scraper/runtime.sqlite3"
-    with sqlite3.connect(runtime_db) as connection:
-        assert connection.execute("SELECT COUNT(*) FROM runs").fetchone() == (1,)
-        assert connection.execute("SELECT COUNT(*) FROM capture_ingests").fetchone() == (1,)
-    assert not (tmp_path / "home-a/.local/state/fin-analyse").exists()
-    assert not (tmp_path / "home-b/.local/state/fin-analyse").exists()
-
 
 def test_ownerless_nonempty_recovery_root_is_never_adopted(tmp_path, capsys):
     from datetime import datetime

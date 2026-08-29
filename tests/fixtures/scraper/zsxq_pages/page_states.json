@@ -1,0 +1,46 @@
+{
+  "cases": [
+    {
+      "name": "valid_67",
+      "visible_text": "星大派今日发布一篇新的投资研究文章，正文内容完整，包含观点、依据、风险提示与后续观察事项。本文仅仅作为脱敏测试样本，不含任何真实信息。",
+      "expected_state": "ready"
+    },
+    {
+      "name": "login_shell_67",
+      "visible_text": "知识星球\n登录网页版\n请使用微信扫码登录\n登录后即可查看星球内容\n扫码登录\n打开微信扫一扫\n当前页面暂无任何话题内容，请先完成登录操作",
+      "expected_state": "login_required"
+    },
+    {
+      "name": "challenge_over_login",
+      "visible_text": "知识星球\n登录网页版\n请使用微信扫码登录\n登录后即可查看星球内容\n扫码登录\n打开微信扫一扫\n当前页面暂无任何话题内容，请先完成登录操作\n\n[安全验证] 请完成滑块验证后继续访问",
+      "expected_state": "challenge"
+    },
+    {
+      "name": "rate_over_wrong_page",
+      "visible_text": "请求过于频繁，请稍后重试\n建议等待2分钟后重新访问\n如持续遇到此问题请联系管理员",
+      "expected_state": "rate_limited",
+      "retry_after_seconds": 120
+    },
+    {
+      "name": "loading_over_missing_dom",
+      "visible_text": "加载中...\n正在获取最新内容\n请耐心等待页面完成渲染",
+      "expected_state": "loading_timeout"
+    },
+    {
+      "name": "dom_changed",
+      "visible_text": "知识星球已升级新版本\n页面布局已更新，请刷新后重试\n当前页面结构与预期不一致",
+      "expected_state": "dom_changed"
+    },
+    {
+      "name": "wrong_page_over_loading",
+      "visible_text": "404 Not Found\nThe requested group does not exist or has been removed.",
+      "expected_state": "wrong_page"
+    },
+    {
+      "name": "control_over_challenge",
+      "visible_text": "知识星球\n登录网页版\n请使用微信扫码登录\n[检测到浏览器扩展异常]",
+      "expected_state": "control_failure",
+      "control_failure_code": "extension_disconnected"
+    }
+  ]
+}

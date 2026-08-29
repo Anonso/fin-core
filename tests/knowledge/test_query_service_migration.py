@@ -15,6 +15,12 @@ def _read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
+def _read_if_present(path: str) -> str | None:
+    """Migration guard adaptation: files left behind in the old repo are vacuous here."""
+    target = ROOT / path
+    return target.read_text(encoding="utf-8") if target.exists() else None
+
+
 def test_production_callers_use_knowledge_query_service_not_legacy_paths():
     production_files = [
         path
@@ -26,7 +32,9 @@ def test_production_callers_use_knowledge_query_service_not_legacy_paths():
         for path in production_files
     }
 
-    assert "def search_articles(" not in source_by_path["fin_analyse/gateway/services.py"]
+    gateway_services = _read_if_present("fin_analyse/gateway/services.py")
+    if gateway_services is not None:
+        assert "def search_articles(" not in gateway_services
 
     legacy_search_articles_callers = [
         path
@@ -52,7 +60,9 @@ def test_production_callers_use_knowledge_query_service_not_legacy_paths():
     ]
     assert direct_text_search_callers == []
 
-    assert "from fin_analyse.knowledge.search import TextSearch" not in _read(
-        "fin_analyse/gateway/mcp_server.py"
-    )
-    assert "from .search import TextSearch" not in _read("fin_analyse/knowledge/qa.py")
+    gateway_mcp_server = _read_if_present("fin_analyse/gateway/mcp_server.py")
+    if gateway_mcp_server is not None:
+        assert "from fin_analyse.knowledge.search import TextSearch" not in gateway_mcp_server
+    knowledge_qa = _read_if_present("fin_analyse/knowledge/qa.py")
+    if knowledge_qa is not None:
+        assert "from .search import TextSearch" not in knowledge_qa

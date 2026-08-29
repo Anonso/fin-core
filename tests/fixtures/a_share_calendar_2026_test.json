@@ -1,0 +1,52 @@
+{
+  "schema_version": "a_share_trading_calendar.v1",
+  "calendar_version": "sse-szse-2026-test-v1",
+  "source_policy_id": "official-notice-dual-exchange-test-v1",
+  "phase_policy_version": "a-share-order-entry-hours-2023-v1",
+  "valid_from": "2026-01-01",
+  "valid_through": "2026-12-31",
+  "timezone": "Asia/Shanghai",
+  "evidence_tier": "test_only",
+  "verified_at": "2025-12-23T00:00:00+08:00",
+  "session_intervals": [
+    {
+      "phase": "CONTINUOUS_AM",
+      "start": "09:30",
+      "end": "11:30"
+    },
+    {
+      "phase": "CONTINUOUS_PM",
+      "start": "13:00",
+      "end": "15:00"
+    }
+  ],
+  "sources": [
+    {
+      "venue": "SSE",
+      "source_id": "sse-official-closure-notice-test",
+      "adapter_version": "official-notice-file.test.v1",
+      "notice_id": "SSE-2026-TEST",
+      "official_url": "https://www.sse.com.cn/official-calendar-test",
+      "published_at": "2025-12-22T18:00:00+08:00",
+      "closed_weekdays": [
+        "2026-09-25",
+        "2026-10-01",
+        "2026-10-02"
+      ]
+    },
+    {
+      "venue": "SZSE",
+      "source_id": "szse-official-closure-notice-test",
+      "adapter_version": "official-notice-file.test.v1",
+      "notice_id": "SZSE-2026-TEST",
+      "official_url": "https://www.szse.cn/official-calendar-test",
+      "published_at": "2025-12-22T18:00:00+08:00",
+      "closed_weekdays": [
+        "2026-09-25",
+        "2026-10-01",
+        "2026-10-02"
+      ]
+    }
+  ],
+  "artifact_sha256": "ddb80885de5cc5e9a7b29ee65199cd2a701b9cff4fb9e94cdde317ff1919fb56"
+}

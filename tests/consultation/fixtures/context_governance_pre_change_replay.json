@@ -1,0 +1,41 @@
+{
+  "captured_from": "main 376d6a1ce808150c87f0c1f7e019e6a2edf82f9b (pre context-governance) — 最小合成样本：无账户/持仓/真实数据；全量原始捕获仅存 owner-only state tasks/context-preinjection-governance-20260815/evidence/pre-change-replay-fixture.json",
+  "options": [
+    {
+      "option_id": "c1776d1d5d91a9b0dd08dae1b20e782d76e6fa62de6cc9b93fbe53fcd092cce8",
+      "payload": {
+        "option_id": "c1776d1d5d91a9b0dd08dae1b20e782d76e6fa62de6cc9b93fbe53fcd092cce8",
+        "data_gaps": [],
+        "owner": "REQUEST_CONTEXT",
+        "context": {
+          "topic": null,
+          "horizon": null,
+          "user_notes": "个人投资策略（用户上下文；非 G、非研报证据、非账户事实）\ncanonical native Codex Session: 019f6b35-14ce-7200-a82b-947cdc6b553c\n- 核心原则: 合成示例规则文本。",
+          "kind": "general"
+        }
+      }
+    }
+  ],
+  "snapshot_payload": {
+    "schema_version": "fin.consultation-input/v1",
+    "question": "合成示例问题",
+    "context_options": [
+      {
+        "option_id": "c1776d1d5d91a9b0dd08dae1b20e782d76e6fa62de6cc9b93fbe53fcd092cce8",
+        "data_gaps": [],
+        "owner": "REQUEST_CONTEXT",
+        "context": {
+          "topic": null,
+          "horizon": null,
+          "user_notes": "个人投资策略（用户上下文；非 G、非研报证据、非账户事实）\ncanonical native Codex Session: 019f6b35-14ce-7200-a82b-947cdc6b553c\n- 核心原则: 合成示例规则文本。",
+          "kind": "general"
+        }
+      }
+    ],
+    "context_data_gaps": [],
+    "context_classification": "user_context_not_evidence",
+    "principal_namespace": "local",
+    "parent_contract_id": null
+  },
+  "snapshot_hash": "6fe64e0f97b06739d45a2073b446e56f7e80bd4cfd904e1ef795758fceffab7c"
+}
