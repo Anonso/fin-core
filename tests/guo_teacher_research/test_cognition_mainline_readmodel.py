@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
@@ -190,9 +192,14 @@ class TestValidatorAcceptance:
             validate_cognition_mainline_readmodel(payload)
 
 
-ANNOTATION_DOC = (
-    "/home/ypk/fin-analyse/knowledge-base/manual-annotations/"
-    "g-cognition-mainline-2026-06-to-2026-08-19.md"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+# 仓相对锚点（bugfix 2026-08-29）：原文档硬编码老仓绝对路径，W2' 步6 绝根删除
+# fin-analyse/knowledge-base/ 副本后 24 例全红；文档现随本仓走。
+ANNOTATION_DOC = str(
+    _REPO_ROOT
+    / "knowledge-base"
+    / "manual-annotations"
+    / "g-cognition-mainline-2026-06-to-2026-08-19.md"
 )
 
 
