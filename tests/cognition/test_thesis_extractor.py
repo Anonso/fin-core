@@ -617,3 +617,18 @@ def test_prompt_declares_quote_driven_fidelity_semantics() -> None:
     assert "引用忠实度" in _LLM_EXTRACTION_PROMPT
     assert "推测口吻" in _LLM_EXTRACTION_PROMPT
     assert "empty_reason" in _LLM_EXTRACTION_PROMPT
+
+
+def test_cognition_preferred_reads_config_tier(monkeypatch, tmp_path) -> None:
+    """路由进配置（家规6）：priorities.cognition 生效；缺省回退历史元组。"""
+    import fin_analyse.cognition.thesis_extractor as te
+
+    cfg = tmp_path / "llm.yaml"
+    cfg.write_text(
+        "models: {}\npriorities:\n  cognition: [qwen, glm53]\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("LLM_CONFIG_PATH", str(cfg))
+    assert te._cognition_preferred() == ("qwen", "glm53")
+
+    monkeypatch.setenv("LLM_CONFIG_PATH", str(tmp_path / "missing.yaml"))
+    assert te._cognition_preferred() == te._COGNITION_PREFERRED_FALLBACK

@@ -496,7 +496,7 @@ class LlmZsxqThesisExtractor:
 
         if self._llm is not None:
             return CognitionLLM(backend=self._llm)
-        return CognitionLLM.from_config(preferred=("glm53", "deepseek", "qwen", "claude"))
+        return CognitionLLM.from_config(preferred=_cognition_preferred())
 
     def extract(
         self,
@@ -637,3 +637,16 @@ def _as_str_list(val: object) -> list[str]:
     if not isinstance(val, list):
         return []
     return [str(v) for v in val if v]
+
+
+#: 路由进配置（家规6）：cognition 提取的 backend 优先序读 llm.yaml
+#: `priorities.cognition`，缺省回退历史元组（零行为变化）。故障实证
+#: 2026-08-29 晚 glm53/deepseek 对该任务返回合法空数组（无 fallback 触发），
+#: 提取路由需要可配置的降级序。
+_COGNITION_PREFERRED_FALLBACK = ("glm53", "deepseek", "qwen", "claude")
+
+
+def _cognition_preferred() -> tuple[str, ...]:
+    from fin_analyse.claims.config_loader import configured_backend_order
+
+    return configured_backend_order("cognition", _COGNITION_PREFERRED_FALLBACK)
