@@ -73,9 +73,12 @@ models:
 # 消费方候选顺序（家规规则 6：会变的选择进配置不写死代码）。
 # t0 = 难题质量锚（先用 glm5.3）；t1 = 简单任务吞吐（先用 glm5.3-flash）。
 # 名字必须是 models 下的条目；段缺失/非法时消费方回退各自硬编码缺省序。
+# cognition = thesis/central-idea 提取（2026-08-30 增：glm53/deepseek 当晚对
+# 该任务返回合法空数组，qwen 正常——提取路由 qwen 先行，恢复后可回调）。
 priorities:
   t0: [glm53, deepseek, qwen]
   t1: [glm53_flash, deepseek, qwen]
+  cognition: [qwen, glm53, deepseek]
 
 # 识图 fallback 链（owner 2026-08-28 拍板重排：glm5.3-flash → GLM-4.6V-Flash 免费 → 硅基流动 → mimo）
 # 条目必须是 models 下的 key：缺失/禁用/未解析 ${}/熔断打开的条目跳过，保序去重；
