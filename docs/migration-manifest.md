@@ -53,3 +53,34 @@
 - 调度重指向（步 5）：systemd daily 8 timer + 2 模板 + zsxq poller/consumer、
   Windows capture 七时点、`~/.config/fin-analyse/*.env`、consult-agent/.mcp.json——
   前后逐条登记，ZSXQ 水位线（`--not-before-run-id`/`--source-commit`）原样延续。
+
+
+## 施工步 5 记录（2026-08-29，单元重指向/生产 cutover 完成）
+
+- **F17 解耦**（cf72d232）：scheduled 入口去 `prepare_fin_release` 依赖（ReleaseLayout/
+  inspect_release/locked_ready_release/release 锁整体移除——checkout 世界无 release 切换方，
+  锁无保护对象，按规则11不补新锁）；替代身份门 `_verify_checkout_identity` =
+  根 owner-only 0700 非符号链接 + `--expected-commit`（渲染时写入）对
+  `/usr/bin/git rev-parse HEAD` + `status --porcelain` 全净。错误码
+  `CHECKOUT_UNSAFE`（detail=`unsafe=<固定词>`）；NOT_CURRENT/RELEASE_UNSAFE 退场；
+  systemd 身份门/75 重试/泄密拦截/时钟冻结原样。`prepare_fin_release.py`（5304 行）净删
+  （引用闭包仅剩缝一处）。全量 2864 过 / 2 skipped / 35 deselected。
+- **渲染器**：`--release-root` → `--project-root` + `--expected-commit`（40hex 校验）。
+- **运维铁律（新增）**：fin-core 任何提交都会使已装单元失配（门拒跑
+  `head_mismatch`/`tree_dirty`）——**提交后必须重渲染 + 重装单元**（daily 两模板 +
+  zsxq 三文件 Description），非窗口期操作。树必须全净（未提交编辑同样触发 `tree_dirty`）。
+- **单元重指向**（F18 序：停班→对账→启用）：daily prepare/delivery 模板 ×2 + 8 timer、
+  zsxq poller.service/timer + consumer@.service；Windows capture 七时点零改动；
+  Hermes cron 两注册表均空、无 crontab（enumeration 登记在
+  `$STATE/fin-analyse/w2-step5-cutover-20260829/`）。ZSXQ 水位线
+  `--not-before-run-id 20260820T171432000-1` / `--source-commit 319faf62…` 逐字延续
+  （grep 断言过）。env 三文件零修改。
+- **A2 并入 apply**（D-026）：poller/consumer `TimeoutStartSec` 15min→20min +
+  `SuccessExitStatus=75`。
+- **薄 server**：`consult-agent/.mcp.json` fin-readonly command → `~/fin-core/.venv`
+  （KB 根与其余字段含 key 未动）。
+- **验收**：六题 Q1–Q6 全过（rc=0，glm-5.3，跑在 fin-core server）；trace 70→90 行，
+  零新增 gap 码、与迁移前基线逐一相同（BUG-002/011/012 等在案旧账不受影响）；
+  portfolio 四调全 ok/gaps=0；Q6 零工具调用。poller fin-core 首跑 20:20:00
+  success/exit0/`status:idle`（水位线完好）。daily 首个真实窗口 = 08-30 08:55 premarket。
+- **根目录权限**：`~/fin-core` 755 → 0700（替门 owner-only 要求）。
