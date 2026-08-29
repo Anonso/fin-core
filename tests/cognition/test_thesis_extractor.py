@@ -632,3 +632,61 @@ def test_cognition_preferred_reads_config_tier(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setenv("LLM_CONFIG_PATH", str(tmp_path / "missing.yaml"))
     assert te._cognition_preferred() == te._COGNITION_PREFERRED_FALLBACK
+
+
+def test_bare_empty_escalates_via_nudge_on_same_backend(tmp_path: Path) -> None:
+    """bare-empty → 重试指令升级：第二次调用产出单元即采用，不再继续链。"""
+    source = _source(
+        tmp_path, "凤仙郡小故事：升级", SAMPLE06_CLEAN_BODY, column="凤仙郡小故事"
+    )
+    calls: list[str] = []
+
+    class _CollapseThenExtract:
+        def complete(self, prompt: str) -> str:
+            calls.append(prompt)
+            if len(calls) == 1:
+                return '{"units": []}'
+            assert "【重试指令】" in prompt
+            return json.dumps(
+                {"units": [_sample06_unit(
+                    "躺好！除非是做t的天才，不动就行了。", "不动就行的持有纪律。", "躺好不动",
+                    "market_timing")]}
+            )
+
+    extraction = LlmZsxqThesisExtractor(llm=_CollapseThenExtract()).extract(source)
+
+    assert [u.title for u in extraction.units] == ["躺好不动"]
+    assert len(calls) == 2
+
+
+def test_reasoned_empty_stops_without_escalation(tmp_path: Path) -> None:
+    """成本护栏：带 empty_reason 的合法空即停，不触发升级链。"""
+    source = _source(tmp_path, "闲聊", "今天天气不错。")
+    calls: list[str] = []
+
+    class _ReasonedEmpty:
+        def complete(self, prompt: str) -> str:
+            calls.append(prompt)
+            return '{"units": [], "empty_reason": "纯闲聊无实质观点"}'
+
+    extraction = LlmZsxqThesisExtractor(llm=_ReasonedEmpty()).extract(source)
+
+    assert extraction.units == []
+    assert extraction.warnings == ["LLM found no extractable units: 纯闲聊无实质观点"]
+    assert len(calls) == 1
+
+
+def test_bare_empty_exhausting_chain_returns_bare_warning(tmp_path: Path) -> None:
+    """全链 bare-empty：最终保持裸字符串警告（P2-12），共 2 次调用（链长1）。"""
+    source = _source(tmp_path, "无内容", "正文。")
+    calls: list[str] = []
+
+    class _AlwaysBareEmpty:
+        def complete(self, prompt: str) -> str:
+            calls.append(prompt)
+            return "[]"
+
+    extraction = LlmZsxqThesisExtractor(llm=_AlwaysBareEmpty()).extract(source)
+
+    assert extraction.warnings == ["LLM found no extractable units"]
+    assert len(calls) == 2

@@ -498,6 +498,29 @@ class LlmZsxqThesisExtractor:
             return CognitionLLM(backend=self._llm)
         return CognitionLLM.from_config(preferred=_cognition_preferred())
 
+    def _get_llm_chain(self) -> list[CognitionLLM]:
+        """主提取的升级链：按 priorities.cognition 排序的可用 backend。
+
+        注入测试 backend 时链长 1（升级仍在同 backend 上以重试指令进行）。
+        """
+        from fin_analyse.cognition.llm import CognitionLLM
+
+        if self._llm is not None:
+            return [CognitionLLM(backend=self._llm)]
+        from fin_analyse.claims.config_loader import create_backends_from_config
+
+        backends = create_backends_from_config()
+        chain = [
+            CognitionLLM(backend=backends[name])
+            for name in _cognition_preferred()
+            if name in backends
+        ]
+        if not chain:
+            for backend in backends.values():
+                chain.append(CognitionLLM(backend=backend))
+                break
+        return chain
+
     def extract(
         self,
         source: ZsxqCognitionSource,
@@ -528,30 +551,62 @@ class LlmZsxqThesisExtractor:
 
         prompt = _LLM_EXTRACTION_PROMPT + "\n---\n" + "\n\n".join(parts)
 
+        # 链式升级（2026-08-30 实证）：各 provider 对该任务存在采样级
+        # 「合法空数组」坍塌（同 prompt/内容/backend 空率 ~5/8，跨 GLM/
+        # deepseek/qwen），且空返回不带 empty_reason 时与真坍塌不可区分。
+        # 策略：bare-empty → 同 backend 追加重试指令一次 → 换链上下一
+        # backend；带 empty_reason 的合法空即停（成本护栏）；硬失败/坏形
+        # 保持既有单次语义。
+        result = None
+        exhausted_bare_empty = True
         try:
-            if control is not None:
-                control.checkpoint_or_raise()
-            llm = self._get_llm()
-            result = llm.complete_json(
-                prompt,
-                expected_type="ThesisUnits",
-                control=control,
-            )
-            if control is not None:
-                control.checkpoint_or_raise()
-            if not result.ok:
-                # 有界重试一次：LLM 偶发返回空/非 JSON（JSON parse failed），
-                # 重试可救回可用抽取；仍失败才返回空壳。
-                result = llm.complete_json(
-                    prompt,
-                    expected_type="ThesisUnits",
-                    control=control,
-                )
-                if control is not None:
-                    control.checkpoint_or_raise()
+            for llm in self._get_llm_chain():
+                for attempt_prompt in (prompt, prompt + _EMPTY_ESCALATION_NUDGE):
+                    if control is not None:
+                        control.checkpoint_or_raise()
+                    result = llm.complete_json(
+                        attempt_prompt,
+                        expected_type="ThesisUnits",
+                        control=control,
+                    )
+                    if control is not None:
+                        control.checkpoint_or_raise()
+                    if not result.ok:
+                        # 有界重试一次：LLM 偶发返回空/非 JSON（JSON parse
+                        # failed），重试可救回可用抽取；仍失败才交失败语义。
+                        result = llm.complete_json(
+                            attempt_prompt,
+                            expected_type="ThesisUnits",
+                            control=control,
+                        )
+                        if control is not None:
+                            control.checkpoint_or_raise()
+                    if not result.ok:
+                        exhausted_bare_empty = False
+                        break
+                    data = result.data
+                    units_probe = (
+                        data.get("units", []) if isinstance(data, dict) else data
+                    )
+                    if not isinstance(units_probe, list) or units_probe:
+                        exhausted_bare_empty = False
+                        break
+                    if isinstance(data, dict) and str(
+                        data.get("empty_reason", "") or ""
+                    ).strip():
+                        exhausted_bare_empty = False  # 合法空：带因即停
+                        break
+                    # bare-empty：继续（同 backend 重试指令 → 下一 backend）
+                if not exhausted_bare_empty:
+                    break
         except Exception as exc:
             logger.warning("LLM thesis extraction failed: %s", exc)
             return ThesisExtraction([], [], [f"LLM extraction error: {exc}"])
+        if exhausted_bare_empty:
+            logger.warning(
+                "LLM empty extraction persisted across escalation chain (%s)",
+                source.title[:40],
+            )
 
         if not result.ok:
             error = result.error or "unknown LLM completion error"
@@ -631,6 +686,15 @@ class LlmZsxqThesisExtractor:
 
         logger.info("LLM thesis extractor: %d units from %s", len(units), source.title[:40])
         return ThesisExtraction(units, chains, warnings)
+
+
+#: bare-empty 升级重试指令：空返回且无 empty_reason 时追加，强迫模型
+#: 先完成逐字摘录再构造单元（自由文本探针实证同内容可完整产出）。
+_EMPTY_ESCALATION_NUDGE = (
+    "\n---\n【重试指令】上一次返回了空 units 且未说明原因，这是异常结果。"
+    "请严格按两步执行：先逐字摘录原文里承载实质观点的句子，再仅对这些"
+    "摘录句构造 units 返回。确无实质内容才允许空返回并给出 empty_reason。"
+)
 
 
 def _as_str_list(val: object) -> list[str]:
