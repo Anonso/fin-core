@@ -28,5 +28,11 @@ knowledge-base/
 # --- editors / OS ---
 .DS_Store
 
+# --- runtime artifacts（与老仓同口径防护） ---
+.browser-profile/
+.codegraph/
+*.log
+cron.log
+
 # --- codex 项目级个人配置（本地） ---
 .codex/

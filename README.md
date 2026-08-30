@@ -21,10 +21,10 @@ FIN 是面向 A 股决策辅助的自用 AI 投研系统。两个产品面：
 
 - [共享工程合同](AGENTS.md)：Codex 与 Claude Code 的唯一工程规则。
 - [当前状态与执行队列](docs/pm/NOW.md)：唯一当前产品事实。
-- [内部模块接口目录](docs/architecture/internal-module-catalog.md)：维护者向；改接口前按其规则核对。
+- [内部模块接口目录](docs/architecture/internal-module-catalog.md)（留旧仓博物馆 `~/fin-analyse`，按特性拆解归位到 `docs/design/`）。
 - [用户理念与产品原则](docs/architecture/user-design-principles.md)。
-- [FIN 领域内核与强 Agent 边界](docs/architecture/fin-domain-kernel-agent-runtime.md)。
-- [Hermes 公共咨询合同](docs/hermes/fin-hermes-provenance-contract-v1.md)：旧飞书/Hermes 拓扑，咨询入口已停用（见 [NOW](docs/pm/NOW.md)）。
+- [FIN 领域内核与强 Agent 边界](docs/architecture/fin-domain-kernel-agent-runtime.md)（留旧仓博物馆 `~/fin-analyse`）。
+- [Hermes 公共咨询合同](docs/hermes/fin-hermes-provenance-contract-v1.md)（原文留旧仓博物馆 `~/fin-analyse`）：旧飞书/Hermes 拓扑，咨询入口已停用（见 [NOW](docs/pm/NOW.md)）。
 - [本次项目复盘](docs/RETROSPECTIVE.md)：历史教训，不是当前排期。
 
 `knowledge-base/**` 是用户/领域数据，不是工程计划文档。历史 plan、spec、handoff 和执行日志已从当前工作树退休，需要时从 Git 历史或退休 bundle 查看。
