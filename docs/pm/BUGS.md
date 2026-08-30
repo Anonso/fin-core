@@ -108,6 +108,12 @@
   manifest 是否显 gap 未被正确证实；本条以 08-29 上午正确姿势实测为准。
   另：夜间 current 已前进至 319faf62（文章标签系统部署，非本条目操作），
   poller 今晨轮次全绿。
+- 状态收尾（2026-08-30 补账）：已关闭——①②（375e8ce1）+ ③（窗口单源配置/交易日语义/
+  topic 配置化）08-28 晚全链施工，08-29 08:51 过渡期结束确认（manifest 重生、窗口
+  投影与 canonical sha 双 match）；后续 owner 撤项（08-28 深夜）把普通栏 G 准入整体
+  撤销回 reference lane，成果保留、general_admission_days 移除；普通栏供料后由
+  BUG-012 第二刀 canonical index.json 接管（08-30）。G 工作集新鲜度当期验收（fresh
+  pair 专项探针）由 NOW 板 B「G 准入/工作集」行跟踪，非本条遗留。
 
 ## BUG-004 read_margin_evidence 工具描述语义写反（账户两融 ≠ 全市场两融）
 

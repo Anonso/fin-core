@@ -86,7 +86,7 @@
 
 | 环节 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006 |
+| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006 已闭 |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
 | 深化 deep-read | 文章支撑证据 | 问询验收中（B2 复盲评 08-30：6.83<7 → 再裁；基线两失败模式已修，残余缺陷面=覆盖/翻译层/拼接标注。08-30 增：空+vision 故障产物转 retryable 随定时深化有界补做〔cd17a11〕；8-17~8-30 全窗 13 篇重生成 32 单元 verbatim 32/32、空标题清零，旧核缺陷〔截图对话当证据〕实证被拦） | 需文章支撑的问题，验引用可溯源 | 【主线】[../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
