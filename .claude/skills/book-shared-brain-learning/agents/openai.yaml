@@ -1,0 +1,4 @@
+interface:
+  display_name: "Book Shared Brain Learning"
+  short_description: "Turn books into shared brain seed plans"
+  default_prompt: "Use $book-shared-brain-learning to design a reference-only shared brain learning plan for a book."

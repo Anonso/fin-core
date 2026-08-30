@@ -1,0 +1,3 @@
+interface:
+  display_name: "Fin Release Launcher Chain"
+  short_description: "Deploy FIN releases; verify codex chain via launcher execution"

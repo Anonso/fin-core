@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage FIN Codex Routes"
+  short_description: "Safely change and verify FIN Codex route nodes"
+  default_prompt: "Use $manage-fin-codex-routes to change the FIN Codex route chain and verify the live result."

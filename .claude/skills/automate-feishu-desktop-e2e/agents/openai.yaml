@@ -1,0 +1,4 @@
+interface:
+  display_name: "Automate Feishu Desktop E2E"
+  short_description: "Drive real Feishu desktop messages and verify ingress"
+  default_prompt: "Use $automate-feishu-desktop-e2e to send a guarded Feishu desktop test message and verify the real ingress path."
