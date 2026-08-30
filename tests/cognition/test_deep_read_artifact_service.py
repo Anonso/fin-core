@@ -1235,3 +1235,63 @@ def test_build_compact_payload_skips_malformed_methodology_rules():
     rules = payload["methodology_rules"]
     assert len(rules) == 1  # 只保留合法条目
     assert rules[0]["title"] == "卡口分析"
+
+
+# ── 空+vision 故障 → retryable（2026-08-30 owner 拍板；有单元不翻旧账）──────
+
+def _pair_payload(units: list, warnings: list) -> dict:
+    return {"units": units, "warnings": warnings}
+
+
+def test_retryable_vision_failure_only_for_empty_payloads() -> None:
+    from fin_analyse.cognition.deep_read_artifacts import _has_retryable_vision_failure
+
+    assert _has_retryable_vision_failure(
+        _pair_payload([], ["vision data gaps: visual_fact_llm_invalid_response"])
+    )
+    assert _has_retryable_vision_failure(
+        _pair_payload([], ["[vision] LLM returned unexpected format for visual facts"])
+    )
+    # 有单元不翻旧账（best-effort 语义保持）
+    assert not _has_retryable_vision_failure(
+        _pair_payload([{"unit_type": "strategic_thesis"}],
+                      ["vision data gaps: visual_fact_llm_invalid_response"])
+    )
+    # 无 vision 故障的空产物仍走既有类（非本类职责）
+    assert not _has_retryable_vision_failure(_pair_payload([], ["LLM found no extractable units"]))
+
+
+def test_vision_failed_empty_pair_is_not_fresh(tmp_path=None) -> None:
+    """端到端：空产物+vision 故障的 pair 不得取得 fresh 身份（is_fresh=False）。"""
+    import hashlib as _hashlib
+    import json as _json
+    import tempfile as _tempfile
+    import uuid as _uuid
+    from datetime import UTC, datetime
+    from pathlib import Path as _Path
+
+    from fin_analyse.cognition.deep_read_artifacts import DeepReadArtifactService
+
+    kb_root = _Path(_tempfile.mkdtemp())
+    (kb_root / "articles").mkdir(parents=True, exist_ok=True)
+    (kb_root / "runtime" / "cognition").mkdir(parents=True, exist_ok=True)
+    article_id = "visionfail1"
+    article = _write_article(kb_root, article_id)
+    envelope = {
+        "artifact_version": "deep_read_artifact_v1",
+        "article_id": article_id,
+        "content_hash": _hashlib.sha256(article.read_bytes()).hexdigest(),
+        "pipeline_version": "1.0.0",
+        "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "generation_id": _uuid.uuid4().hex,
+    }
+    payload = _pair_payload(
+        [], ["vision data gaps: visual_fact_llm_invalid_response"])
+    service = DeepReadArtifactService(kb_root=kb_root)
+    for detail in ("full", "compact"):
+        doc = dict(envelope, detail=detail, payload=payload)
+        target = service._full_dir if detail == "full" else service._compact_dir
+        target.mkdir(parents=True, exist_ok=True)
+        (target / f"{article_id}.json").write_text(_json.dumps(doc), encoding="utf-8")
+
+    assert not service.is_fresh(article_id, str(article))

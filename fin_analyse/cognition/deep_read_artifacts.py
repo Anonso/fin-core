@@ -75,6 +75,29 @@ def _has_retryable_extraction_failure(payload: dict[str, Any]) -> bool:
     )
 
 
+#: vision 故障警告（zsxq_apprentice 折叠时的两种前缀）。
+_VISION_FAILURE_WARNING_RE = re.compile(r"^(vision data gaps: |\[vision\] )")
+
+
+def _has_retryable_vision_failure(payload: dict[str, Any]) -> bool:
+    """空产物 + vision 故障 = retryable（2026-08-30 owner 拍板）。
+
+    举证：08-18/19 两篇锐评正文可提取却因 vision 链故障整篇空壳且永不
+    补做——vision 本为 best-effort 上下文，不应永久封死文本提取的结果。
+    稳定边界（故意收窄）：仅「units 为空 + 警告含 vision 故障前缀」才
+    retryable；有单元的产物不因 vision 缺席翻旧账（best-effort 语义保持，
+    存量零扰动）；文本兜底（central-idea）成功即 units>0，自然恢复 fresh。
+    """
+    units = payload.get("units")
+    if isinstance(units, list) and units:
+        return False
+    warnings = payload.get("warnings")
+    return isinstance(warnings, list) and any(
+        isinstance(warning, str) and _VISION_FAILURE_WARNING_RE.match(warning)
+        for warning in warnings
+    )
+
+
 @dataclass(frozen=True)
 class _FileSnapshot:
     raw: bytes
@@ -882,6 +905,8 @@ class DeepReadArtifactService:
             or _has_retryable_backend_failure(compact_payload)
             or _has_retryable_extraction_failure(full_payload)
             or _has_retryable_extraction_failure(compact_payload)
+            or _has_retryable_vision_failure(full_payload)
+            or _has_retryable_vision_failure(compact_payload)
         ):
             return None
 
