@@ -61,6 +61,11 @@
 - 附带发现：仓库侧 knowledge-base/ 存在生产 shared 根的陈旧副本，误导诊断；是否仍被
   读取需核（a_share_name_map 等默认路径都指向 repo 侧）。
 - 状态：开放（并入 BUG-006 一并修；repo 侧陈旧副本单列核实项）。
+- 状态收尾（2026-08-30 补账）：已关闭——根因「新鲜度窗口分级错」修复随 BUG-006③
+  全链落地并经 08-29 08:51 过渡期结束确认（manifest 重生、锐评 2 交易日/特刊 30 天
+  窗口投影实证）；「repo 侧陈旧副本」核实项随 BUG-007 关闭（08-28 清出 + 08-29
+  迁移步6 绝根，读方经 knowledge_root 单缝指 shared 根）。ZSXQ 新鲜度当期验收
+  （fresh pair 专项探针）由 NOW 板 B「G 准入/工作集」行跟踪，非本条遗留。
 
 ## BUG-006 ZSXQ/G 相关性选段三层缺陷（owner 2026-08-28 定调，部分已修）
 
@@ -188,6 +193,13 @@
   附带待办（W3）：5 个 owner 手动脚本仍硬编码 repo KB 路径
   （rebuild_name_map 写 repo KB、seed_shared_brain×2、report/sectors/
   clean_comments cwd 相对默认），随 W3 换缝或按规则 12 退役。
+- 状态收尾（2026-08-30 补账）：已关闭，对齐 NOW 板 B 入库/索引行「BUG-007 已闭」——
+  两证：①默认路径换缝（08-28 两轮：子代理 20 文件机械换缝 + scraper 缝收口；
+  priority_articles 读侧漂移另案 BUG-009）；②repo 副本绝根（08-28 清出 228e4017 后，
+  08-29 迁移步6 老仓最后 1 个 tracked 批注 git rm b5d65cba，owner-only 备份+manifest，
+  见 migration-manifest.md）。遗留各有去处：G 手工批注 durable 归位=NOW 待办11（P5 前
+  KB 收拢首项）；老仓 5 个 owner 手动脚本硬编码 repo KB 路径=未随迁（不在 keep-set，
+  老仓已归档）。本仓无 repo KB 副本。
 
 ## BUG-008 L1 简报内容降级（W2④ 盲评判定 2026-08-28；主因代码缺陷非模型）
 
