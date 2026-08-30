@@ -78,7 +78,7 @@
 | read_market_snapshot | 标的行情 | 问询验收中（容量已修；EASTMONEY 源解析失败致参考价） | 最新价，验无容量耗尽 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002/011 |
 | read_market_overview | 大盘结构 | 问询验收中（结构性半边待修） | 「今天大盘怎么样」，验 gaps 空 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 问询验收中（描述修复已在本仓运行树，待探针复核闭环） | 两融问题 | BUG-004 |
-| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（08-30 根因诊断：工具描述已修；供料经 priority cache 结构性偏 G 级，扩展待裁） | 当天老师相关提问，验工具被调 + 有料则注入 | 【主线】BUG-012 |
+| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料已换 canonical index.json，端到端测试过；待实弹探针闭环） | 当天老师相关提问，验工具被调 + 有料则注入 | 【主线】BUG-012 |
 | read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（7 天消费 42 次；gap 率待公告探针复核） | 公告类问题，验工具被调 + gaps 空 | BUG-012 探针改指此缝 |
 | read_user_watchlist | 自选股清单（user context 注意力焦点，永非投资证据） | 在用（08-29 接入；探针「看下当前自选股」ok 无 gaps，22 只如实分组） | 「看下当前自选股」，验工具被调 + 空表诚实答空 | 短设计已按规则 5 归档（git 历史：read-user-watchlist-tool）；写通道=manage_user_watchlist.py |
 
@@ -104,7 +104,7 @@
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 2 | BUG-012 ready_evidence 定修（全调用 unavailable，7 天 12 调 0 ok；无盘面依赖，立即可动手） | 立即 |
+| 主线 | 2 | BUG-012 定修：描述+供料两刀已施工（08-30，全量 2901 绿）；待实弹探针闭环（当日普通栏提问 → 工具被调 items 非空；公告类 → 走 external_evidence） | 探针随下次问询 |
 | 主线 | 3 | 深化收尾：01/03/05 prompt 调优（定向修覆盖不足/翻译层失真/拼接标注三实锤面）→ 二轮复盲评（同协议新 seed，均分>7 闭环）；08-30 复盲评 6.83<7 的再裁 owner 已裁走此路径 | 前序=主线2 |
 | 主线 | 4 | Daily gap 记账哑两项：断料降级模板 + snapshot 材料级 gap 上报（B1 归因新发现） | 随主线排期 |
 | 旁路·时间触发 | 5 | BUG-002 结构性半边定修 + BUG-011 EASTMONEY 源复查（同一 repro，单会话；需实弹盘面） | 周一 08-31 09:00–09:20 盘前窗口 |

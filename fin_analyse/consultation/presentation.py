@@ -35,6 +35,7 @@ _GAP_LABELS = {
     "g_context_no_relevant_items": "本次没有相关的老师材料",
     "pinned_source_relevance_gate_skipped": "置顶材料未通过本题相关性门，未注入",
     "pinned_source_identity_conflict": "置顶材料来源标识不一致，未注入",
+    "recent_reference_index_unavailable": "知识索引不可用，同日参考材料未检",
     "g_context_no_extractable_units": "相关老师材料暂无可提取要点",
     "g_working_set_sources_changed": "老师材料工作集在咨询期间更新，已按当前版本处理",
     "g_context_unavailable": "老师材料不可用",

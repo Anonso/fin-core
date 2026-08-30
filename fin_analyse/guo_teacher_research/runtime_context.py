@@ -1370,11 +1370,16 @@ class AgentRuntimeContextProvider:
             ),
         }
 
+        index_unavailable = False
         if self._fresh_g_candidates is not None:
             raw_candidates = list(self._fresh_g_candidates)
         else:
-            raw_candidates = _read_cache_candidates(self._kb_root)
+            raw_candidates, index_unavailable = _read_index_reference_candidates(
+                self._kb_root
+            )
         if not raw_candidates:
+            if index_unavailable:
+                result["data_gaps"].append("recent_reference_index_unavailable")
             return result
 
         if latest_focus:
@@ -1733,6 +1738,66 @@ def _read_cache_candidates(kb_root: Path) -> list[dict[str, Any]]:
         logger.warning("Failed to read priority_events.jsonl: %s", exc)
         return []
     return candidates
+
+
+def _read_index_reference_candidates(kb_root: Path) -> tuple[list[dict[str, Any]], bool]:
+    """BUG-012②：read_ready_evidence 参考巷道的候选源——canonical index.json。
+
+    priority_events.jsonl 按设计只记 T0/T1 推送事件（G 级为主），同日 reference
+    级材料结构性缺料；普通栏文章由 owner 裁定（2026-08-28）整体归 reference
+    tier，其目录事实在 index.json。只读、有界；投影即 allowlist——仅普通栏行
+    入候选（设计门 P2-3：防未来新增 G 列静默放行）。返回 (candidates,
+    index_unavailable)；索引缺失/损坏 → 空候选 + typed gap 诚实空。
+    """
+    snapshot = _read_bounded_owned_regular_file_at(
+        kb_root,
+        Path("index.json"),
+        max_bytes=_MAX_PRIORITY_CACHE_BYTES,
+    )
+    if snapshot is None:
+        return [], True
+    try:
+        payload = json.loads(snapshot[0].decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        logger.warning("Failed to parse knowledge index.json for reference lane")
+        return [], True
+    rows = payload.get("articles") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        return [], True
+    candidates: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        article_id = str(row.get("id", "")).strip()
+        column = str(row.get("column", "")).strip()
+        title = str(row.get("title", "")).strip()
+        if not article_id or not title or column != "普通":
+            continue
+        keywords = [
+            tag.strip()[:16]
+            for tag in (row.get("tags") or [])[:8]
+            if isinstance(tag, str) and tag.strip()
+        ]
+        companies = [
+            str(company).strip()
+            for company in (row.get("companies") or [])[:8]
+            if str(company).strip()
+        ]
+        candidates.append(
+            {
+                "article_id": article_id,
+                "title": title,
+                # 普通栏=reference tier；"observation" 是 strict 校验认的既有
+                # reference 级分类（_REFERENCE_CLASSIFICATIONS）。
+                "source_classification": "observation",
+                "column": column,
+                "published_at": str(row.get("date", "")).strip(),
+                "keywords": keywords,
+                "companies": companies,
+                "metadata": {"column": column, "path": str(row.get("path", ""))},
+            }
+        )
+    return candidates, False
 
 
 def _read_g_index_articles(
@@ -4310,6 +4375,26 @@ def _extract_body_key_points(
     return points
 
 
+def _normalize_reference_time(value: str) -> str:
+    """Normalize one reference timestamp to tz-aware ISO (naive assumed CST).
+
+    知识库前言 date 是朴素 CST（如 "2026-08-30 09:30"）；read_ready_evidence
+    的 strict 校验只认带时区时间戳（BUG-012② 供料换源后普通栏走 markdown
+    材料分支，必须在投影边界归一，不改校验器）。不可解析则原样返回，交由
+    下游诚实拒绝。
+    """
+    text = str(value or "").strip()
+    if not text:
+        return text
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return text
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        parsed = parsed.replace(tzinfo=CST)
+    return parsed.isoformat()
+
+
 def _recent_reference_to_candidate(
     kb_root: Path,
     candidate: dict[str, Any],
@@ -4343,6 +4428,8 @@ def _recent_reference_to_candidate(
     published_at = material.published_at if material is not None else _candidate_time(candidate)
     selected_material = material.provenance() if material is not None else {}
     available_at = material.available_at if material is not None else ""
+    published_at = _normalize_reference_time(published_at)
+    available_at = _normalize_reference_time(available_at)
     return {
         "source_bucket": "recent_reference",
         "article_id": str(candidate.get("article_id", "")),

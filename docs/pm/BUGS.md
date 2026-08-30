@@ -358,9 +358,13 @@
   落通用默认，agent 无从判断调用时机（探针不触发根因）；③「官方公告/记录」真实
   供体是 read_external_evidence（OfficialRecordEvidence，7 天消费 42 次），板 B
   契约描述写错行。
-- 修复：工具描述改专项（当天参考材料语义 + 公告类转 read_external_evidence）
-  + 板 B 两行契约纠偏 + 描述回归测试
-  （test_capability_tool_descriptions.py）。
-- 遗留决策（owner）：lane 供料扩展三选——维持诚实空 / 绕开 priority cache 直读
-  当日 KB（需小设计）/ 撤缝；未裁前该缝对多数提问仍诚实空（属正确行为）。
-- 状态：开放（描述与契约已修，供料决策待裁）。
+- 修复：两刀施工完毕（08-30）。①工具描述专项化（当天参考材料语义 + 公告类
+  转 read_external_evidence）+ 板 B 两行契约纠偏 + 描述回归测试；②供料换
+  canonical index.json（owner 裁方向 B；普通栏 allowlist 投影 + classification
+  "observation" + 朴素 date→CST 归一 + typed gap + 去重），端到端测试
+  test_recent_reference_index_supply.py 全过，设计门 0P0/2P1/6P2 全裁决落稿
+  （设计稿按规则 5 入 Git 史：docs/design/ready-evidence-supply.md）。
+- 残余：券商名不在 index companies 字段，相关性门 company 重叠通道对券商
+  类问题失效（tags/标题通道可用；既有缺口，评审 P2-8 记档）。
+- 状态：修复已施工（全量 2901 绿）；待实弹探针闭环（提问涉当日普通栏 →
+  工具被调且 items 非空；公告类问题 → 正确走 read_external_evidence）。
