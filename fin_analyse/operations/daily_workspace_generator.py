@@ -58,6 +58,12 @@ _FAILURE_SENTINELS = frozenset({"[]", "null", "none", "''", '""'})
 
 _MATERIAL_KEYS: tuple[str, ...] = ("portfolio", "market_overview", "g_reference")
 
+# The two data faces a briefing is made of.  With both broken there is no
+# briefing left to generate: the checkpoint must fall to the deterministic
+# degraded notice instead of letting the model pad a normal-shaped answer
+# (B1 blind-eval L3 attribution; design docs/design/daily-gap-ledger.md v2).
+_CORE_DATA_KEYS: tuple[str, ...] = ("portfolio", "market_overview")
+
 
 class DailyWorkspaceGenerationUnavailableError(RuntimeError):
     """The L1 direct lane returned a safe unavailable outcome."""
@@ -435,14 +441,19 @@ def _material_usable(value: object) -> bool:
 
 
 def _material_gaps(materials: Mapping[str, str | None]) -> tuple[str, ...]:
-    gap_codes = {
-        "portfolio": "l1_material_portfolio_unavailable",
-        "market_overview": "l1_material_market_overview_unavailable",
-        "g_reference": "l1_material_g_reference_unavailable",
-    }
-    return tuple(
-        gap_codes[key] for key in _MATERIAL_KEYS if not _material_usable(materials.get(key))
-    )
+    gaps: list[str] = []
+    for key in _MATERIAL_KEYS:
+        value = materials.get(key)
+        if _material_usable(value):
+            continue
+        # A present-but-corrupt string (str()'d object address) is a
+        # serialization defect; anything else is a source that supplied
+        # nothing.  One cause, one code (B1 attribution L3).
+        if isinstance(value, str) and _OBJECT_REPR_MARK in value:
+            gaps.append(f"l1_material_{key}_unrenderable")
+        else:
+            gaps.append(f"l1_material_{key}_unavailable")
+    return tuple(gaps)
 
 
 class L1DirectWorkspaceGenerator:
@@ -561,6 +572,14 @@ class L1DirectWorkspaceGenerator:
         materials: Mapping[str, str | None] = (
             self._material_provider(question) if self._material_provider is not None else {}
         )
+        if self._material_provider is not None and all(
+            not _material_usable(materials.get(key)) for key in _CORE_DATA_KEYS
+        ):
+            # Material death shares the backend-unavailable semantics: the
+            # scheduled/ask handlers turn this into the deterministic degraded
+            # notice carrying exactly these gap codes — never a fabricated
+            # normal-looking briefing (B1 attribution L3).
+            raise DailyWorkspaceGenerationUnavailableError(_material_gaps(materials))
         prompt = _render_prompt(
             question=question,
             materials=materials,
