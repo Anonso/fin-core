@@ -35,6 +35,15 @@ models:
     reasoning_effort: max
     enabled: true
 
+  # DeepSeek V4 Flash - 深化提取链第三位（owner 2026-08-30：cognition 链 DS 槽位
+  # 换 flash；与 deepseek 同 key 同端点，不设 reasoning_effort）
+  deepseek_flash:
+    provider: openai_compatible
+    model: deepseek-v4-flash
+    api_key: ${DEEPSEEK_API_KEY}
+    base_url: ${DEEPSEEK_BASE_URL}
+    enabled: true
+
   # 小米 MiMo n-v2.5 - 识图链末位兜底（owner 2026-08-28 重排；原生识图，OpenAI 兼容）
   # 用法参考 https://mimo.mi.com/docs/zh-CN/quick-start/usage-guide/multimodal-understanding/image-understanding
   mimo:
@@ -74,11 +83,12 @@ models:
 # t0 = 难题质量锚（先用 glm5.3）；t1 = 简单任务吞吐（先用 glm5.3-flash）。
 # 名字必须是 models 下的条目；段缺失/非法时消费方回退各自硬编码缺省序。
 # cognition = thesis/central-idea 提取（2026-08-30 增：glm53/deepseek 当晚对
-# 该任务返回合法空数组，qwen 正常——提取路由 qwen 先行，恢复后可回调）。
+# 该任务返回合法空数组，qwen 正常——提取路由 qwen 先行，恢复后可回调；
+# 同日 owner 指令：DS 槽位改 deepseek_flash）。
 priorities:
   t0: [glm53, deepseek, qwen]
   t1: [glm53_flash, deepseek, qwen]
-  cognition: [qwen, glm53, deepseek]
+  cognition: [qwen, glm53, deepseek_flash]
 
 # 识图 fallback 链（owner 2026-08-28 拍板重排：glm5.3-flash → GLM-4.6V-Flash 免费 → 硅基流动 → mimo）
 # 条目必须是 models 下的 key：缺失/禁用/未解析 ${}/熔断打开的条目跳过，保序去重；
