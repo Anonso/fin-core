@@ -120,4 +120,4 @@
 1. release/gateway 运维判读：碰 release 树一律 `-B`（pyc 三来源污染）；gateway journal 近零日志是常态，判卡死先查 state.db 与官方历史。
 2. codex CLI 0.149.0 静默忽略带引号的 `-c` 值 → 401；手动入口 `-c` 必须写 TOML 裸值。
 3. fin-core 的 `fin_analyse` 是无 `__init__.py` 的 namespace 包：从旧仓 cwd 以 stdin 跑一次性诊断会整包 import 旧仓代码（旧逻辑+旧仓 `.env` 解键，结果看似正常实则错源）→ 诊断脚本一律文件模式跑 + 显式注入 `FIN_LLM_ENV_FILE`（指针在旧仓 `.env` 第 6 行，目标 `~/.config/fin-analyse/llm.env`）。
-4. LLM provider 采样级空坍塌（08-30 实证：同 prompt/内容/backend 空率 ~5/8 返回合法 `[]`，跨 GLM/deepseek/qwen）→ 已有 bare-empty 链式升级+`priorities.cognition` 路由（qwen 先行，runtime `41ccc6bd…`，旧 `a8f8…` 留回滚）；B2 复盲评时留意空样本归因。
+4. LLM provider 采样级空坍塌（08-30 实证：同 prompt/内容/backend 空率 ~5/8 返回合法 `[]`，跨 GLM/deepseek/qwen；同日下午重生成 88 对时全面爆发 85/88 空，已自备份恢复 79/88）→ 已有 bare-empty 链式升级+`priorities.cognition` 路由（qwen 先行，runtime `41ccc6bd…`，旧 `a8f8…` 留回滚）；重试一律 regen-if-better 且限低峰窗（凌晨窗可靠）。B2 复盲评时留意空样本归因。
