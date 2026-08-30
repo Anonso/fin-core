@@ -733,3 +733,24 @@ def test_evidence_stitched_with_connector_passes(tmp_path: Path) -> None:
     )
     # 纯连接词 evidence = 无实质片段 → 拒绝
     assert not _evidence_in_source("“以及”", body)
+
+
+def test_prompt_carries_coverage_and_interpretation_fidelity_guidance() -> None:
+    """01/03/05 调优（B2 二轮缺口面）：覆盖、翻译层保真、类型选择、定义句。"""
+    from fin_analyse.cognition.thesis_extractor import (
+        _CENTRAL_IDEA_PROMPT,
+        _LLM_EXTRACTION_PROMPT,
+    )
+
+    # 覆盖不足（B2 密度 6.0 主因）：独立论点分单元 + 量化锚点不丢
+    assert "独立论点" in _LLM_EXTRACTION_PROMPT
+    assert "量化锚点" in _LLM_EXTRACTION_PROMPT
+    assert "不得整条丢弃" in _LLM_EXTRACTION_PROMPT
+    # 翻译层失真（B2 04/09/02/12）：interpretation 只能基于摘录句
+    assert "不得引入原文没有的方法论" in _LLM_EXTRACTION_PROMPT
+    assert "无摘录句支撑的内容不得写进 interpretation" in _LLM_EXTRACTION_PROMPT
+    # 01 类型-半衰期错配：risk_signal 类型选择边界
+    assert "不要标成 risk_signal" in _LLM_EXTRACTION_PROMPT
+    # 05 核心概念定义漏提
+    assert "概念定义句" in _LLM_EXTRACTION_PROMPT
+    assert "概念定义句" in _CENTRAL_IDEA_PROMPT
