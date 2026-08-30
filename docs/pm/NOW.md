@@ -108,11 +108,9 @@
 | 主线 | 3 | 深化收尾：01/03/05 prompt 调优（定向修覆盖不足/翻译层失真/拼接标注三实锤面）→ 二轮复盲评（同协议新 seed，均分>7 闭环）；08-30 复盲评 6.83<7 的再裁 owner 已裁走此路径 | 前序=主线2 |
 | 旁路·时间触发 | 5 | BUG-002 结构性半边定修 + BUG-011 EASTMONEY 源复查（同一 repro，单会话；需实弹盘面） | 周一 08-31 09:00–09:20 盘前窗口 |
 | 旁路·使用触发 | 6 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
-| 旁路·等owner | 7 | G 置顶错位记账毕：现置顶 3 条全为特刊（07-01/08-10/08-17，最新已 13 天），08-27 以来 9/14 次 g_context 相关性门跳过（复核同盘点 8/13 现象）——门行为正确，错位=置顶集合陈旧。两选：换置顶至当下关注（编辑 `pinned_sources.jsonl` 即换）或维持（置顶形同虚设）；要「框架特刊常驻硬注入」属行为变更，需另立案 | owner（置顶=注意力配置） |
-| 旁路·等owner | 8 | 基础设施审计 A5：Windows Task PS1 的 commit 常量更新（低优先，poller 不比对不阻塞） | owner（Windows 侧手动） |
-| 旁路·随手修 | 9 | BUG-004 闭环探针：两融问题验 margin 描述修复生效（修复已在本仓运行树） | 随手（下次问询顺带） |
-| 随部署 | 10 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
-| 旁路·P5 前 | 11 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
+| 旁路·随手修 | 7 | BUG-004 闭环探针：两融问题验 margin 描述修复生效（修复已在本仓运行树） | 随手（下次问询顺带） |
+| 随部署 | 8 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
+| 旁路·P5 前 | 9 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
 
