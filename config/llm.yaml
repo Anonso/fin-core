@@ -36,12 +36,12 @@ models:
     enabled: true
 
   # DeepSeek V4 Flash - 深化提取链第三位（owner 2026-08-30：cognition 链 DS 槽位
-  # 换 flash；与 deepseek 同 key 同端点，不设 reasoning_effort）
+  # 换 flash；同日晚指令：改走 opencode 网关（OPENCODE_GO_*），官方端点暂弃）
   deepseek_flash:
     provider: openai_compatible
     model: deepseek-v4-flash
-    api_key: ${DEEPSEEK_API_KEY}
-    base_url: ${DEEPSEEK_BASE_URL}
+    api_key: ${OPENCODE_GO_API_KEY}
+    base_url: ${OPENCODE_GO_BASE_URL}
     enabled: true
 
   # 小米 MiMo n-v2.5 - 识图链末位兜底（owner 2026-08-28 重排；原生识图，OpenAI 兼容）
