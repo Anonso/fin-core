@@ -9,6 +9,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 import stat
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -807,6 +808,33 @@ REQUIRED_STATUS_FIELDS = frozenset(
 )
 
 
+# BUG-009 read-side tolerance (design priority-status-read-tolerance): the
+# retired Hermes-side v2 consumer appended structured fields the repo contract
+# never declared.  Registered here so the 39 historical lines (20× six-field
+# generation + 19× seven-field, read-only probe 2026-08-30) stay readable; any
+# OTHER extra key still rejects the entry — fail-closed to new drift, new
+# writers must register first.  Values are ignored on read (observed shapes:
+# null / bool / str / list); ``result_classification`` is a writer self-label
+# and never feeds health aggregation.  ``to_dict()`` emits the core ten keys
+# only (lossy for extensions) and ``append()`` never writes them.
+_V2_EXTENSION_FIELDS: frozenset[str] = frozenset(
+    {
+        "result_status",
+        "article_analysis_status",
+        "data_gaps",
+        "operation_advice_blocked",
+        "operation_advice_block_reason",
+        "portfolio_advice_status",
+        "result_classification",
+    }
+)
+# Registered v2 delivery-target form ("feishu:" + open-chat id), verified
+# against every historical line (39/39 probe).  ``is_hermes_feishu`` still
+# recognises only ("hermes", "feishu"), so v2 push claims are never counted
+# as Hermes delivery evidence.
+_V2_DELIVERY_TARGET_RE = re.compile(r"^feishu:oc_[0-9a-f]+$")
+
+
 @dataclass
 class PriorityJobStatus:
     """A single status/ack entry written by Hermes (or FIN internal).
@@ -858,8 +886,14 @@ class PriorityJobStatus:
             or updated_at is None
             or updated_at.tzinfo is None
             or updated_at.utcoffset() is None
-            or (self.consumer, self.delivery_target)
-            not in {("hermes", "feishu"), ("fin", "internal")}
+            or (
+                (self.consumer, self.delivery_target)
+                not in {("hermes", "feishu"), ("fin", "internal")}
+                and not (
+                    self.consumer == "priority_analysis_consumer_v2"
+                    and _V2_DELIVERY_TARGET_RE.fullmatch(self.delivery_target) is not None
+                )
+            )
         ):
             raise ValueError("priority job status entry is invalid")
 
@@ -901,7 +935,11 @@ class PriorityJobStatus:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PriorityJobStatus:
-        if not isinstance(data, dict) or set(data) != REQUIRED_STATUS_FIELDS:
+        # BUG-009: required keys must all be present; registered v2 extension
+        # keys may ride along (ignored); anything else still rejects.
+        if not isinstance(data, dict) or not REQUIRED_STATUS_FIELDS <= set(data):
+            raise ValueError("priority job status entry is invalid")
+        if not set(data) <= REQUIRED_STATUS_FIELDS | _V2_EXTENSION_FIELDS:
             raise ValueError("priority job status entry is invalid")
         return cls(
             job_id=data["job_id"],
@@ -943,9 +981,19 @@ class PriorityJobStatusSink:
         PriorityJobStatus.from_dict(status.to_dict())
         _append_jsonl(self._path, status.to_dict())
 
-    def list_statuses(self) -> list[PriorityJobStatus]:
-        """Return all status entries."""
+    def list_statuses_with_health(self) -> tuple[list[PriorityJobStatus], int]:
+        """Return ``(entries, bad_count)`` with per-line typed isolation.
+
+        Bad = JSON decode failure, missing required keys, unregistered
+        extension keys, or value-validation failure — each isolated to its own
+        line so one bad record cannot poison the whole file (BUG-009: the old
+        whole-file atomic reject made a single unreadable line hide all 39).
+        Empty lines are not counted; the torn (newline-less) tail frame dropped
+        by ``_committed_jsonl_lines`` is not counted either (pre-existing
+        behaviour, unchanged).
+        """
         entries: list[PriorityJobStatus] = []
+        bad = 0
         for line in _committed_jsonl_lines(_read_jsonl_bytes(self._path)):
             stripped = line.strip()
             if not stripped:
@@ -953,9 +1001,13 @@ class PriorityJobStatusSink:
             try:
                 data = json.loads(stripped)
                 entries.append(PriorityJobStatus.from_dict(data))
-            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
-                raise ValueError("priority job status record is invalid") from error
-        return entries
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                bad += 1
+        return entries, bad
+
+    def list_statuses(self) -> list[PriorityJobStatus]:
+        """Return all status entries (bad lines skipped; see ``_with_health``)."""
+        return self.list_statuses_with_health()[0]
 
     def latest_for_job(self, job_id: str) -> PriorityJobStatus | None:
         """Return the most recent status entry for a job_id."""
@@ -978,6 +1030,12 @@ class PriorityDispatchHealth:
 
     ``completed_jobs`` counts locally acknowledged workflow jobs only. It is
     not evidence of platform acceptance, a message ID, display, or live delivery.
+
+    ``bad_status_entries`` counts status lines skipped as unparseable (see
+    ``PriorityJobStatusSink.list_statuses_with_health``).  Residual risk when
+    it is > 0: a job's latest line may have been skipped, so latest-wins
+    aggregation falls back to an older line — the count is the tripwire, the
+    per-job view is not trustworthy until the bad lines are investigated.
     """
 
     total_jobs: int = 0
@@ -986,6 +1044,7 @@ class PriorityDispatchHealth:
     completed_jobs: int = 0
     analysis_partial_but_pushed: int = 0
     priority_dispatch_pending: bool = False
+    bad_status_entries: int = 0
     pending_job_ids: list[str] = field(default_factory=list)
     failed_job_ids: list[str] = field(default_factory=list)
     analysis_partial_job_ids: list[str] = field(default_factory=list)
@@ -999,6 +1058,7 @@ class PriorityDispatchHealth:
             "completed_jobs": self.completed_jobs,
             "analysis_partial_but_pushed": self.analysis_partial_but_pushed,
             "priority_dispatch_pending": self.priority_dispatch_pending,
+            "bad_status_entries": self.bad_status_entries,
             "pending_job_ids": list(self.pending_job_ids),
             "failed_job_ids": list(self.failed_job_ids),
             "analysis_partial_job_ids": list(self.analysis_partial_job_ids),
@@ -1029,7 +1089,7 @@ def check_priority_dispatch_health(
     status_sink = PriorityJobStatusSink(Path(status_path))
 
     jobs = job_outbox.list_jobs()
-    all_statuses = status_sink.list_statuses()
+    all_statuses, bad_status_entries = status_sink.list_statuses_with_health()
 
     # Preserve every acknowledgement so a reused job_id cannot smuggle a
     # foreign article/event into the delivery state of a real job.
@@ -1143,6 +1203,7 @@ def check_priority_dispatch_health(
         completed_jobs=completed,
         analysis_partial_but_pushed=partial_but_pushed,
         priority_dispatch_pending=total_pending_and_partial > 0,
+        bad_status_entries=bad_status_entries,
         pending_job_ids=pending_ids,
         failed_job_ids=failed_ids,
         analysis_partial_job_ids=partial_ids,

@@ -171,7 +171,7 @@ def test_invalid_status_raises():
         )
 
 
-def test_status_parser_rejects_extra_or_coerced_fields():
+def test_status_parser_allows_registered_v2_extensions_and_rejects_unknown():
     from fin_analyse.cognition.priority_articles import PriorityJobStatus
 
     job = _make_job("strict-status")
@@ -204,6 +204,88 @@ def test_status_parser_rejects_extra_or_coerced_fields():
     for invalid in invalid_values:
         with pytest.raises(ValueError, match="status entry is invalid"):
             PriorityJobStatus.from_dict({**valid, **invalid})
+
+    # BUG-009: both registered v2 schema generations parse (six-field and
+    # seven-field, matching the 20+19 production generations); synthetic
+    # open-chat id — real ids never enter fixtures (rule 3).
+    core_v2 = {
+        **valid,
+        "consumer": "priority_analysis_consumer_v2",
+        "delivery_target": "feishu:oc_0123abcd",
+    }
+    gen7 = {
+        "result_status": "ok",
+        "article_analysis_status": "ok",
+        "data_gaps": [],
+        "operation_advice_blocked": False,
+        "operation_advice_block_reason": "",
+        "portfolio_advice_status": "ok",
+        "result_classification": "analysis_partial_but_pushed",
+    }
+    gen6 = {k: gen7[k] for k in tuple(gen7)[:6]}
+    gen6["operation_advice_blocked"] = None  # early generation wrote null
+    parsed6 = PriorityJobStatus.from_dict({**core_v2, **gen6})
+    parsed7 = PriorityJobStatus.from_dict({**core_v2, **gen7})
+    assert parsed6.consumer == parsed7.consumer == "priority_analysis_consumer_v2"
+
+    # v2 push claims never count as Hermes delivery evidence (invariant).
+    assert parsed7.is_hermes_feishu is False
+    assert parsed7.reports_feishu_push_succeeded is False
+    pushed = PriorityJobStatus.from_dict({**core_v2, **gen7, "status": "push_succeeded"})
+    assert pushed.reports_feishu_push_succeeded is False
+
+    # to_dict() is lossy for extensions: core ten keys only, append-safe.
+    assert pushed.to_dict() == {**core_v2, "status": "push_succeeded"}
+
+    # Unregistered delivery form still rejects (fail-closed to new drift).
+    with pytest.raises(ValueError, match="status entry is invalid"):
+        PriorityJobStatus.from_dict({**core_v2, "delivery_target": "feishu:not_oc"})
+
+
+def test_status_sink_isolates_bad_lines_and_health_surfaces_count():
+    """BUG-009: one bad line no longer poisons the whole file; the count
+    reaches PriorityDispatchHealth even when the skipped line was a job's
+    LATEST line (latest-wins masking residual — the count is the tripwire)."""
+    from fin_analyse.cognition.priority_articles import (
+        PriorityJobStatus,
+        PriorityJobStatusSink,
+        check_priority_dispatch_health,
+    )
+
+    with TemporaryDirectory() as tmp:
+        jobs_path = Path(tmp) / "jobs.jsonl"
+        status_path = Path(tmp) / "status.jsonl"
+        job = _make_job("art-bad")
+        _write_job_file(jobs_path, [job])
+        good = PriorityJobStatus(
+            job_id=job["job_id"],
+            event_id=job["event_id"],
+            article_id=job["article_id"],
+            user_id=job["user_id"],
+            status="notified",
+            attempt=1,
+            updated_at=_now_iso(),
+            consumer="hermes",
+            delivery_target="feishu",
+        )
+        latest_unknown_key = {**good.to_dict(), "future_writer_field": 1}
+        status_path.write_text(
+            json.dumps(good.to_dict())
+            + "\n"
+            + json.dumps(latest_unknown_key)
+            + "\n{not json\n"
+        )
+        sink = PriorityJobStatusSink(status_path)
+
+        entries, bad = sink.list_statuses_with_health()
+        assert len(entries) == 1
+        assert bad == 2
+        assert sink.list_statuses() == entries
+
+        health = check_priority_dispatch_health(jobs_path=jobs_path, status_path=status_path)
+        assert health.total_jobs == 1
+        assert health.bad_status_entries == 2
+        assert health.to_dict()["bad_status_entries"] == 2
 
 
 def test_status_sink_does_not_follow_a_dangling_symlink(tmp_path):

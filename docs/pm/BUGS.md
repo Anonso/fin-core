@@ -298,6 +298,16 @@
 - 待拍板点：v2 消费者是否还会回来（决定方向 1 vs 3）；status 文件 39 条 7 月陈记录
   本身是否还有保留价值（已超 24h 新鲜度窗口数十倍）。
 - 状态：方案已出，不施工（owner 拍板后随 W3-4）。
+- 状态收尾（2026-08-30，方向1 已实施，设计门过）：from_dict 改「必需键齐全 +
+  已登记 v2 七扩展字段白名单，未知键仍拒」；consumer/delivery 白名单增 v2 +
+  `feishu:oc_[0-9a-f]+`（39/39 探针验证；`is_hermes_feishu` 不变量零改动，v2
+  push 声明不计 Hermes 证据）；list_statuses 改逐条隔离 + 新
+  `list_statuses_with_health` 计数，经 `PriorityDispatchHealth.bad_status_entries`
+  进 provider_health MCP payload。实证：生产 39/39 解析 bad=0、单测 18/18、
+  门评 12 发现全采纳（elapsed 469s，裁决录随设计稿入 Git 史）。
+  **范围注记**：恒显 `priority_status_outbox_unavailable` 的 report.py 在**老仓**
+  （独立解析器，两套代码）——本修只治 fin-core 读缝与 provider_health 段，
+  老仓报告不受影响，其迁移/退役另案。
 
 ## BUG-010 测试基线三簇非绿（semantic_state 36 败 + route_config 1 败 + scraper 死补丁 12）
 
