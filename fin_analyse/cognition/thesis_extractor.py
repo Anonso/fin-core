@@ -363,6 +363,22 @@ def _evidence_domain(source: ZsxqCognitionSource) -> str:
     return "\n".join(part for part in parts if part)
 
 
+#: 引句拼接时残留的纯连接词/序号片段（docstring 承诺「非相邻句各句忠实
+#: 即可接受」，但 "引句A"以及"引句B" 的连接词会粘进相邻分段且必不在原文，
+#: 把整条忠实 evidence 误杀——2026-08-30 新旧产物 diff 实证 2 条）。
+_CONNECTOR_FRAGMENTS = frozenset(
+    {"以及", "同时", "另外", "并且", "还有", "然后", "而且", "再", "及"}
+)
+_STITCHED_QUOTE_CONNECTOR_RE = re.compile(
+    r"[”\"’']\s*(?:以及|同时|另外|并且|还有|然后|而且|及|再)\s*[“\"‘']"
+)
+
+
+def _is_connector_fragment(fragment: str) -> bool:
+    clean = _strip_noise(fragment)
+    return (not clean) or clean.isdigit() or clean in _CONNECTOR_FRAGMENTS
+
+
 def _evidence_in_source(evidence: str, content: str) -> bool:
     """Deterministic check that the central-idea evidence verbatim appears in
     the source content (whitespace/punctuation-tolerant).
@@ -371,12 +387,15 @@ def _evidence_in_source(evidence: str, content: str) -> bool:
     breaks and sentence-ending punctuation; every fragment must appear as a
     contiguous verbatim substring of the source.  Non-adjacent sentences are
     therefore accepted only when each quoted sentence is itself faithful.
+    Pure connector/numbering remnants between quoted sentences are ignored.
     """
     clean_content = _strip_noise(content)
+    # 引号边界连接词先归一为句界，再走分段校验
+    evidence = _STITCHED_QUOTE_CONNECTOR_RE.sub("。", evidence)
     fragments = [
         fragment.strip()
         for fragment in re.split(r"[\n。！？；;!?]+", evidence)
-        if fragment.strip()
+        if fragment.strip() and not _is_connector_fragment(fragment)
     ]
     if not fragments:
         return False

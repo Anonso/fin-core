@@ -713,3 +713,23 @@ def test_empty_backend_chain_returns_typed_unavailable(tmp_path: Path) -> None:
 
     assert extraction.units == []
     assert extraction.warnings == ["LLM extraction failed: LLM backend unavailable"]
+
+
+def test_evidence_stitched_with_connector_passes(tmp_path: Path) -> None:
+    """引句连接词不误杀：'引句A"以及"引句B' 两句各自忠实即通过（设计
+    docstring 已承诺非相邻句各句忠实可接受；08-30 新旧产物 diff 实证
+    两条忠实单元被连接词残段误杀）。"""
+    from fin_analyse.cognition.thesis_extractor import _evidence_in_source
+
+    body = "未来地方zf肯定会在老英雄重做和孵化小登上疯狂发力。或者不断搞出小型高科技公司。"
+    assert _evidence_in_source(
+        "“未来地方zf肯定会在老英雄重做和孵化小登上疯狂发力。”以及“或者不断搞出小型高科技公司。”",
+        body,
+    )
+    # 实质片段不忠实仍拒绝（防线不变）
+    assert not _evidence_in_source(
+        "“未来地方zf肯定会在老英雄重做和疯狂减持。”以及“或者不断搞出小型高科技公司。”",
+        body,
+    )
+    # 纯连接词 evidence = 无实质片段 → 拒绝
+    assert not _evidence_in_source("“以及”", body)
