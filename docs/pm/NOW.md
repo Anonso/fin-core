@@ -19,7 +19,7 @@
 > 7. 推进位五词：`先决 / 主线 / 旁路（时间·使用·owner·随手）/ 随部署 / 最后`；
 >    主线同一时刻只推一项，完成即出队。
 >
-> 最后核对：2026-08-29（Asia/Shanghai）。
+> 最后核对：2026-08-30（Asia/Shanghai）。
 
 ## 生产声明
 
@@ -40,7 +40,7 @@
 | 路由重排 D-018/019/021 | ✅ 完成（文件层 + 运行态） | [../DECISIONS.md](../DECISIONS.md) |
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 待排期，范围开工时定 | D-020 |
-| W3-4 深化调优 | 🔶 两刀完成（删罐头注入；08-30 第二刀 06 零提取重写：quote-driven 生成核心+证据防线+链式升级+数据手术 387 清洗/205 backfill+88 对 artifact 重生成 79 篇非空，勿回罐头缝）；**剩 01/03/05 prompt 调优 + B2 复盲评**（预注册口径样本≥10 均分>7） | 【主线】[../design/deepen.md](../design/deepen.md)；台账 `$STATE/fin-analyse/thesis-core-rewrite-06-construction/` |
+| W3-4 深化调优 | 🔶 两刀完成 + B2 复盲评已跑（08-30：14 样本无上下文盲评 6.83<7 → 预注册「再裁」分支；首轮两失败模式实证已修，缺陷面=覆盖不足/翻译层失真/拼接标注）；**待 owner 裁决（A 调优→二轮复盲评 / B 推翻口径 / C 第四刀）** | 【主线】[../design/deepen.md](../design/deepen.md)；台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
 | D3 三天真实使用门 | ⏳ 建设完成后一次性执行；供数 = finq usage.jsonl | D-020 |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步） | rebaseline §6 |
 
@@ -88,7 +88,7 @@
 | ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006 |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
-| 深化 deep-read | 文章支撑证据 | 问询验收中（06 重写已施工：主链 evidence 确定性校验+幻觉拦截实证生效；待 B2 复盲评闭环） | 需文章支撑的问题，验引用可溯源 | 【主线】[../design/deepen.md](../design/deepen.md)；B2 盲评（裁决台账在设计稿 Git 史） |
+| 深化 deep-read | 文章支撑证据 | 问询验收中（B2 复盲评 08-30：6.83<7 → 再裁；基线两失败模式已修，残余缺陷面=覆盖/翻译层/拼接标注） | 需文章支撑的问题，验引用可溯源 | 【主线】[../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
 | G 准入/工作集 | G 注入新鲜度 | 问询验收中（深化第一刀后的 manifest 契约失配已消——08-29 晚六题 g_context 零失配码；fresh pair 专项探针待跑） | 老师体系问题，验 fresh pair | [../design/g-cognition.md](../design/g-cognition.md)；CC 收口 b2da8d9c |
 | 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（两卡已点亮进问询上下文；方法论探针未命中） | 方法论类问题，验命中卡（risk_check/高PE 关键词） | knowledge_brain/seed_methodology_qa.py（541368d8） |
 | 薄 server 装配 | 六缝可用性（单缝失败隔离降级） | 在用 | 任一问询，验 gaps 可查 | read_capabilities/ |
@@ -103,7 +103,7 @@
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 2 | 深化收尾：01/03/05 prompt 调优 + B2 复盲评（预注册：样本≥10 均分>7 才闭环；06 重写已完成 08-30——设计稿按规则5入 Git 史，实证 `$STATE/fin-analyse/thesis-core-rewrite-06-construction/`） | owner |
+| 主线 | 2 | 深化收尾：B2 复盲评已跑 6.83<7 →「再裁」（选项 A 先调优再二轮复盲评 / B 推翻口径闭环 / C 第四刀；实锤与口径见复盲评打分表），等 owner 拍板 | owner |
 | 主线 | 3 | Daily gap 记账哑两项：断料降级模板 + snapshot 材料级 gap 上报（B1 归因新发现；深化之后顺位） | 随主线排期 |
 | 旁路·时间触发 | 4 | BUG-002 结构性半边定修 + BUG-011 EASTMONEY 源复查（同一 repro，单会话执行） | 周一 08-31 09:00–09:20 盘前窗口 |
 | 旁路·使用触发 | 5 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
