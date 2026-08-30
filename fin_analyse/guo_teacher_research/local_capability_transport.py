@@ -85,6 +85,14 @@ _READ_TOOL_DESCRIPTIONS = {
         "cash, exposure and as-of. Use for current-portfolio or account-aware advice; "
         "this read never changes the portfolio."
     ),
+    # BUG-012：通用默认描述导致 agent 无从判断调用时机（公告探针不触发）。
+    # 契约=当天高相关本地参考材料（非 G 非公告）；公告类必须转 read_external_evidence。
+    "fin.read_ready_evidence": (
+        "Read same-day, highly question-relevant local reference items (recent teacher "
+        "Q&A, general-column notes, market observations) as non-G reference context; "
+        "an empty result on other days is expected. For official company announcements "
+        "or records use read_external_evidence instead."
+    ),
 }
 _SERVER_POLL_INTERVAL_SECONDS = 0.01
 _SERVER_THREAD_JOIN_SECONDS = 0.1

@@ -346,11 +346,21 @@
 - 修复：待办——并入周一 08-31 BUG-002 盘前窗口同一 repro 复查，当场定修。
 - 状态：开放。
 
-## BUG-012 read_ready_evidence 恒 unavailable + 公告探针不触发工具（2026-08-29 探针复核立案）
+## BUG-012 read_ready_evidence 恒 unavailable + 公告探针不触发工具（2026-08-29 立案；08-30 根因诊断）
 
 - 现象：08-28 trace 6/6 调用 `ready_evidence_unavailable`；08-29 探针「持仓公司
-  官方公告」未触发该工具（5 探针仅 G/方法论探针顺带调用 2 次，均 unavailable）。
-- 根因：未诊断（官方记录/ready evidence 装配链或工具描述问题；疑似与 BUG-007
-  数据根双轨相关，待查）。
-- 修复：待办——排 W3-4 或迁移后；先查 ready_evidence 装配链。
-- 状态：开放。
+  官方公告」未触发该工具（5 探针仅 G/方法论探针顺带调用 2 次，均 unavailable）；
+  08-30 使用盘点 7 天 12 调 0 ok，全部单码 unavailable。
+- 根因（08-30 诊断，判别实验 `$STATE/fin-analyse/bug012-ready-evidence-20260830/`）：
+  三重契约错位，非崩溃——① 供料错位：reference lane 只从 priority_events.jsonl
+  取候选，缓存近期行全为 T0/teacher_original（G 级），`_is_reference_eligible`
+  恒滤空 → 当天 reference 候选结构性为零；② `fin.read_ready_evidence` 工具描述
+  落通用默认，agent 无从判断调用时机（探针不触发根因）；③「官方公告/记录」真实
+  供体是 read_external_evidence（OfficialRecordEvidence，7 天消费 42 次），板 B
+  契约描述写错行。
+- 修复：工具描述改专项（当天参考材料语义 + 公告类转 read_external_evidence）
+  + 板 B 两行契约纠偏 + 描述回归测试
+  （test_capability_tool_descriptions.py）。
+- 遗留决策（owner）：lane 供料扩展三选——维持诚实空 / 绕开 priority cache 直读
+  当日 KB（需小设计）/ 撤缝；未裁前该缝对多数提问仍诚实空（属正确行为）。
+- 状态：开放（描述与契约已修，供料决策待裁）。
