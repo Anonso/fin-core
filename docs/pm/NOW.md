@@ -40,7 +40,7 @@
 | 路由重排 D-018/019/021 | ✅ 完成（文件层 + 运行态） | [../DECISIONS.md](../DECISIONS.md) |
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 待排期，范围开工时定 | D-020 |
-| W3-4 深化调优 | 🔶 两刀完成 + B2 复盲评已跑（08-30：14 样本无上下文盲评 6.83<7；首轮两失败模式实证已修，缺口面=覆盖不足/翻译层失真/拼接标注）；**owner 已裁：坏缝修复优先，后 01/03/05 调优 → 二轮复盲评** | 【主线·顺位后】[../design/deepen.md](../design/deepen.md)；台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
+| W3-4 深化调优 | 🔶 两刀完成 + B2 复盲评已跑（08-30：14 样本无上下文盲评 6.83<7；首轮两失败模式实证已修，缺口面=覆盖不足/翻译层失真/拼接标注）；**owner 已裁：BUG-012 先修（立即），01/03/05 调优 → 二轮复盲评随后；BUG-002/011 走时间窗** | 【主线·顺位后】[../design/deepen.md](../design/deepen.md)；台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
 | D3 三天真实使用门 | ⏳ 建设完成后一次性执行；供数 = finq usage.jsonl | D-020 |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步） | rebaseline §6 |
 
@@ -52,7 +52,7 @@
 问询探针 = 一次真实提问，看 trace 三字段（`~/fin-data/trace/read-capability/calls.jsonl`：
 工具被调、`data_gaps` 空、`status` 正常）判「起了作用没」；效果好坏归打分/盲评，不混判。
 
-推进位标记（执行顺序，与状态六档无关；主线当前 = 问询面坏缝修复（08-30 owner 裁定，深化顺位其后），完整顺序看待办队列）：
+推进位标记（执行顺序，与状态六档无关；主线当前 = BUG-012（立即可动手）；时间窗项放旁路·时间触发到点执行、不占主线位（owner 08-30 裁定）；完整顺序看待办队列）：
 `【先决】【主线】【旁路·时间/使用/owner/随手】【随部署】`。
 
 问询面运行源：薄 server 与 Daily/ZSXQ 单元均由本仓起（单元绑 HEAD，
@@ -75,8 +75,8 @@
 | --- | --- | --- | --- | --- |
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
-| read_market_snapshot | 标的行情 | 问询验收中（容量已修；EASTMONEY 源解析失败致参考价） | 最新价，验无容量耗尽 | 【主线】[../design/market-data.md](../design/market-data.md)；BUG-002/011 |
-| read_market_overview | 大盘结构 | 问询验收中（结构性半边待修） | 「今天大盘怎么样」，验 gaps 空 | 【主线】[../design/market-data.md](../design/market-data.md)；BUG-002 |
+| read_market_snapshot | 标的行情 | 问询验收中（容量已修；EASTMONEY 源解析失败致参考价） | 最新价，验无容量耗尽 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002/011 |
+| read_market_overview | 大盘结构 | 问询验收中（结构性半边待修） | 「今天大盘怎么样」，验 gaps 空 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 问询验收中（描述修复已在本仓运行树，待探针复核闭环） | 两融问题 | BUG-004 |
 | read_ready_evidence | 官方公告/记录 | 问询验收中（全调用 unavailable；08-30 盘点 7 天 12 调 0 ok） | 公告类问题，验工具被调 + 可用 | 【主线】BUG-012 |
 | read_user_watchlist | 自选股清单（user context 注意力焦点，永非投资证据） | 在用（08-29 接入；探针「看下当前自选股」ok 无 gaps，22 只如实分组） | 「看下当前自选股」，验工具被调 + 空表诚实答空 | 短设计已按规则 5 归档（git 历史：read-user-watchlist-tool）；写通道=manage_user_watchlist.py |
@@ -103,15 +103,16 @@
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 2 | 问询面坏缝修复：BUG-002 结构性半边 + BUG-011 EASTMONEY 源复查（同一 repro，单会话）→ 紧随 BUG-012 ready_evidence 定修；08-30 使用盘点实证三缝「常被调、gaps 恒非空」（snapshot 35 调 0 ok / overview 13 调 0 ok / ready 12 调 0 ok） | 时间窗 08-31 09:00–09:20 盘前起 |
+| 主线 | 2 | BUG-012 ready_evidence 定修（全调用 unavailable，7 天 12 调 0 ok；无盘面依赖，立即可动手） | 立即 |
 | 主线 | 3 | 深化收尾：01/03/05 prompt 调优（定向修覆盖不足/翻译层失真/拼接标注三实锤面）→ 二轮复盲评（同协议新 seed，均分>7 闭环）；08-30 复盲评 6.83<7 的再裁 owner 已裁走此路径 | 前序=主线2 |
 | 主线 | 4 | Daily gap 记账哑两项：断料降级模板 + snapshot 材料级 gap 上报（B1 归因新发现） | 随主线排期 |
-| 旁路·使用触发 | 5 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
-| 旁路·记账 | 6 | G 置顶材料与真实问询错位：pinned 相关性门 8/13 次跳过（08-30 使用盘点；非缺陷，注意力配置信号） | 低优先 |
-| 旁路·等owner | 7 | 基础设施审计 A5：Windows Task PS1 的 commit 常量更新（低优先，poller 不比对不阻塞） | owner（Windows 侧手动） |
-| 旁路·随手修 | 8 | BUG-004 闭环探针：两融问题验 margin 描述修复生效（修复已在本仓运行树） | 随手（下次问询顺带） |
-| 随部署 | 9 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
-| 旁路·P5 前 | 10 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
+| 旁路·时间触发 | 5 | BUG-002 结构性半边定修 + BUG-011 EASTMONEY 源复查（同一 repro，单会话；需实弹盘面） | 周一 08-31 09:00–09:20 盘前窗口 |
+| 旁路·使用触发 | 6 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
+| 旁路·记账 | 7 | G 置顶材料与真实问询错位：pinned 相关性门 8/13 次跳过（08-30 使用盘点；非缺陷，注意力配置信号） | 低优先 |
+| 旁路·等owner | 8 | 基础设施审计 A5：Windows Task PS1 的 commit 常量更新（低优先，poller 不比对不阻塞） | owner（Windows 侧手动） |
+| 旁路·随手修 | 9 | BUG-004 闭环探针：两融问题验 margin 描述修复生效（修复已在本仓运行树） | 随手（下次问询顺带） |
+| 随部署 | 10 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
+| 旁路·P5 前 | 11 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
 
