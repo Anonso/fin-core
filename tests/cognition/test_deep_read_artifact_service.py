@@ -1261,37 +1261,71 @@ def test_retryable_vision_failure_only_for_empty_payloads() -> None:
     assert not _has_retryable_vision_failure(_pair_payload([], ["LLM found no extractable units"]))
 
 
-def test_vision_failed_empty_pair_is_not_fresh(tmp_path=None) -> None:
-    """端到端：空产物+vision 故障的 pair 不得取得 fresh 身份（is_fresh=False）。"""
-    import hashlib as _hashlib
-    import json as _json
+def _vision_pair_variant(kb_root: Path, article_id: str, published_at: str) -> Path:
+    """合法 pair 基线 + 空单元 + vision 故障警告 + 指定发布时间。"""
+    (kb_root / "articles").mkdir(parents=True, exist_ok=True)
+    article = _write_article(kb_root, article_id)
+    full_path, compact_path = _write_valid_pair(kb_root, article_id, article)
+    payload = {"source": {"published_at": published_at}, "units": [],
+               "warnings": ["vision data gaps: visual_fact_llm_invalid_response"]}
+    for path in (full_path, compact_path):
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        doc["payload"] = payload
+        path.write_text(json.dumps(doc), encoding="utf-8")
+    return article
+
+
+def test_vision_failed_recent_pair_is_not_fresh(tmp_path=None) -> None:
+    """空+vision 故障 + 发布 7 天内 → retryable → is_fresh=False（进补做队列）。"""
     import tempfile as _tempfile
-    import uuid as _uuid
     from datetime import UTC, datetime
     from pathlib import Path as _Path
 
     from fin_analyse.cognition.deep_read_artifacts import DeepReadArtifactService
 
     kb_root = _Path(_tempfile.mkdtemp())
-    (kb_root / "articles").mkdir(parents=True, exist_ok=True)
-    (kb_root / "runtime" / "cognition").mkdir(parents=True, exist_ok=True)
-    article_id = "visionfail1"
-    article = _write_article(kb_root, article_id)
-    envelope = {
-        "artifact_version": "deep_read_artifact_v1",
-        "article_id": article_id,
-        "content_hash": _hashlib.sha256(article.read_bytes()).hexdigest(),
-        "pipeline_version": "1.0.0",
-        "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
-        "generation_id": _uuid.uuid4().hex,
-    }
-    payload = _pair_payload(
-        [], ["vision data gaps: visual_fact_llm_invalid_response"])
-    service = DeepReadArtifactService(kb_root=kb_root)
-    for detail in ("full", "compact"):
-        doc = dict(envelope, detail=detail, payload=payload)
-        target = service._full_dir if detail == "full" else service._compact_dir
-        target.mkdir(parents=True, exist_ok=True)
-        (target / f"{article_id}.json").write_text(_json.dumps(doc), encoding="utf-8")
+    article = _vision_pair_variant(
+        kb_root, "visionrecent1", datetime.now(UTC).isoformat())
+    assert not DeepReadArtifactService(kb_root=kb_root).is_fresh(
+        "visionrecent1", str(article))
 
-    assert not service.is_fresh(article_id, str(article))
+
+def test_vision_failed_old_article_is_final_empty(tmp_path=None) -> None:
+    """发布超 7 天 → 终态诚实空 → fresh（退出补做队列，不无限重试）。"""
+    import tempfile as _tempfile
+    from datetime import UTC, datetime, timedelta
+    from pathlib import Path as _Path
+
+    from fin_analyse.cognition.deep_read_artifacts import DeepReadArtifactService
+
+    kb_root = _Path(_tempfile.mkdtemp())
+    article = _vision_pair_variant(
+        kb_root, "visionold1",
+        (datetime.now(UTC) - timedelta(days=11)).isoformat())
+    assert DeepReadArtifactService(kb_root=kb_root).is_fresh(
+        "visionold1", str(article))
+
+
+def test_vision_retry_window_boundary_and_unparseable() -> None:
+    """窗口边界：≤7 天补做、>7 天终态；发布时间缺失/坏格式 → 保守不补。"""
+    from datetime import UTC, datetime, timedelta
+
+    from fin_analyse.cognition.deep_read_artifacts import _vision_failure_pending_retry
+
+    warn = ["vision data gaps: visual_fact_llm_invalid_response"]
+    def payload(published, units=None):
+        p = _pair_payload(units or [], warn)
+        if published is not None:
+            p["source"] = {"published_at": published}
+        return p
+
+    now = datetime.now(UTC)
+    assert _vision_failure_pending_retry(payload(now.isoformat()))
+    # 边界留 60s 余量，避免断言与真实时钟的微秒竞态
+    assert _vision_failure_pending_retry(
+        payload((now - timedelta(days=7) + timedelta(seconds=60)).isoformat()))
+    assert not _vision_failure_pending_retry(
+        payload((now - timedelta(days=7) - timedelta(seconds=60)).isoformat()))
+    assert not _vision_failure_pending_retry(payload(None))
+    assert not _vision_failure_pending_retry(payload("not-a-date"))
+    assert not _vision_failure_pending_retry(payload(now.isoformat(), units=[{"u": 1}]))

@@ -37,7 +37,7 @@ import re
 import stat
 from contextlib import nullcontext, suppress
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
@@ -80,12 +80,12 @@ _VISION_FAILURE_WARNING_RE = re.compile(r"^(vision data gaps: |\[vision\] )")
 
 
 def _has_retryable_vision_failure(payload: dict[str, Any]) -> bool:
-    """空产物 + vision 故障 = retryable（2026-08-30 owner 拍板）。
+    """空产物 + vision 故障 = 补做候选（2026-08-30 owner 拍板）。
 
     举证：08-18/19 两篇锐评正文可提取却因 vision 链故障整篇空壳且永不
     补做——vision 本为 best-effort 上下文，不应永久封死文本提取的结果。
     稳定边界（故意收窄）：仅「units 为空 + 警告含 vision 故障前缀」才
-    retryable；有单元的产物不因 vision 缺席翻旧账（best-effort 语义保持，
+    候选；有单元的产物不因 vision 缺席翻旧账（best-effort 语义保持，
     存量零扰动）；文本兜底（central-idea）成功即 units>0，自然恢复 fresh。
     """
     units = payload.get("units")
@@ -96,6 +96,27 @@ def _has_retryable_vision_failure(payload: dict[str, Any]) -> bool:
         isinstance(warning, str) and _VISION_FAILURE_WARNING_RE.match(warning)
         for warning in warnings
     )
+
+
+#: 补做窗口：发布后 7 天内才随定时深化补做。owner 2026-08-30 追加边界：
+#: 难识别图片类必须有终态，不得无限占用补做队列。锚 = source.published_at
+#: （重生成不刷新，天然防「每次重试都续期」死循环）；超龄 = 终态诚实空
+#: （原因链保留在产物里，force 手动重生成不受限）；发布时间缺失/不可解析
+#: → 保守不补（宁可漏做，不做无界重试）。
+_VISION_RETRY_WINDOW = timedelta(days=7)
+
+
+def _vision_failure_pending_retry(payload: dict[str, Any]) -> bool:
+    if not _has_retryable_vision_failure(payload):
+        return False
+    published = str((payload.get("source") or {}).get("published_at") or "").strip()
+    try:
+        published_at = datetime.fromisoformat(published)
+        if published_at.tzinfo is None:
+            published_at = published_at.replace(tzinfo=UTC)
+    except ValueError:
+        return False
+    return datetime.now(UTC) - published_at <= _VISION_RETRY_WINDOW
 
 
 @dataclass(frozen=True)
@@ -905,8 +926,8 @@ class DeepReadArtifactService:
             or _has_retryable_backend_failure(compact_payload)
             or _has_retryable_extraction_failure(full_payload)
             or _has_retryable_extraction_failure(compact_payload)
-            or _has_retryable_vision_failure(full_payload)
-            or _has_retryable_vision_failure(compact_payload)
+            or _vision_failure_pending_retry(full_payload)
+            or _vision_failure_pending_retry(compact_payload)
         ):
             return None
 
