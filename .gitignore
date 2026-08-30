@@ -27,3 +27,6 @@ knowledge-base/
 
 # --- editors / OS ---
 .DS_Store
+
+# --- codex 项目级个人配置（本地） ---
+.codex/

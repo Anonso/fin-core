@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Skill(update-config)",
+      "WebFetch(domain:mp.weixin.qq.com)",
+      "WebSearch",
+      "mcp__plugin_serena_serena__initial_instructions",
+      "mcp__plugin_serena_serena__get_symbols_overview",
+      "mcp__plugin_serena_serena__activate_project",
+      "mcp__plugin_serena_serena__onboarding",
+      "mcp__codegraph__codegraph_explore",
+      "mcp__plugin_serena_serena__search_for_pattern",
+      "Skill(skill-creator:skill-creator)",
+      "WebFetch(domain:github.com)"
+    ]
+  },
+  "enabledPlugins": {
+    "claude-mem@thedotmack": false,
+    "superpowers@claude-plugins-official": false,
+    "context7@claude-plugins-official": true,
+    "serena@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/block_insecure_cc_task_state_write.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

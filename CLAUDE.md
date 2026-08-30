@@ -1,4 +1,4 @@
-# fin-analyse — Claude Code 入口
+# fin-core — Claude Code 入口
 
 @AGENTS.md
 
