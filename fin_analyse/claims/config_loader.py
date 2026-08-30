@@ -4,6 +4,7 @@ Supports ${ENV_VAR} syntax in YAML values for secrets.
 Priority: Environment variables > YAML config file.
 """
 
+import json
 import logging
 import math
 import os
@@ -19,6 +20,7 @@ from .openai_backend import OpenAICompatibleBackend
 
 logger = logging.getLogger(__name__)
 _ENV_REFERENCE = re.compile(r"\$\{(\w+)\}")
+_AUTHJSON_REFERENCE = re.compile(r"^\$\{AUTHJSON:([A-Za-z0-9_.-]+)\}$")
 
 
 class LLMConfigError(ValueError):
@@ -66,6 +68,9 @@ def _resolve_env(value: Any) -> Any:
     """Resolve ${ENV_VAR} patterns in string values."""
     if not isinstance(value, str):
         return value
+    authjson_match = _AUTHJSON_REFERENCE.fullmatch(value)
+    if authjson_match:
+        return _read_authjson_api_key(authjson_match.group(1))
     matches = _ENV_REFERENCE.findall(value)
     if matches and len(matches) == 1 and value.strip() == f"${{{matches[0]}}}":
         return os.environ.get(matches[0], value)
@@ -75,6 +80,60 @@ def _resolve_env(value: Any) -> Any:
             continue
         value = value.replace(f"${{{var}}}", env_val)
     return value
+
+
+def _authjson_path() -> Path:
+    data_home = os.environ.get("XDG_DATA_HOME")
+    if data_home:
+        return Path(data_home).expanduser() / "opencode" / "auth.json"
+    return Path.home() / ".local" / "share" / "opencode" / "auth.json"
+
+
+def _read_authjson_api_key(entry: str) -> str:
+    """owner-only 读 opencode auth.json 的 <entry>.key，供 ${AUTHJSON:<entry>}。
+
+    owner 2026-08-30 指令：opencode 的 DS 端点失败时换 auth.json 里的秘钥。
+    与 _load_owner_only_dotenv_file 同级边界：绝对路径、非符号链接、regular
+    file、属主本人、nlink==1、无 group/other 权限位、读取前后 fstat 一致。
+    任何不符/失败返回空串（下游端点按缺凭据跳过），绝不放宽，值不入日志。
+    """
+    path = _authjson_path()
+    if not path.is_absolute():
+        return ""
+    descriptor = -1
+    payload: Any = None
+    try:
+        descriptor = os.open(
+            path,
+            os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
+        before = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or before.st_uid != os.geteuid()
+            or before.st_nlink != 1
+            or stat.S_IMODE(before.st_mode) & 0o077 != 0
+        ):
+            return ""
+        stream = os.fdopen(descriptor, encoding="utf-8")
+        descriptor = -1
+        with stream:
+            payload = json.load(stream)
+            after = os.fstat(stream.fileno())
+        linked = os.stat(path, follow_symlinks=False)
+    except (OSError, RuntimeError, UnicodeError, ValueError):
+        return ""
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if (
+        _file_identity(before) != _file_identity(after)
+        or _file_identity(after) != _file_identity(linked)
+    ):
+        return ""
+    item = payload.get(entry) if isinstance(payload, dict) else None
+    key = item.get("key") if isinstance(item, dict) else None
+    return str(key) if isinstance(key, str) else ""
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:

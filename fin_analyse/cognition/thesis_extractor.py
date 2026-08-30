@@ -586,6 +586,7 @@ class LlmZsxqThesisExtractor:
         # 保持既有单次语义。
         result = None
         exhausted_bare_empty = True
+        sentinel_details: list[str] = []
         try:
             for llm in self._get_llm_chain():
                 for attempt_prompt in (prompt, prompt + _EMPTY_ESCALATION_NUDGE):
@@ -623,6 +624,16 @@ class LlmZsxqThesisExtractor:
                     ).strip():
                         exhausted_bare_empty = False  # 合法空：带因即停
                         break
+                    backend_failure = getattr(
+                        getattr(llm, "backend", None), "last_failure", None
+                    )
+                    if backend_failure is not None:
+                        # 后端失败哨兵：complete()/complete_bounded() 重试耗尽时
+                        # 返回字面 "[]" 且 last_failure 非空——与模型真产空数组
+                        # 不可分，last_failure 即硬失败证据。同 backend 的 nudge
+                        # 不解决服务端故障，留证后直接换链下一 backend。
+                        sentinel_details.append(_sentinel_summary(backend_failure))
+                        break
                     # bare-empty：继续（同 backend 重试指令 → 下一 backend）
                 if not exhausted_bare_empty:
                     break
@@ -635,6 +646,13 @@ class LlmZsxqThesisExtractor:
             # retryable 契约，后续排空可重试），绝不带 None 走 .ok。
             return ThesisExtraction(
                 [], [], ["LLM extraction failed: LLM backend unavailable"]
+            )
+        if exhausted_bare_empty and sentinel_details:
+            # 全链以硬失败哨兵收尾：不能落「合法空」的不可重试语义；产出
+            # typed retryable 失败（命中 LLM extraction failed 正则），排空/
+            # 重生成后续可补做。
+            return ThesisExtraction(
+                [], [], [f"LLM extraction failed: {sentinel_details[-1]}"]
             )
         if exhausted_bare_empty:
             logger.warning(
@@ -729,6 +747,17 @@ _EMPTY_ESCALATION_NUDGE = (
     "请严格按两步执行：先逐字摘录原文里承载实质观点的句子，再仅对这些"
     "摘录句构造 units 返回。确无实质内容才允许空返回并给出 empty_reason。"
 )
+
+
+def _sentinel_summary(failure: object) -> str:
+    """后端失败哨兵的 content-free 摘要：仅 error_type + http_status。"""
+    if not isinstance(failure, dict):
+        return "backend failure"
+    error_type = str(failure.get("error_type") or "LLMBackendError")
+    status = failure.get("http_status")
+    if isinstance(status, int):
+        return f"backend failure ({error_type} http={status})"
+    return f"backend failure ({error_type})"
 
 
 def _as_str_list(val: object) -> list[str]:

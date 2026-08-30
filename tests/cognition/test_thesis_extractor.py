@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from fin_analyse.cognition.llm import CognitionCompletionControl
+from fin_analyse.cognition.llm import CognitionCompletionControl, CognitionLLM
 from fin_analyse.cognition.thesis_extractor import (
     _LLM_EXTRACTION_PROMPT,
     LlmZsxqThesisExtractor,
@@ -690,6 +690,92 @@ def test_bare_empty_exhausting_chain_returns_bare_warning(tmp_path: Path) -> Non
 
     assert extraction.warnings == ["LLM found no extractable units"]
     assert len(calls) == 2
+
+
+def test_sentinel_empty_skips_nudge_and_uses_next_backend(tmp_path: Path) -> None:
+    """后端失败哨兵（last_failure 非空 + 返回 "[]"）不浪费同 backend nudge，
+    直接换链下一 backend 出活。"""
+    source = _source(
+        tmp_path, "凤仙郡小故事：升级", SAMPLE06_CLEAN_BODY, column="凤仙郡小故事"
+    )
+
+    class _SentinelBackend:
+        last_failure = {"error_type": "ValueError", "http_status": None}
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def complete(self, _prompt: str) -> str:
+            self.calls += 1
+            return "[]"
+
+    class _WorkingBackend:
+        last_failure = None
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def complete(self, _prompt: str) -> str:
+            self.calls += 1
+            return json.dumps(
+                {
+                    "units": [
+                        _sample06_unit(
+                            "躺好！除非是做t的天才，不动就行了。",
+                            "不动就行的持有纪律。",
+                            "躺好不动",
+                            "market_timing",
+                        )
+                    ]
+                }
+            )
+
+    failing = _SentinelBackend()
+    working = _WorkingBackend()
+    extractor = LlmZsxqThesisExtractor(llm=None)
+    original = extractor._get_llm_chain
+    extractor._get_llm_chain = lambda: [
+        CognitionLLM(backend=failing),
+        CognitionLLM(backend=working),
+    ]
+    try:
+        extraction = extractor.extract(source)
+    finally:
+        extractor._get_llm_chain = original
+
+    assert [unit.title for unit in extraction.units] == ["躺好不动"]
+    assert failing.calls == 1  # 哨兵是硬失败：不重试指令
+    assert working.calls == 1
+
+
+def test_sentinel_exhausting_chain_returns_retryable_failure(tmp_path: Path) -> None:
+    """全链哨兵失败 → typed retryable 警告（不落「合法空」的不可重试语义）。"""
+    source = _source(tmp_path, "无内容", "正文。")
+
+    class _SentinelBackend:
+        last_failure = {"error_type": "BadRequestError", "http_status": 400}
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def complete(self, _prompt: str) -> str:
+            self.calls += 1
+            return "[]"
+
+    failing = _SentinelBackend()
+    extractor = LlmZsxqThesisExtractor(llm=None)
+    original = extractor._get_llm_chain
+    extractor._get_llm_chain = lambda: [CognitionLLM(backend=failing)]
+    try:
+        extraction = extractor.extract(source)
+    finally:
+        extractor._get_llm_chain = original
+
+    assert extraction.units == []
+    assert extraction.warnings == [
+        "LLM extraction failed: backend failure (BadRequestError http=400)"
+    ]
+    assert failing.calls == 1
 
 
 def test_empty_backend_chain_returns_typed_unavailable(tmp_path: Path) -> None:

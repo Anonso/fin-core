@@ -1,3 +1,4 @@
+import json
 import os
 
 import pytest
@@ -9,6 +10,65 @@ from fin_analyse.claims.config_loader import (
     create_backends_from_config,
     load_llm_config,
 )
+
+
+def test_authjson_reference_resolves_owner_only_key(tmp_path, monkeypatch):
+    """${AUTHJSON:<entry>} 从 owner-only auth.json 解析 <entry>.key。"""
+    data_home = tmp_path / "data-home"
+    auth = data_home / "opencode" / "auth.json"
+    auth.parent.mkdir(parents=True)
+    auth.write_text(
+        json.dumps({"opencode-go": {"type": "api", "key": "sk-authjson-test"}})
+    )
+    auth.chmod(0o600)
+    monkeypatch.setenv("XDG_DATA_HOME", str(data_home))
+    config_path = tmp_path / "llm.yaml"
+    config_path.write_text(
+        """
+models:
+  ds:
+    provider: openai_compatible
+    model: ds-test
+    api_key: ${AUTHJSON:opencode-go}
+    enabled: true
+"""
+    )
+
+    config = load_llm_config(str(config_path))
+
+    assert config["models"]["ds"]["api_key"] == "sk-authjson-test"
+
+
+def test_authjson_reference_rejects_unsafe_files(tmp_path, monkeypatch):
+    """auth.json 为符号链接/组他可读/缺条目时解析为空串，绝不放宽。"""
+    data_home = tmp_path / "data-home"
+    auth_dir = data_home / "opencode"
+    auth_dir.mkdir(parents=True)
+    monkeypatch.setenv("XDG_DATA_HOME", str(data_home))
+
+    # 符号链接 → O_NOFOLLOW 拒绝
+    real = tmp_path / "real-auth.json"
+    real.write_text(
+        json.dumps({"opencode-go": {"type": "api", "key": "sk-linked"}})
+    )
+    (auth_dir / "auth.json").symlink_to(real)
+    from fin_analyse.claims.config_loader import _resolve_env
+
+    assert _resolve_env("${AUTHJSON:opencode-go}") == ""
+    (auth_dir / "auth.json").unlink()
+
+    # 组/他可读 → 拒绝
+    auth = auth_dir / "auth.json"
+    auth.write_text(
+        json.dumps({"opencode-go": {"type": "api", "key": "sk-readable"}})
+    )
+    auth.chmod(0o644)
+    assert _resolve_env("${AUTHJSON:opencode-go}") == ""
+
+    # 缺条目 → 空串
+    auth.write_text(json.dumps({"other": {"type": "api", "key": "sk-other"}}))
+    auth.chmod(0o600)
+    assert _resolve_env("${AUTHJSON:opencode-go}") == ""
 
 
 def test_load_config_reads_enabled_models(tmp_path):

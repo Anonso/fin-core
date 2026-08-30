@@ -22,6 +22,10 @@ class OpenAICompatibleBackend:
     a /v1/chat/completions endpoint."""
 
     _MAX_RETRY_TOKENS = 16384
+    #: finish_reason=length 且 content 空（推理耗尽签名）最多倍增一次即止；
+    #: 2026-08-30 实证 glm53/deepseek 的推理随预算线性增长、三档全空，
+    #: 无界倍增只烧钱不救回；qwen 一次倍增（4096→8192）即可救回答案。
+    _EMPTY_LENGTH_RETRY_TOKENS = 8192
     _MAX_ERROR_RETRIES = 2
     _ERROR_RETRY_BASE_DELAY_SECONDS = 0.1
 
@@ -230,12 +234,22 @@ class OpenAICompatibleBackend:
                     if endpoint_reasoning_effort:
                         kwargs["reasoning_effort"] = endpoint_reasoning_effort
                     response = client.chat.completions.create(**kwargs)
-                    content = self._response_text(response)
                     finish_reason = (
                         getattr(response.choices[0], "finish_reason", None)
                         if not isinstance(response, str)
                         else None
                     )
+                    if finish_reason == "length":
+                        # 推理模型（reasoning_content 计入 completion 预算）会把
+                        # max_tokens 全部耗在隐藏推理上，content 为空——length 即
+                        # 截断信号，跳过 _response_text 的空 content 校验，直接走
+                        # 倍增恢复，不当作通用失败（2026-08-30 空坍塌实证）。
+                        try:
+                            content = self._response_text(response)
+                        except ValueError:
+                            content = ""
+                    else:
+                        content = self._response_text(response)
                     if finish_reason != "length" and not self._looks_truncated(content):
                         self.last_failure = None
                         get_backend_circuit_breaker().record_success(self.backend_name)
@@ -248,7 +262,10 @@ class OpenAICompatibleBackend:
                         "http_status": None,
                         "base_url": str(endpoint.get("base_url") or self.base_url or ""),
                     }
-                    if max_tokens >= self._MAX_RETRY_TOKENS:
+                    if max_tokens >= self._MAX_RETRY_TOKENS or (
+                        not content
+                        and max_tokens >= self._EMPTY_LENGTH_RETRY_TOKENS
+                    ):
                         failures.append(last_truncated)
                         last_truncated = None
                         break
@@ -351,12 +368,20 @@ class OpenAICompatibleBackend:
                     if endpoint_reasoning_effort:
                         kwargs["reasoning_effort"] = endpoint_reasoning_effort
                     response = bounded_client.chat.completions.create(**kwargs)
-                    content = self._response_text(response)
                     finish_reason = (
                         getattr(response.choices[0], "finish_reason", None)
                         if not isinstance(response, str)
                         else None
                     )
+                    if finish_reason == "length":
+                        # 同 complete()：推理预算耗尽截断的恢复路径不可被
+                        # _response_text 的空 content 校验短路。
+                        try:
+                            content = self._response_text(response)
+                        except ValueError:
+                            content = ""
+                    else:
+                        content = self._response_text(response)
                     if finish_reason != "length" and not self._looks_truncated(content):
                         self.last_failure = None
                         get_backend_circuit_breaker().record_success(self.backend_name)
@@ -369,7 +394,10 @@ class OpenAICompatibleBackend:
                         "http_status": None,
                         "base_url": str(endpoint.get("base_url") or self.base_url or ""),
                     }
-                    if max_tokens >= self._MAX_RETRY_TOKENS:
+                    if max_tokens >= self._MAX_RETRY_TOKENS or (
+                        not content
+                        and max_tokens >= self._EMPTY_LENGTH_RETRY_TOKENS
+                    ):
                         failures.append(last_truncated)
                         last_truncated = None
                         break

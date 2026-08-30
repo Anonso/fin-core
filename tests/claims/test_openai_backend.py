@@ -15,6 +15,26 @@ _ORIGINAL_COMPLETE = OpenAICompatibleBackend.complete
 _ORIGINAL_COMPLETE_BOUNDED = OpenAICompatibleBackend.complete_bounded
 
 
+def _choice_response(content: str, finish_reason: str):
+    """Minimal OpenAI response stub with one choice."""
+    return type(
+        "Response",
+        (),
+        {
+            "choices": [
+                type(
+                    "Choice",
+                    (),
+                    {
+                        "message": type("Message", (), {"content": content})(),
+                        "finish_reason": finish_reason,
+                    },
+                )()
+            ]
+        },
+    )()
+
+
 def test_complete_bounded_caps_each_wire_call_and_disables_sdk_retries(monkeypatch):
     monkeypatch.setattr(
         OpenAICompatibleBackend,
@@ -703,3 +723,186 @@ class TestBackendFailureRecording:
         assert len(breaker.failures) == 1
         assert breaker.failures[0][0] == "gpt5"
         assert breaker.failures[0][1]["model"] == "gpt-5.6-sol"
+
+    def test_complete_doubles_budget_when_reasoning_exhausts_length_with_empty_content(
+        self, monkeypatch
+    ):
+        """推理预算耗尽（finish_reason=length + 空 content）走倍增恢复，不落哨兵。
+
+        2026-08-30 空坍塌实证：推理模型把 max_tokens 全耗在 reasoning_content，
+        content 为空——修复前 _response_text 抛 ValueError 短路倍增逻辑，
+        重试耗尽返回 "[]"；修复后 4096→8192 重试拿到可见答案。
+        """
+        monkeypatch.setattr(OpenAICompatibleBackend, "complete", _ORIGINAL_COMPLETE)
+        calls: list[int] = []
+
+        def create(*_args, **kwargs):
+            max_tokens = kwargs["max_tokens"]
+            calls.append(max_tokens)
+            if max_tokens == 4096:
+                return _choice_response("", "length")
+            return _choice_response('{"units": [{"evidence": "原文"}]}', "stop")
+
+        monkeypatch.setattr(
+            OpenAICompatibleBackend,
+            "_get_client",
+            lambda self, _index=0: type(
+                "Client",
+                (),
+                {
+                    "chat": type(
+                        "Chat",
+                        (),
+                        {"completions": type("Completions", (), {"create": create})()},
+                    )()
+                },
+            )(),
+        )
+        backend = OpenAICompatibleBackend(model="gpt-5.6-sol", api_key="sk-test")
+
+        result = backend.complete("prompt")
+
+        assert result == '{"units": [{"evidence": "原文"}]}'
+        assert backend.last_failure is None
+        assert calls == [4096, 8192]
+
+    def test_complete_caps_empty_length_reasoning_after_one_doubling(self, monkeypatch):
+        """推理耗尽签名（length+空 content）只倍增一次即终态截断——
+        2026-08-30 实证 glm53/deepseek 推理随预算线性增长，无界倍增只烧钱。"""
+        monkeypatch.setattr(OpenAICompatibleBackend, "complete", _ORIGINAL_COMPLETE)
+        calls: list[int] = []
+
+        def create(*_args, **kwargs):
+            calls.append(kwargs["max_tokens"])
+            return _choice_response("", "length")
+
+        monkeypatch.setattr(
+            OpenAICompatibleBackend,
+            "_get_client",
+            lambda self, _index=0: type(
+                "Client",
+                (),
+                {
+                    "chat": type(
+                        "Chat",
+                        (),
+                        {"completions": type("Completions", (), {"create": create})()},
+                    )()
+                },
+            )(),
+        )
+        backend = OpenAICompatibleBackend(model="gpt-5.6-sol", api_key="sk-test")
+
+        result = backend.complete("prompt")
+
+        assert result == "[]"
+        assert calls == [4096, 8192]
+        assert backend.last_failure is not None
+        assert backend.last_failure["error_type"] == "LLMResponseTruncated"
+
+    def test_complete_full_doubles_when_answer_content_is_truncated(self, monkeypatch):
+        """答案非空但 length 截断 → 保留全档倍增（4096→8192→16384）直至出活。"""
+        monkeypatch.setattr(OpenAICompatibleBackend, "complete", _ORIGINAL_COMPLETE)
+        calls: list[int] = []
+
+        def create(*_args, **kwargs):
+            max_tokens = kwargs["max_tokens"]
+            calls.append(max_tokens)
+            if max_tokens < 16384:
+                return _choice_response('{"units": [{"evidence": "原文', "length")
+            return _choice_response(
+                '{"units": [{"evidence": "原文完整句"}]}', "stop"
+            )
+
+        monkeypatch.setattr(
+            OpenAICompatibleBackend,
+            "_get_client",
+            lambda self, _index=0: type(
+                "Client",
+                (),
+                {
+                    "chat": type(
+                        "Chat",
+                        (),
+                        {"completions": type("Completions", (), {"create": create})()},
+                    )()
+                },
+            )(),
+        )
+        backend = OpenAICompatibleBackend(model="gpt-5.6-sol", api_key="sk-test")
+
+        result = backend.complete("prompt")
+
+        assert result == '{"units": [{"evidence": "原文完整句"}]}'
+        assert calls == [4096, 8192, 16384]
+        assert backend.last_failure is None
+
+    def test_endpoint_fallback_on_401_uses_next_endpoint_key(self, monkeypatch):
+        """主端点 401 → 换下一端点（auth.json 降级键）出活，不落哨兵。"""
+        monkeypatch.setattr(OpenAICompatibleBackend, "complete", _ORIGINAL_COMPLETE)
+        from openai import BadRequestError
+
+        request = httpx.Request("POST", "https://x/v1/chat/completions")
+        response = httpx.Response(status_code=401, request=request)
+        error = BadRequestError(
+            message="invalid api key",
+            response=response,
+            body={
+                "error": {
+                    "message": "invalid api key",
+                    "type": "invalid_request_error",
+                }
+            },
+        )
+
+        class _PrimaryClient:
+            chat = type(
+                "Chat",
+                (),
+                {
+                    "completions": type(
+                        "Completions",
+                        (),
+                        {
+                            "create": lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                                error
+                            )
+                        },
+                    )()
+                },
+            )()
+
+        class _FallbackClient:
+            chat = type(
+                "Chat",
+                (),
+                {
+                    "completions": type(
+                        "Completions",
+                        (),
+                        {"create": lambda *_args, **_kwargs: "fallback answer"},
+                    )()
+                },
+            )()
+
+        backend = OpenAICompatibleBackend(
+            model="ds-flash",
+            api_key="sk-primary",
+            endpoints=[
+                {"name": "primary", "api_key": "sk-primary", "base_url": "https://x"},
+                {"name": "fallback", "api_key": "sk-fallback", "base_url": "https://x"},
+            ],
+        )
+        seen: list[int] = []
+
+        def _client(index: int = 0):
+            seen.append(index)
+            return _PrimaryClient() if index == 0 else _FallbackClient()
+
+        monkeypatch.setattr(backend, "_get_client", _client)
+
+        result = backend.complete("prompt")
+
+        assert result == "fallback answer"
+        assert seen == [0, 1]
+        assert backend.last_failure is None
