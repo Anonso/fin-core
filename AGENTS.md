@@ -53,9 +53,12 @@ docs/GLOSSARY.md（术语指路）；认知域深度词汇以 UBIQUITOUS_LANGUAG
 
 废止：binding / design review 轮次 / 审核 failover / 四级完成等级 /
 五层 E2E / 唯一 writer 官僚 / opencode 双 writer 变体。
-复评第一层（按需动词）：/review（实名 skill，自固定比较点；Spec 轴源
+审查机制归属（owner 2026-08-30 拍板）：设计门与外部 agent 审计为 CC
+专属；codex-open 不设设计门、不做外部审计，全部自己完成。
+复评第一层（CC 按需动词）：/review（实名 skill，自固定比较点；Spec 轴源
 指向 docs/design/、NOW.md、commit message 引用，不依赖 issue tracker）。
-外部审视（按需动词，无常驻设施）：评审者固定 scripts/codex_open.sh
+外部审视（CC 专属，按需动词，无常驻设施）：CC 的评审者固定
+scripts/codex_open.sh
 --sandbox read-only（当前 codex-open · deepseek-v4-pro · max；换
 provider/模型/强度只改该脚本，本文件不写死）。三触发、每触发一次：
 核心设计稿动代码前（设计门，规则5 那类，非核心豁免）；吓人 diff 合入前
@@ -64,7 +67,7 @@ provider/模型/强度只改该脚本，本文件不写死）。三触发、每�
 codex-glm·glm-5.3——前两次双模并行校准独立发现占比再定转正）。每次给
 评审者冻结 packet：设计稿或 diff+提交清单+固定四问（契约破坏？durable
 state 时序/幂等？引用闭包漏删？相对直接 Agent 退化？）；评审只产发现，
-裁决归 writer 逐条落稿；裁决记录附 elapsed_seconds/发现数/采纳数。
+裁决归 CC 逐条落稿；裁决记录附 elapsed_seconds/发现数/采纳数。
 评审侧不用长驻会话，靠 packet 固定前缀吃 provider 缓存；仅外援出现
 一次单发 packet 反复漏上下文的真实事故才许引入 resume 会话。
 升级防线：外部审视每周真在手动用才许包脚本（规则11）；想接回自动

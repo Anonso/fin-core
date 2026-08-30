@@ -170,3 +170,12 @@
 - 为什么：深化重写是核心链路大改，在新仓写避免老仓写完再搬一遍；数据与代码彻底分离，绝 BUG-007 类双轨问题；W2 原地手术已在老仓跑通、生产稳定，移植不重做功能只搬成品。
 - 否决了什么：「原地继续」——承认现状、不建新仓，把干净化无限期推迟。
 - 状态：active · 证据：rebaseline §0.5.6；infra-audit A3；docs/design/new-repo-migration.md。
+
+## D-027 · 2026-08-30 · 设计门/外部审计为 CC 专属，codex-open 全部自己完成（owner 拍板）
+- 决策：设计门与外部 agent 审计仅 CC 会话执行；codex-open 不设设计门、不做
+  外部审计，全部自己完成。家规 AGENTS.md 外部审视节改为 CC 专属并新增审查
+  机制归属行，GLOSSARY 外部审视/设计门/外援触发三行同步。
+- 为什么：owner 明确「codex-open 不需要设计门，不需要外部 agent 审计，全部是
+  自己完成，只有 CC 才有设计门/审计门」。
+- 否决了什么：继续把外部审视三触发无条件套在 codex-open 会话（打断其自主完成）。
+- 状态：active · 证据：AGENTS.md 审查机制归属；docs/GLOSSARY.md；本条目落盘即 commit。

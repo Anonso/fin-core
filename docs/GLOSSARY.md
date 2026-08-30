@@ -58,7 +58,7 @@
 | **熔断** | 按命名空间（如 `vision:`）的故障隔离，防单点拖垮整链。 | [backend_health.py](../fin_analyse/claims/backend_health.py)（BackendCircuitBreaker） |
 | **vision chain** | 识图链：glm53_flash → glm-4.6v-flash → 硅基流动 → mimo，已配置化。 | [config/llm.yaml](../config/llm.yaml) `vision.chain` 段 |
 | **复评第一层** | `/review`（实名 skill，自固定比较点）；Spec 轴源指向 docs/design/、NOW.md、commit message，不依赖 issue tracker。 | [AGENTS.md](../AGENTS.md) 复评第一层节 |
-| **外部审视** | 统一外部评审机制：评审者固定 scripts/codex_open.sh --sandbox read-only（当前 codex-open·deepseek-v4-pro·max，换规格只改脚本）；三触发各一次=设计门/吓人 diff/外援；packet 冻结四问；评审只产发现、裁决归 writer；裁决记录附时长。 | [AGENTS.md](../AGENTS.md) 外部审视节 |
+| **外部审视** | CC 专属统一外部评审机制：CC 的评审者固定 scripts/codex_open.sh --sandbox read-only（当前 codex-open·deepseek-v4-pro·max，换规格只改脚本）；三触发各一次=设计门/吓人 diff/外援；packet 冻结四问；评审只产发现、裁决归 CC；裁决记录附时长。codex-open 不设设计门/外部审计，全部自己完成。 | [AGENTS.md](../AGENTS.md) 审查机制归属 |
 
 ## 运行与发布
 
@@ -79,8 +79,8 @@
 | **rebaseline-20260827** | 方向权威（§0.5 为当前版本）：CLI-first、Daily 脱钩、实验预注册、容器判决 ③b。 | [rebaseline](pm/rebaseline-20260827.md) |
 | **容器判决 ③b** | 新代码住 `~/fin-core`（新 git 历史）、数据住 `~/fin-data`、旧仓冻结不删。 | [rebaseline §0.5.6](pm/rebaseline-20260827.md) |
 | **阶段（P0–P5）** | rebaseline §6 刻度 + D-020 时序调整：P0 止血 → P1 CLI 首链（薄 server/consult-agent）→ W2 手术 → 外部项目吸收 → W3-4 深化 → D3 终态验收（最后）→ P5 条件开放。 | [rebaseline §6](pm/rebaseline-20260827.md)、[D-020](DECISIONS.md) |
-| **设计门** | 外部审视三触发之一：核心设计稿动代码前一次盲评（规则 5 那类，非核心豁免）。 | [AGENTS.md](../AGENTS.md) 外部审视节 |
-| **外援触发** | 外部审视三触发之一：同一问题 ≥2 次修复未果时加第二意见模型（当前 codex-glm·glm-5.3），前两次双模并行校准独立发现占比再定转正。 | [AGENTS.md](../AGENTS.md) 外部审视节 |
+| **设计门** | CC 外部审视三触发之一：核心设计稿动代码前一次盲评（规则 5 那类，非核心豁免）。 | [AGENTS.md](../AGENTS.md) 外部审视节 |
+| **外援触发** | CC 外部审视三触发之一：同一问题 ≥2 次修复未果时加第二意见模型（当前 codex-glm·glm-5.3），前两次双模并行校准独立发现占比再定转正。 | [AGENTS.md](../AGENTS.md) 外部审视节 |
 | **keep-set 闭包** | 薄 server + Daily + ZSXQ + 深化四入口的 import 闭包并集；新仓移植与归档的准入线。 | [rebaseline §0.5.6](pm/rebaseline-20260827.md) |
 | **工作树（worktree）** | 并行开发隔离单元；独立功能并行、半成品不进 main、终态回收。 | [AGENTS.md](../AGENTS.md) 规则 13 |
 | **advisory_only** | 研究咨询默认边界；真实交易/资金副作用必须人工确认（家规硬边界 1）。 | [AGENTS.md](../AGENTS.md) 硬边界节 |
