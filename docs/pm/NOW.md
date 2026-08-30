@@ -77,9 +77,9 @@
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
 | read_market_snapshot | 标的行情 | 问询验收中（容量已修；EASTMONEY 源解析失败致参考价） | 最新价，验无容量耗尽 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002/011 |
 | read_market_overview | 大盘结构 | 问询验收中（结构性半边待修） | 「今天大盘怎么样」，验 gaps 空 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002 |
-| read_margin_evidence | 两融语义 | 问询验收中（描述修复已在本仓运行树，待探针复核闭环） | 两融问题 | BUG-004 |
-| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料已换 canonical index.json，端到端测试过；待实弹探针闭环） | 当天老师相关提问，验工具被调 + 有料则注入 | 【主线】BUG-012 |
-| read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（7 天消费 42 次；gap 率待公告探针复核） | 公告类问题，验工具被调 + gaps 空 | BUG-012 探针改指此缝 |
+| read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
+| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；选材层残余：相关性门空转 + 公司空帖占位双重损耗，见 BUG-012 残余二【主线】） | 当天老师相关提问，验工具被调 + 有料则注入 | 【主线】BUG-012 |
+| read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（08-30 公告探针过：外搜带时点、持仓联动正确；现役面=外搜 MCP 辅助面） | 公告类问题，验工具被调 + gaps 空 | BUG-012 公告腿已闭 |
 | read_user_watchlist | 自选股清单（user context 注意力焦点，永非投资证据） | 在用（08-29 接入；探针「看下当前自选股」ok 无 gaps，22 只如实分组） | 「看下当前自选股」，验工具被调 + 空表诚实答空 | 短设计已按规则 5 归档（git 历史：read-user-watchlist-tool）；写通道=manage_user_watchlist.py |
 
 ### L3 供给链（决定上面缝的数据质量）
@@ -104,11 +104,10 @@
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 2 | BUG-012 定修：描述+供料两刀已施工（08-30，全量 2901 绿；当晚复测 2902 绿，用例数随施工漂移、非固定基线）；待实弹探针闭环（当日普通栏提问 → 工具被调 items 非空；公告类 → 走 external_evidence） | 探针随下次问询（门已开：空坍塌定修合入 `5a6f12b`、全量绿、端到端实弹过；供料看当日普通栏有无新帖） |
+| 主线 | 2 | BUG-012 残余二修复：实弹四发已裁（08-30 晚）——公告类腿过、两融描述腿顺带过（BUG-004 闭）、置顶换装实弹过；普通栏腿两发 items 空，根因=选材门空转+公司空帖占位双重损耗（目标帖四门全过仍未浮出，门级仪表化定位，见 BUGS.md BUG-012 残余二）。核心链路选材，动代码前走设计门 | 主线顺位（无外部等待） |
 | 主线 | 3 | 深化收尾：01/03/05 prompt 调优（定向修覆盖不足/翻译层失真/拼接标注三实锤面）→ 二轮复盲评（同协议新 seed，均分>7 闭环）；08-30 复盲评 6.83<7 的再裁 owner 已裁走此路径 | 前序=主线2 |
 | 旁路·时间触发 | 5 | BUG-002 结构性半边定修 + BUG-011 EASTMONEY 源复查（同一 repro，单会话；需实弹盘面） | 周一 08-31 09:00–09:20 盘前窗口 |
 | 旁路·使用触发 | 6 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
-| 旁路·随手修 | 7 | BUG-004 闭环探针：两融问题验 margin 描述修复生效（修复已在本仓运行树） | 随手（下次问询顺带） |
 | 随部署 | 8 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
 | 旁路·P5 前 | 9 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
 
