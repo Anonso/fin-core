@@ -390,3 +390,20 @@
   类问题失效（tags/标题通道可用；既有缺口，评审 P2-8 记档）。
 - 状态：修复已施工（全量 2901 绿）；待实弹探针闭环（提问涉当日普通栏 →
   工具被调且 items 非空；公告类问题 → 正确走 read_external_evidence）。
+
+## BUG-013 cognition 提取空坍塌：推理预算耗尽 + 失败哨兵误判（2026-08-30 立案并定修）
+
+- 现象：08-30 下午/晚间 glm53/deepseek/qwen 对同一提取任务返回字面 `[]`
+  （85/88 空），同 prompt/backend/文章可翻转；opencode 网关 deepseek_flash 正常。
+- 根因（raw HTTP 探针定案）：三后端均 `finish_reason=length`、content 空、
+  reasoning≈1 万字符、completion_tokens=4096 顶满——隐藏推理吃光 max_tokens，
+  可见答案截成空；`_response_text` 空 content 抛 ValueError 在倍增恢复前短路；
+  重试耗尽返回 `"[]"` 哨兵被提取层当「合法空」落不可重试语义（排空不补做）。
+  glm53 另有偶发 400 内容过滤路径。原判「模型自主选最短合法 JSON」证伪，非限流。
+- 修复：length 容忍空 content 走倍增恢复（答案非空截断全档 4096→8192→16384；
+  空推理签名只倍增一次即终态截断）；提取层按 last_failure 区分哨兵→retryable
+  硬失败并跳过同 backend nudge；deepseek_flash 双端点（llm.env 主键 +
+  auth.json opencode-go 降级键，owner 指令）。72 focused + 2910 全量绿；
+  端到端实弹 290.8s 出 5 单元 0 警告。
+- 状态：修复已合入（5a6f12b）；低峰重生成（regen_driver_v4，regen-if-better）
+  待 08-31 凌晨照跑复核。
