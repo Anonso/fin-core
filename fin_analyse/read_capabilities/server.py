@@ -115,8 +115,9 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "audit via as_of. Advisory reference only, never a trade instruction. "
         "HARD RULE: any analysis/opinion question (怎么样/怎么看/该不该/要不要) "
         "calls this FIRST — analysis always consults the G mainline. Only a pure "
-        "factual lookup (what holdings, what cost, how many) skips it; when in "
-        "doubt, call it."
+        "factual lookup (what holdings, what cost, how many) or an explicit "
+        "user opt-out ('不用 G 认知' / don't use the teacher's framework) skips "
+        "it; when in doubt, call it."
     ),
     "read_actual_portfolio": (
         "Read the latest user-confirmed actual portfolio snapshot: holdings, "
@@ -124,8 +125,9 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "never changes the portfolio. HARD RULE for any instrument/holdings "
         "question: call this plus read_market_snapshot FIRST. For any "
         "analysis/opinion question about holdings, call read_g_context FIRST "
-        "as well — only a pure factual lookup (what holdings, what cost) skips "
-        "G. Never invent holdings, names, or portfolio rules from memory."
+        "as well — only a pure factual lookup (what holdings, what cost) or an "
+        "explicit user opt-out of G cognition skips G. Never invent holdings, "
+        "names, or portfolio rules from memory."
     ),
     "read_market_snapshot": (
         "Read on-demand tactical market context for up to 5 A-share instruments "

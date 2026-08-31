@@ -32,6 +32,8 @@ def test_g_context_description_analysis_first_rule() -> None:
     assert "HARD RULE" in text
     assert "analysis always consults the G mainline" in text
     assert "skips it" in text
+    # Owner 2026-09-01: explicit user opt-out is the only other exemption.
+    assert "explicit user opt-out" in text
 
 
 def test_market_snapshot_description_keeps_gap_honesty_rule() -> None:
