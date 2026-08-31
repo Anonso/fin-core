@@ -489,4 +489,7 @@
   个股榜、限制）；`MarketIndexObservation.level` 透传 f2；闭市优先既有 Eastmoney
   指数端点以补齐涨跌家数；prompt 要求有料时至少引用两条带数字事实并说明含义。
   focused 39 例、默认套件 2936 例 + ruff 已通过。
-- 状态：文件层修复，尚未部署；需下一次真实 Daily 班次确认正文不再只写缺口。
+- 部署（2026-08-31 17:27）：目标 SHA `5e64c43`，`uv sync` 无依赖变更，
+  systemd daemon-reload 后 gateway PID `497795` 正常运行；薄 server 公共
+  `read_market_overview` RPC 返回 `PARTIAL`、四指数点位与涨跌家数。
+- 状态：已部署，尚未经过下一次真实 Daily 正文验收；需确认正文不再只写缺口。
