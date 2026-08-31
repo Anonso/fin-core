@@ -179,3 +179,18 @@
   自己完成，只有 CC 才有设计门/审计门」。
 - 否决了什么：继续把外部审视三触发无条件套在 codex-open 会话（打断其自主完成）。
 - 状态：active · 证据：AGENTS.md 审查机制归属；docs/GLOSSARY.md；本条目落盘即 commit。
+
+## D-028 · 2026-08-31 · B2 二轮复盲评闭环 + GLM 额度耗尽暂时关闭（owner 拍板）
+- 决策：深化二轮复盲评（同协议新 seed，14 样本、四评审无上下文、三维 1-10）
+  总均分 **7.59 > 7**，预注册闭环触发，深化主线闭环、deep-read 板 B 升「在用」；
+  缺票稳健性实测最坏 7.48 仍 >7。同日 owner 裁：GLM 额度耗尽，llm.yaml
+  `glm53`/`glm53_flash`/`glm-vision` 三节点 `enabled: false` 暂时关闭，
+  恢复启用只需改回 `true`（priorities/vision.chain 条目保留，禁用节点消费方自动跳过）。
+- 为什么：6.83<7 → 01/03/05 prompt 调优后同协议复评，7.59 缺口闭合且非踩线；
+  GLM 空响应实为额度耗尽（02 号 flash 票多次空响应），继续挂着会拖慢/污染后续链。
+- 否决了什么：缺票不补（额度耗尽后无法取得，且最坏情形仍闭环）；删 GLM 配置条目
+  （暂时关闭≠永久删除，保留 `enabled` 开关零成本恢复）；调低评审超时线
+  （owner 08-31：最少 300s，不踩线）。
+- 状态：active · 证据：`$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/`
+  （打分表2.md、verbatim_check2.json、eval2_results.json）；config/llm.yaml；
+  本条目落盘即 commit。

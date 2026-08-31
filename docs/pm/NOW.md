@@ -40,7 +40,7 @@
 | 路由重排 D-018/019/021 | ✅ 完成（文件层 + 运行态） | [../DECISIONS.md](../DECISIONS.md) |
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 待排期，范围开工时定 | D-020 |
-| W3-4 深化调优 | 🔶 两刀完成 + B2 复盲评已跑（08-30：14 样本无上下文盲评 6.83<7；首轮两失败模式实证已修，缺口面=覆盖不足/翻译层失真/拼接标注）；**owner 已裁：先收口 08-31 实弹暴露的 BUG-016/017（已部署，隔离真实预演通过，待下一真实 Daily 正文确认），再 BUG-012，最后 01/03/05 调优 → 二轮复盲评；BUG-002/011 已闭（08-31 时间窗补做）** | 【主线·顺位后】[../design/deepen.md](../design/deepen.md)；台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
+| W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点因额度耗尽暂关（D-028） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | D3 三天真实使用门 | ⏳ 建设完成后一次性执行；供数 = finq usage.jsonl | D-020 |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步） | rebaseline §6 |
 
@@ -89,7 +89,7 @@
 | ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006 已闭 |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
-| 深化 deep-read | 文章支撑证据 | 问询验收中（B2 复盲评 08-30：6.83<7 → 再裁；基线两失败模式已修，残余缺陷面=覆盖/翻译层/拼接标注。08-30 增：空+vision 故障产物转 retryable 随定时深化有界补做〔cd17a11〕；8-17~8-30 全窗 13 篇重生成 32 单元 verbatim 32/32、空标题清零，旧核缺陷〔截图对话当证据〕实证被拦） | 需文章支撑的问题，验引用可溯源 | 【主线】[../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
+| 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | 【主线】[../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | G 准入/工作集 | G 注入新鲜度 | 问询验收中（深化第一刀后的 manifest 契约失配已消——08-29 晚六题 g_context 零失配码；fresh pair 专项探针待跑） | 老师体系问题，验 fresh pair | [../design/g-cognition.md](../design/g-cognition.md)；CC 收口 b2da8d9c |
 | 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（两卡已点亮进问询上下文；方法论探针未命中） | 方法论类问题，验命中卡（risk_check/高PE 关键词） | knowledge_brain/seed_methodology_qa.py（541368d8） |
 | 薄 server 装配 | 六缝可用性（单缝失败隔离降级） | 在用 | 任一问询，验 gaps 可查 | read_capabilities/ |
@@ -106,10 +106,10 @@
 | --- | --- | --- | --- |
 | 主线 | 2 | BUG-016/017 盘后 Daily 修复：整行市场材料投影 + 指数点位/成交额/闭市宽度透传 + 有料先判断 prompt + 多 backend 总预算共享；已部署，薄 server RPC 与隔离真实预演均通过，待下一真实 Daily 班次确认正文 | 下一真实班次 |
 | 主线 | 3 | BUG-012 残余二定修：标题 4 字门 + 有事实帖优先排序 + latest-focus 误判修正（08-31 已施工，生产数据重放 9→1，公共 RPC 端到端仅返回目标帖，默认套件绿）；待实弹问询确认 | 前序=主线2 |
-| 主线 | 4 | 深化收尾：01/03/05 prompt 调优（定向修覆盖不足/翻译层失真/拼接标注三实锤面）→ 二轮复盲评（同协议新 seed，均分>7 闭环）；08-30 复盲评 6.83<7 的再裁 owner 已裁走此路径 | 前序=主线3 |
 | 旁路·使用触发 | 6 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 随部署 | 8 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
 | 旁路·P5 前 | 9 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
+| 旁路·时间 | 10 | GLM 三节点恢复启用：llm.yaml glm53/glm53_flash/glm-vision enabled 改回 true（D-028 暂关） | 额度恢复 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
 
