@@ -142,3 +142,22 @@ def test_no_material_provider_keeps_existing_behaviour(tmp_path: Path) -> None:
         principal=object(),
     )
     assert product["data_gaps"] == []
+
+
+def test_disabled_t0_entry_is_skipped_on_l1_chain(tmp_path: Path) -> None:
+    config_path = tmp_path / "llm.yaml"
+    config_path.write_text(
+        "models:\n"
+        "  disabled_t0:\n"
+        "    provider: openai_compatible\n"
+        "    model: sealed-model\n"
+        "    api_key: sk-sealed\n"
+        "    base_url: http://127.0.0.1:9\n"
+        "    enabled: false\n"
+        "priorities:\n"
+        "  t0: [disabled_t0]\n",
+        encoding="utf-8",
+    )
+    generator = L1DirectWorkspaceGenerator(config_path=str(config_path))
+
+    assert generator._resolve_backends() == ()
