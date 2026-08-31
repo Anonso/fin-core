@@ -8,8 +8,8 @@
 
 ## 决策
 
-- 把本次生成的预算变成一个 monotonic 总截止点；多个 backend 按剩余 backend
-  数平分剩余时间，单 backend 不改变原预算。
+- 把本次生成的预算变成一个 monotonic 总截止点；多个 backend 预先等分总预算，
+  单 backend 不改变原预算，避免前一个 backend 耗尽后把总时限挤穿。
 - backend 内既有重试、路由顺序和失败语义不改；没有剩余预算时直接保留
   `daily_workspace_l1_all_backends_failed`。
 - 不新增 scheduler、状态、重试编排或 provider 配置。

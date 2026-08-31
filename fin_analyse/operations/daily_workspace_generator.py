@@ -23,6 +23,7 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from math import isfinite
 from pathlib import Path
+from time import monotonic
 from typing import Any, Protocol
 
 from fin_analyse.consultation.daily_workspace_product_contracts import (
@@ -931,13 +932,21 @@ class L1DirectWorkspaceGenerator:
                     ("daily_workspace_deadline_exhausted",)
                 )
             budget = min(budget, remaining)
+        chain_deadline = monotonic() + budget
+        backend_budget = budget / len(backends)
         failures: list[str] = []
         for name, backend in backends:
+            remaining = min(backend_budget, chain_deadline - monotonic())
+            if deadline_at is not None:
+                remaining = min(remaining, (deadline_at - self._clock()).total_seconds())
+            if remaining <= 0:
+                failures.append(f"{name}:deadline")
+                break
             try:
                 text = backend.complete_bounded(
                     prompt,
-                    total_timeout_seconds=budget,
-                    wire_timeout_seconds=min(240.0, budget),
+                    total_timeout_seconds=backend_budget,
+                    wire_timeout_seconds=min(240.0, backend_budget),
                     before_attempt=lambda: None,
                 )
             except Exception as exc:
