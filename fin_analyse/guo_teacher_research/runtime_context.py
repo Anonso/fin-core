@@ -1403,6 +1403,7 @@ class AgentRuntimeContextProvider:
                 result["data_gaps"].append("latest_focus_no_recent_reference")
             return result
 
+        selected: list[dict[str, Any]] = []
         for c in raw_candidates:
             article_id = str(c.get("article_id", ""))
             if article_id and article_id in exclude_ids:
@@ -1416,6 +1417,11 @@ class AgentRuntimeContextProvider:
                 continue
             if not _reference_is_relevant(c, request, intent_tokens):
                 continue
+            selected.append(c)
+        # 有公司/链事实的候选优先：空事实帖先占槽位、投影再被 mapping 门丢弃
+        # 是 BUG-012 残余二的第二重损耗。排序只改变候选顺序，不改变准入。
+        selected.sort(key=_reference_rank_key, reverse=True)
+        for c in selected:
             result["candidates"].append(_recent_reference_to_candidate(self._kb_root, c))
 
         return result
@@ -1711,6 +1717,22 @@ def _latest_focus_rank_key(candidate: dict[str, Any]) -> tuple[float, int, str]:
     if stage in ("t0", "t1") or "positive" in judgement:
         ready += 1
     return (score, ready, _candidate_time(candidate))
+
+
+def _reference_rank_key(candidate: dict[str, Any]) -> tuple[int, str]:
+    """Rank reference candidates so fact-bearing rows precede empty shells.
+
+    The ready projection later rejects rows with no tickers/companies/chain
+    facts; ranking them last prevents them from consuming the lane budget first
+    (BUG-012 残余二).  A stable secondary key keeps the original index order
+    for equal-fact candidates.
+    """
+    tickers = [str(t).strip() for t in (candidate.get("tickers") or []) if str(t).strip()]
+    companies = [str(co).strip() for co in (candidate.get("companies") or []) if str(co).strip()]
+    chain_facts = [
+        str(f).strip() for f in (candidate.get("industry_chain_facts") or []) if str(f).strip()
+    ]
+    return (1 if (tickers or companies or chain_facts) else 0, str(candidate.get("article_id", "")))
 
 
 def _read_cache_candidates(kb_root: Path) -> list[dict[str, Any]]:
@@ -3750,8 +3772,12 @@ def _reference_is_relevant(
     - a candidate keyword/theme term (>=2 chars) that appears verbatim in the
       user's question, OR
     - the candidate's own title (a Q&A's source question / headline) shares a
-      significant term with the user's question — a keyword-less Q&A about the
-      same topic is still relevant.
+      substantive term (>=4 chars) with the user's question — a keyword-less
+      Q&A about the same topic is still relevant.
+
+    BUG-012 残余二：标题子串只认 4 字以上领域词。自由文本标题里的 2 字泛词
+    （“主线”“公司”“什么”“信息”等）不足以证明同主题，否则同日无关帖会
+    大量挤占 reference lane。
     """
     tickers = {str(t).strip() for t in (candidate.get("tickers", []) or [])}
     companies = {str(co).strip() for co in (candidate.get("companies", []) or [])}
@@ -3769,7 +3795,7 @@ def _reference_is_relevant(
         if len(term) >= 2 and term in question:
             return True
 
-    return _has_common_substring(str(candidate.get("title", "")), question, min_len=2)
+    return _has_common_substring(str(candidate.get("title", "")), question, min_len=4)
 
 
 _REF_OVERLAP_STRIP = "，。！？：；、（）()【】《》〈〉…—-·•*#\"'“”‘’ \t\n\r　"

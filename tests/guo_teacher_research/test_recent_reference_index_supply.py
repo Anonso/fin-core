@@ -11,8 +11,6 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
-
 from fin_analyse.guo_teacher_research.ready_evidence import (
     RecentReferenceReadyEvidenceReader,
 )
@@ -178,3 +176,168 @@ def test_lane_does_not_read_priority_events_cache(tmp_path: Path) -> None:
     result = _read(_reader(tmp_path), "帮我看下算电协同今天有什么新说法")
 
     assert result.value["items"], result.data_gaps
+
+
+def _write_article_custom(
+    kb: Path,
+    article_id: str,
+    *,
+    date: str,
+    title: str,
+    companies: list[str],
+    tags: list[str],
+) -> Path:
+    path = kb / "articles" / f"20260830_test_{article_id}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    topic_id = article_id.removeprefix("zsxq-")
+    path.write_text(
+        "---\n"
+        f"id: {article_id}\n"
+        f"topic_id: {topic_id}\n"
+        f"date: {date}\n"
+        "score: 6.0\n"
+        "column: 普通\n"
+        f"companies: {companies}\n"
+        "is_qa: True\n"
+        "type: q&a\n"
+        f"tags: {tags}\n"
+        "---\n"
+        "\n"
+        f"# {title}\n"
+        "\n"
+        "锅师回复：内容正文。\n",
+        encoding="utf-8",
+    )
+    os.utime(path, (_FIXTURE_MTIME, _FIXTURE_MTIME))
+    return path
+
+
+def test_reference_relevance_rejects_generic_title_keeps_domain_title(
+    tmp_path: Path,
+) -> None:
+    """BUG-012 残余二：2 字泛词标题不再误放行，4 字领域词标题仍进入。"""
+    generic_id = "zsxq-22258828218828121"
+    domain_id = "zsxq-22258828218828122"
+    generic_title = "三种算力金属的价格与政策主线已经交叉核验完毕。能量评分7.2分。"
+    domain_title = "保偏光纤正从军用陀螺敏感材料，升级成CPO/硅光/相干光互联的偏振卡口"
+    generic = _write_article_custom(
+        tmp_path,
+        generic_id,
+        date="2026-08-30 09:30",
+        title=generic_title,
+        companies=[],
+        tags=[],
+    )
+    domain = _write_article_custom(
+        tmp_path,
+        domain_id,
+        date="2026-08-30 09:30",
+        title=domain_title,
+        companies=["英伟达", "康宁", "藤仓"],
+        tags=[],
+    )
+    _write_index(
+        tmp_path,
+        [
+            {
+                "id": generic_id,
+                "topic_id": generic_id.removeprefix("zsxq-"),
+                "date": "2026-08-30 09:30",
+                "score": 6.0,
+                "column": "普通",
+                "companies": [],
+                "tags": [],
+                "title": generic_title,
+                "char_count": 400,
+                "path": str(generic),
+                "type": "q&a",
+            },
+            {
+                "id": domain_id,
+                "topic_id": domain_id.removeprefix("zsxq-"),
+                "date": "2026-08-30 09:30",
+                "score": 6.0,
+                "column": "普通",
+                "companies": ["英伟达", "康宁", "藤仓"],
+                "tags": [],
+                "title": domain_title,
+                "char_count": 400,
+                "path": str(domain),
+                "type": "q&a",
+            },
+        ],
+    )
+
+    result = _read(
+        _reader(tmp_path),
+        "保偏光纤和CPO今天有什么新说法？请对照相关公司和主线。",
+    )
+
+    ids = [str(item["article_id"]) for item in result.value["items"]]
+    assert domain_id in ids
+    assert generic_id not in ids
+
+
+def test_reference_fact_rows_rank_before_empty_rows(tmp_path: Path) -> None:
+    """BUG-012 残余二：带 companies 的候选先于空事实候选进入 lane。"""
+    empty_id = "zsxq-22258828218828123"
+    fact_id = "zsxq-22258828218828124"
+    empty = _write_article_custom(
+        tmp_path,
+        empty_id,
+        date="2026-08-30 09:30",
+        title="提问：算电协同的绿电门槛怎么看",
+        companies=[],
+        tags=["算电协同"],
+    )
+    fact = _write_article_custom(
+        tmp_path,
+        fact_id,
+        date="2026-08-30 09:30",
+        title="提问：算电协同的绿电门槛怎么看",
+        companies=["协鑫能科"],
+        tags=["算电协同"],
+    )
+    _write_index(
+        tmp_path,
+        [
+            {
+                "id": empty_id,
+                "topic_id": empty_id.removeprefix("zsxq-"),
+                "date": "2026-08-30 09:30",
+                "score": 6.0,
+                "column": "普通",
+                "companies": [],
+                "tags": ["算电协同"],
+                "title": "提问：算电协同的绿电门槛怎么看",
+                "char_count": 400,
+                "path": str(empty),
+                "type": "q&a",
+            },
+            {
+                "id": fact_id,
+                "topic_id": fact_id.removeprefix("zsxq-"),
+                "date": "2026-08-30 09:30",
+                "score": 6.0,
+                "column": "普通",
+                "companies": ["协鑫能科"],
+                "tags": ["算电协同"],
+                "title": "提问：算电协同的绿电门槛怎么看",
+                "char_count": 400,
+                "path": str(fact),
+                "type": "q&a",
+            },
+        ],
+    )
+
+    provider = AgentRuntimeContextProvider(kb_root=tmp_path)
+    resolution = provider._resolve_recent_reference(
+        _FakeRequest("算电协同今天有什么新说法"),
+        {"tickers": set(), "companies": {"协鑫能科"}, "topics": {"算电协同"}},
+        "2026-08-30T23:00:00+08:00",
+    )
+
+    ids = [str(c["article_id"]) for c in resolution["candidates"]]
+    assert fact_id in ids
+    assert empty_id in ids
+    assert ids.index(fact_id) < ids.index(empty_id)
