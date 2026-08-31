@@ -82,7 +82,10 @@
 - **午间 D-1 generation 污染收盘后 D generation** → artifact key 绑定 provider-version/symbol/trading-day/completed-through-date（目录条目）。
 - **OpenCLI transport 反复失败** → 300s TTL 进程内 cooldown + 每次请求单次尝试、无 daemon、无无限 retry；opencli 路径只是同一 source 的 transport fallback，不计第二来源（目录条目）。
 - **官方记录分页有限** → `DOCUMENTS_TRUNCATED` 显式标记，不把有限页伪装为全量（目录条目）。
-- **概览 top-page 畸形行** → 任一 section/指数截断或安全投影不完整即整体 `UNKNOWN`，不得静默丢弃或改变排名（目录条目）。
+- **概览 top-page 畸形行** → 形状级破损（截断/计数失配/分节缺失）与指数投影
+  不完整仍整体 `UNKNOWN`；排名分节行投影不完整自 2026-08-31 起按源降级
+  （空榜 + 显式 gap + 诊断出门），不静默丢行、不静默改写排名（BUG-002
+  结构性半边定修，见下）。
 - **报价来源身份/时间冲突** → 各自 evidence/frame typed 降级，单标的/单 frame 失败不污染其余（目录条目）。
 - **on-demand 嵌套预算自挤占**（BUG-002，2026-08-28 诊断）：每个 symbol worker
   最坏向 detail executor 提交 3 个任务（quote+日线+30 分钟线），5 worker × 3=15
@@ -116,6 +119,39 @@
   候选：PRE_OPEN 时占位行按「无更新」处理放行既有 timestamp 校验、或 coverage
   门按 section 降级为显式 gap 而非 UNKNOWN；无论哪种，保持诚实缺口显形不变
   （f3/f6 缺席的宽度/涨跌信息照常标 gap）。
+  **定修落地（2026-08-31，候选 b 收窄版）**：以「行投影地面真值」裁定降级，
+  不按 coverage 计数器（生产中计数与行同源同函数，计数仅作诊断呈报）。
+  语义：①覆盖门仅形状级原因致命（计数/时间戳数量失配、分节缺失/重复），
+  仅 `PROJECTED_ROWS_MISMATCH` 不再整链拒绝；②任一行投影失败 → 该行源
+  （行业/概念/个股，注意 industry_change 与 industry_turnover 共享合并行源）
+  整源退出证据流——空榜 + 显式 gap `MARKET_OVERVIEW_SECTION_ROWS_
+  UNPROJECTABLE` + `coverage_diagnostics` 随 PARTIAL 结果出门（干净读取为
+  空元组，capability value 输出不变），不静默丢行、不静默改写排名；③降级
+  源的行与时间戳同步退出全部下游门（trade-date/session/age/provider_
+  updated_at），指数必需性不变（指数投影不完整仍整链拒绝）；④空分节源仅在
+  显式降级时合法，未降级而空仍 `PAYLOAD_INVALID`。盘前形态下指数（腾讯实时
+  源，昨收值）+ 广度照常诚实呈现，Daily 渲染器（status==PARTIAL）恢复可用。
+  实证：`tests/market/test_current_market_overview.py` 三测钉死（盘前占位
+  回归 = 08-28 09:07 生产形态；行降级不静默改写排名；纯计数失配不致命），
+  market 284 绿；盘中实弹 read 无回归（PARTIAL、12/12/15 榜单、诊断空）。
+  盘前生产形态实弹确认 = 下一交易日 08:55 premarket 班 `l1_material_market_
+  overview_unavailable` gap 消失。
+- **报价源整型假设 vs push2delay 浮点契约**（BUG-011，2026-08-31 诊断+修复）：
+  08-27 起 trace 中凡真打到 push2delay 报价源的 `read_market_snapshot` 100%
+  带 `EASTMONEY_RAW_SOURCE_PAYLOAD_PARSE_FAILED`（此前「ok」样本全是未触达
+  源的短路：identity 未解析/无标的 0ms 返回、或容量拒绝，见 trace 复盘）。
+  根因：报价端点 08-02 由 push2 切至 push2delay（git 契约注释），f48 成交额
+  以带分位浮点返回（实测 8/8 样本跨 svr 一致，如 793325655.17），解析器
+  `_optional_nonnegative_quantity` 按 push2 时代整型契约写，`not isinstance(
+  value, int)` 必抛 → 解析失败；且失败捕获 venue=None 使 `_qualify_quotes`
+  身份比对恒假阳性追加 `EASTMONEY_RAW_IDENTITY_MISMATCH`，噪声掩盖真因。
+  回应：①解析器接受有限、非负的 int|float（`Decimal(repr(...))` 最短往返
+  保真转字符串；NaN/Infinity 显式拒绝）；②失败捕获以其自身 typed gap 为
+  完整结论，跳过身份比对，真实身份错配照常上报。实证：盘中实弹三标的
+  capture `gaps=()` + replay 一致；真实装配端到端探针（两标的 READY）
+  `gaps=()`；`test_eastmoney_raw.py` 浮点契约用例 + `tests/market/
+  test_on_demand_qualify_quotes_gap_hygiene.py` 回归（trace 生产签名成对
+  gap 不再出现）。
 
 ## 验证方式
 

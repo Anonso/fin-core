@@ -349,8 +349,15 @@ def _optional_scaled_price(field_name: str, value: object, scale: int) -> str | 
 def _optional_nonnegative_quantity(field_name: str, value: object) -> str | None:
     if _is_missing(value):
         return None
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
         raise ValueError(f"Eastmoney {field_name} is malformed")
+    if isinstance(value, float):
+        # 2026-08-31（BUG-011）：push2delay 的 f48 成交额以带分位的浮点返回
+        # （实测 793325655.17，8/8 样本跨 svr 一致），整型假设是 push2 时代
+        # 的契约；repr 走最短往返十进制， faithfully 保真为字符串。
+        if not math.isfinite(value):
+            raise ValueError(f"Eastmoney {field_name} is malformed")
+        return str(Decimal(repr(value)))
     return str(value)
 
 

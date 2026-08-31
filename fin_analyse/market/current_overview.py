@@ -819,10 +819,18 @@ class AshareMarketOverviewService:
             for coverage in coverage_by_section.values()
             if (diagnostic := _ranked_page_coverage_diagnostic(coverage)).reasons
         )
+        # 2026-08-31（BUG-002 结构性半边）：仅 PROJECTED_ROWS_MISMATCH 的分节
+        # 不再整链拒绝——东财盘前把行情衍生列（f3/f6）置为占位 "-" 是每交易
+        # 日的确定合法形态，行的标识/时间戳完好；是否降级由下方真实行投影
+        # 裁定，计数器仅作诊断呈报。形状级原因（计数/时间戳数量失配等）仍是
+        # provider 契约破损，整链拒绝。
         if (
             set(coverage_by_section) != _REQUIRED_RANKED_SECTIONS
             or len(coverage_by_section) != len(raw.ranked_page_coverage)
-            or coverage_diagnostics
+            or any(
+                diagnostic.reasons != ("PROJECTED_ROWS_MISMATCH",)
+                for diagnostic in coverage_diagnostics
+            )
         ):
             return _unknown(
                 queried_at=queried_at,
@@ -835,13 +843,35 @@ class AshareMarketOverviewService:
                 ),
                 coverage_diagnostics=coverage_diagnostics,
             )
+        projected_industries = tuple(_project_board(row) for row in raw.industries)
+        projected_concepts = tuple(_project_board(row) for row in raw.concepts)
+        projected_equities = tuple(_project_equity(row) for row in raw.equities)
+        # 行投影失败的分节按源整体降级（显式 gap + 空榜），不整链拒绝、不静默
+        # 丢行——该源全部行退出证据流（时间戳门/榜单/广度），其余证据（指数/
+        # 广度）照常诚实呈现；分节级归因留在 coverage_diagnostics。
+        industries_dropped = any(item is None for item in projected_industries)
+        concepts_dropped = any(item is None for item in projected_concepts)
+        equities_dropped = any(item is None for item in projected_equities)
+        ranked_section_survives = {
+            "industry_change": not industries_dropped,
+            "industry_turnover": not industries_dropped,
+            "concept_change": not concepts_dropped,
+            "concept_turnover": not concepts_dropped,
+            "equity_turnover": not equities_dropped,
+        }
         ranked_timestamps = tuple(
             timestamp
-            for coverage in coverage_by_section.values()
+            for section, coverage in coverage_by_section.items()
+            if ranked_section_survives[section]
             for timestamp in coverage.provider_timestamps
         )
         raw_ranked_timestamps = tuple(
-            _provider_timestamp(row) for row in (*raw.industries, *raw.concepts, *raw.equities)
+            _provider_timestamp(row)
+            for row in (
+                *(raw.industries if not industries_dropped else ()),
+                *(raw.concepts if not concepts_dropped else ()),
+                *(raw.equities if not equities_dropped else ()),
+            )
         )
         provider_updated_at = _conservative_provider_update(
             ranked_timestamps,
@@ -967,24 +997,6 @@ class AshareMarketOverviewService:
                 ),
             )
 
-        projected_industries = tuple(_project_board(row) for row in raw.industries)
-        projected_concepts = tuple(_project_board(row) for row in raw.concepts)
-        projected_equities = tuple(_project_equity(row) for row in raw.equities)
-        if any(
-            item is None
-            for item in (*projected_industries, *projected_concepts, *projected_equities)
-        ):
-            return _unknown(
-                queried_at=queried_at,
-                effective_trade_date=effective_trade_date,
-                observation_mode=observation_mode,
-                session_phase=session_phase,
-                provider_updated_at=provider_updated_at,
-                data_gaps=(
-                    "MARKET_OVERVIEW_SECTION_PAYLOAD_INVALID",
-                    "MARKET_OVERVIEW_UNAVAILABLE",
-                ),
-            )
         projected_indices = tuple(_project_index(row) for row in raw.indices)
         if any(index is None for index in projected_indices) or len(projected_indices) != len(
             _REQUIRED_MAJOR_INDEX_CODES
@@ -1000,19 +1012,33 @@ class AshareMarketOverviewService:
                     "MARKET_OVERVIEW_UNAVAILABLE",
                 ),
             )
-        industries = tuple(board for board in projected_industries if board is not None)
-        concepts = tuple(
-            concept
-            for concept in projected_concepts
-            if concept is not None and not _is_non_thematic_concept(concept.name)
+        industries = (
+            ()
+            if industries_dropped
+            else tuple(board for board in projected_industries if board is not None)
+        )
+        concepts = (
+            ()
+            if concepts_dropped
+            else tuple(
+                concept
+                for concept in projected_concepts
+                if concept is not None and not _is_non_thematic_concept(concept.name)
+            )
+        )
+        equities = (
+            ()
+            if equities_dropped
+            else tuple(equity for equity in projected_equities if equity is not None)
         )
         indices = tuple(index for index in projected_indices if index is not None)
-        equities = tuple(equity for equity in projected_equities if equity is not None)
         breadth_indices = {item.code: item for item in indices if item.code in {"000001", "399001"}}
+        # 空分节源仅在被显式降级时合法（BUG-002 结构性半边：盘前占位形态下
+        # 榜单整体缺席但仍需诚实呈现指数证据）；未降级而空 = 载荷残缺，拒绝。
         if (
-            not industries
-            or not concepts
-            or not equities
+            (not industries and not industries_dropped)
+            or (not concepts and not concepts_dropped)
+            or (not equities and not equities_dropped)
             or set(breadth_indices) != {"000001", "399001"}
         ):
             return _unknown(
@@ -1103,9 +1129,16 @@ class AshareMarketOverviewService:
             concept_leaders_by_change=ordered_change_concepts,
             concept_leaders_by_turnover=ordered_turnover_concepts,
             turnover_leaders=turnover_leaders,
+            # 降级分节的归因必须随结果出门（干净读取时为空元组，输出不变）。
+            coverage_diagnostics=coverage_diagnostics,
             data_gaps=tuple(
                 dict.fromkeys(
                     (
+                        *(
+                            ["MARKET_OVERVIEW_SECTION_ROWS_UNPROJECTABLE"]
+                            if industries_dropped or concepts_dropped or equities_dropped
+                            else []
+                        ),
                         *breadth_gaps,
                         "MARKET_OVERVIEW_SINGLE_SOURCE",
                         "MARKET_OVERVIEW_PERSISTENCE_NOT_EVALUATED",

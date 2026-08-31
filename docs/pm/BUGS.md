@@ -26,7 +26,6 @@
   ON_DEMAND_MARKET_CAPACITY_EXHAUSTED（延迟 14s）→ 板块宽度/部分标的无新价（002015 用 8-25 价）。
 - 根因：未诊断（section coverage 校验失败是结构性缺陷，非盘前时点效应；capacity 额度策略待查）。
 - 修复：待办——修复方案落 market-data 特性设计页（docs/pm 特性设计页已建），排 W3-4 深化。
-- 状态：开放。
 - 诊断+修复（2026-08-28 晚）：**容量半边已根治**——trace 复盘（43 调用仅 3 次
   触发、全是 snapshot、延迟整齐 12-14s）+读码钉死：非负载超限，是嵌套预算
   自挤占——每 symbol worker 最坏向 detail executor 提 3 任务（quote+日线+30min），
@@ -48,6 +47,14 @@
   三段闭环（盘后基线全过/f3 或 f6 换 `"-"` 全 section 复现 valid=0/端到端
   gaps 逐字一致），命令与回应方向见 market-data.md「已知故障与设计回应」。
   施工仍排 W3-4。
+- **定修落地（2026-08-31 盘中会话，窗口项补做——09:00-09:20 窗口漏执行，
+  10:40 起盘中补）**：候选 b 收窄版全链落地（语义与实证见 market-data.md
+  「overview 盘前整链拒绝」条目定修段）。诚实分级：单测钉死 08-28 生产
+  占位形态（回归三测）+ 盘中实弹 read 无回归 = 「跑通」级；**盘前生产
+  实弹确认待 09-01 08:55 premarket 班**（`l1_material_market_overview_
+  unavailable` gap 消失即闭环，需部署先于该班次）。部署前提：单元重渲染
+  （运维铁律）。
+- 状态：修复落地（2026-08-31），盘前实弹确认后关闭。
 
 ## BUG-003 ZSXQ 问询空返回（2026-08-28 二次诊断改写，原「停更」结论有误）
 
@@ -372,16 +379,29 @@
 - 改号注记（2026-08-30）：本条原误撞 BUG-010（与测试基线三簇条重号），改号
   BUG-014；改号前查引用面=仅本文件，无外部引用。
 
-## BUG-011 read_market_snapshot EASTMONEY 源解析失败/身份不匹配（2026-08-29 探针复核立案）
+## BUG-011 read_market_snapshot EASTMONEY 源解析失败/身份不匹配（2026-08-29 立案；2026-08-31 诊断+修复闭环）
 
 - 现象：08-28（周四交易日）8 次 + 08-29 板 B 探针 12 次调用全带 gaps——
   `EASTMONEY_RAW_SOURCE_PAYLOAD_PARSE_FAILED` + `EASTMONEY_RAW_IDENTITY_MISMATCH` +
   `DUAL_SOURCE_QUOTE_INCOMPLETE` + `NON_CONTINUOUS_REFERENCE_QUOTE` +
   `MARKET_SESSION_REFERENCE_ONLY`；交易日复现，非周末特有。
-- 根因：未诊断（Eastmoney 源 payload 解析失败/身份不匹配；与 BUG-002 容量半边
-  （已修）不同缝）。
-- 修复：待办——并入周一 08-31 BUG-002 盘前窗口同一 repro 复查，当场定修。
-- 状态：开放。
+- 根因（2026-08-31 盘中实弹钉死）：报价端点 08-02 由 push2 切至 push2delay，
+  f48 成交额以带分位浮点返回（实测 8/8 样本跨 svr 一致，793325655.17 形态），
+  解析器 `_optional_nonnegative_quantity` 按 push2 时代整型契约写
+  （fixture f48=185184000 整型为证）→ `not isinstance(value, int)` 必抛 →
+  解析失败。`EASTMONEY_RAW_IDENTITY_MISMATCH` 是级联噪声：失败捕获
+  venue=None（eastmoney_raw `_failed_capture`）使 `_qualify_quotes` 身份比对
+  恒假阳性——trace 中两 gap 恒成对即此故，非两个独立缺陷。onset 无法从
+  trace 追认（trace 覆盖窗 08-27 起凡真触达源者 100% 失败；此前「ok」样本
+  全是未触达源的短路——identity 未解析/无标的 0ms、容量拒绝），推测自
+  08-02 切端点起从未通过。
+- 修复（2026-08-31）：①解析器接受有限非负 int|float，`Decimal(repr(...))`
+  最短往返保真（NaN/Infinity 显式拒绝——`json.loads` 默认放行）；②失败
+  捕获跳过身份比对，以自身 typed gap 为完整结论。实证：盘中实弹三标的
+  capture `gaps=()` + replay 一致；真实装配端到端探针两标的 READY
+  `gaps=()`；单测浮点契约用例 + gap 卫生回归。详见 market-data.md
+  「报价源整型假设 vs push2delay 浮点契约」。
+- 状态：已关闭（2026-08-31，实弹+端到端双实证）。
 
 ## BUG-012 read_ready_evidence 恒 unavailable + 公告探针不触发工具（2026-08-29 立案；08-30 根因诊断）
 

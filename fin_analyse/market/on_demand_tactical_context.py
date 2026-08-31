@@ -1103,6 +1103,12 @@ def _qualify_quotes(
             continue
         if capture.data_gaps:
             gaps.extend(f"{source_id.upper()}_{gap.upper()}" for gap in capture.data_gaps)
+        if capture.venue is None:
+            # 2026-08-31（BUG-011）：失败捕获 venue=None 且必带自身 typed gap
+            # （解析失败/http 状态码），身份比对必假阳性报 IDENTITY_MISMATCH，
+            # 掩盖真因（08-28~08-30 trace 全数如此）——失败捕获以其自身 gap
+            # 为完整结论，不重复报身份错配。
+            continue
         if capture.symbol != code or capture.venue != venue.lower():
             gaps.append(f"{source_id.upper()}_IDENTITY_MISMATCH")
             continue

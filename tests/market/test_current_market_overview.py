@@ -521,7 +521,12 @@ def test_truncated_ranked_page_and_missing_major_index_fail_closed() -> None:
     assert "MARKET_OVERVIEW_INDEX_COVERAGE_INVALID" in missing_index_result.data_gaps
 
 
-def test_ranked_page_projected_row_mismatch_has_content_free_diagnostic() -> None:
+def test_projected_rows_mismatch_diagnostic_alone_surfaces_without_rejecting() -> None:
+    """BUG-002 结构性半边：仅计数器失配不致命，诊断照常呈报。
+
+    生产中 coverage 计数器由同一投影函数对同一批行算出，与行不一致只在
+    合成场景出现；行是地面真值——行健康则链路照常。
+    """
     snapshot = _snapshot()
     malformed = tuple(
         replace(coverage, valid_projected_rows=coverage.returned - 1)
@@ -535,15 +540,16 @@ def test_ranked_page_projected_row_mismatch_has_content_free_diagnostic() -> Non
         calendar=AShareTradingCalendar.from_file(_CALENDAR_PATH),
     ).read(AshareMarketOverviewRequest(as_of=_SUNDAY_QUERY))
 
-    assert result.status == "UNKNOWN"
+    assert result.status == "PARTIAL"
     assert len(result.coverage_diagnostics) == 1
     diagnostic = result.coverage_diagnostics[0]
     assert diagnostic.section == "equity_turnover"
     assert diagnostic.valid_projected_rows == diagnostic.returned - 1
     assert diagnostic.reasons == ("PROJECTED_ROWS_MISMATCH",)
+    assert result.turnover_leaders
 
 
-def test_malformed_ranked_rows_and_index_fail_closed_without_rewriting_leaders() -> None:
+def test_unprojectable_ranked_rows_degrade_their_source_without_silent_rank_rewrite() -> None:
     snapshot = _snapshot()
     malformed_industries = (
         dict(snapshot.industries[0], f3="-"),
@@ -558,14 +564,31 @@ def test_malformed_ranked_rows_and_index_fail_closed_without_rewriting_leaders()
         dict(snapshot.indices[2], f3="-"),
         *snapshot.indices[3:],
     )
+    # 生产中 coverage 计数与行投影同源同函数：fixture 保持一致（坏 1 行 = valid-1）。
+    industry_inconsistent = tuple(
+        replace(coverage, valid_projected_rows=coverage.returned - 1)
+        if coverage.section in {"industry_change", "industry_turnover"}
+        else coverage
+        for coverage in snapshot.ranked_page_coverage
+    )
+    equity_inconsistent = tuple(
+        replace(coverage, valid_projected_rows=coverage.returned - 1)
+        if coverage.section == "equity_turnover"
+        else coverage
+        for coverage in snapshot.ranked_page_coverage
+    )
     calendar = AShareTradingCalendar.from_file(_CALENDAR_PATH)
 
     industry_result = AshareMarketOverviewService(
-        source=_RecordingSource(replace(snapshot, industries=malformed_industries)),
+        source=_RecordingSource(
+            replace(snapshot, industries=malformed_industries, ranked_page_coverage=industry_inconsistent)
+        ),
         calendar=calendar,
     ).read(AshareMarketOverviewRequest(as_of=_SUNDAY_QUERY))
     equity_result = AshareMarketOverviewService(
-        source=_RecordingSource(replace(snapshot, equities=malformed_equities)),
+        source=_RecordingSource(
+            replace(snapshot, equities=malformed_equities, ranked_page_coverage=equity_inconsistent)
+        ),
         calendar=calendar,
     ).read(AshareMarketOverviewRequest(as_of=_SUNDAY_QUERY))
     index_result = AshareMarketOverviewService(
@@ -573,12 +596,70 @@ def test_malformed_ranked_rows_and_index_fail_closed_without_rewriting_leaders()
         calendar=calendar,
     ).read(AshareMarketOverviewRequest(as_of=_SUNDAY_QUERY))
 
-    assert industry_result.status == "UNKNOWN"
-    assert "MARKET_OVERVIEW_SECTION_PAYLOAD_INVALID" in industry_result.data_gaps
-    assert equity_result.status == "UNKNOWN"
-    assert "MARKET_OVERVIEW_SECTION_PAYLOAD_INVALID" in equity_result.data_gaps
+    # 行投影失败 → 该源整源降级（空榜 + 显式 gap），其余源照常；不静默改写排名。
+    assert industry_result.status == "PARTIAL"
+    assert "MARKET_OVERVIEW_SECTION_ROWS_UNPROJECTABLE" in industry_result.data_gaps
+    assert industry_result.industry_leaders_by_change == ()
+    assert industry_result.industry_leaders_by_turnover == ()
+    assert industry_result.concept_leaders_by_change
+    assert industry_result.turnover_leaders
+    assert len(industry_result.coverage_diagnostics) == 2
+
+    assert equity_result.status == "PARTIAL"
+    assert "MARKET_OVERVIEW_SECTION_ROWS_UNPROJECTABLE" in equity_result.data_gaps
+    assert equity_result.turnover_leaders == ()
+    assert equity_result.industry_leaders_by_change
+
+    # 指数是必需核心证据，仍整链拒绝。
     assert index_result.status == "UNKNOWN"
     assert "MARKET_OVERVIEW_INDEX_PAYLOAD_INVALID" in index_result.data_gaps
+
+
+def test_pre_open_placeholder_rows_degrade_sections_but_present_completed_indices() -> None:
+    """BUG-002 结构性半边回归（08-28 09:07 生产形态）。
+
+    盘前东财 clist 把 f3/f6 置为占位 "-"、五分节 valid=0：旧行为整链
+    MARKET_OVERVIEW_SECTION_COVERAGE_INVALID 拒绝（与
+    LATEST_COMPLETED_SESSION 意图自相矛盾）；新行为分节降级 + 显式 gap，
+    上一完成交易日的指数/广度证据照常诚实呈现。
+    """
+    pre_open = datetime(2026, 7, 27, 9, 7, tzinfo=_CN_TZ)  # 周一盘前
+    snapshot = _snapshot()
+    placeholder = replace(
+        snapshot,
+        captured_at=pre_open,
+        industries=tuple(dict(row, f3="-", f6="-") for row in snapshot.industries),
+        concepts=tuple(dict(row, f3="-", f6="-") for row in snapshot.concepts),
+        equities=tuple(dict(row, f3="-", f6="-") for row in snapshot.equities),
+        ranked_page_coverage=tuple(
+            replace(coverage, valid_projected_rows=0)
+            for coverage in snapshot.ranked_page_coverage
+        ),
+    )
+    service = AshareMarketOverviewService(
+        source=_RecordingSource(placeholder),
+        calendar=AShareTradingCalendar.from_file(_CALENDAR_PATH),
+        clock=lambda: pre_open,
+    )
+
+    result = service.read(AshareMarketOverviewRequest())
+
+    assert result.status == "PARTIAL"
+    assert result.observation_mode == "LATEST_COMPLETED_SESSION"
+    assert result.effective_trade_date == date(2026, 7, 24)
+    assert result.provider_updated_at == _FRIDAY_CLOSE
+    assert len(result.major_indices) == 4
+    assert result.breadth is not None
+    assert result.industry_leaders_by_change == ()
+    assert result.concept_leaders_by_turnover == ()
+    assert result.turnover_leaders == ()
+    assert "MARKET_OVERVIEW_SECTION_ROWS_UNPROJECTABLE" in result.data_gaps
+    assert "MARKET_OVERVIEW_UNAVAILABLE" not in result.data_gaps
+    assert len(result.coverage_diagnostics) == 5
+    assert all(
+        diagnostic.reasons == ("PROJECTED_ROWS_MISMATCH",)
+        for diagnostic in result.coverage_diagnostics
+    )
 
 
 def test_deadline_expiring_during_fetch_prevents_late_result_publication() -> None:

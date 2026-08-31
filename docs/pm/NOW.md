@@ -19,7 +19,7 @@
 > 7. 推进位五词：`先决 / 主线 / 旁路（时间·使用·owner·随手）/ 随部署 / 最后`；
 >    主线同一时刻只推一项，完成即出队。
 >
-> 最后核对：2026-08-30（Asia/Shanghai）。
+> 最后核对：2026-08-31（Asia/Shanghai）。
 
 ## 生产声明
 
@@ -40,7 +40,7 @@
 | 路由重排 D-018/019/021 | ✅ 完成（文件层 + 运行态） | [../DECISIONS.md](../DECISIONS.md) |
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 待排期，范围开工时定 | D-020 |
-| W3-4 深化调优 | 🔶 两刀完成 + B2 复盲评已跑（08-30：14 样本无上下文盲评 6.83<7；首轮两失败模式实证已修，缺口面=覆盖不足/翻译层失真/拼接标注）；**owner 已裁：BUG-012 先修（立即），01/03/05 调优 → 二轮复盲评随后；BUG-002/011 走时间窗** | 【主线·顺位后】[../design/deepen.md](../design/deepen.md)；台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
+| W3-4 深化调优 | 🔶 两刀完成 + B2 复盲评已跑（08-30：14 样本无上下文盲评 6.83<7；首轮两失败模式实证已修，缺口面=覆盖不足/翻译层失真/拼接标注）；**owner 已裁：BUG-012 先修（立即），01/03/05 调优 → 二轮复盲评随后；BUG-002/011 已闭（08-31 时间窗补做）** | 【主线·顺位后】[../design/deepen.md](../design/deepen.md)；台账 `$STATE/fin-analyse/deepen-blind-eval-20260830-b2-re/` |
 | D3 三天真实使用门 | ⏳ 建设完成后一次性执行；供数 = finq usage.jsonl | D-020 |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步） | rebaseline §6 |
 
@@ -75,8 +75,8 @@
 | --- | --- | --- | --- | --- |
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
-| read_market_snapshot | 标的行情 | 问询验收中（容量已修；EASTMONEY 源解析失败致参考价） | 最新价，验无容量耗尽 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002/011 |
-| read_market_overview | 大盘结构 | 问询验收中（结构性半边待修） | 「今天大盘怎么样」，验 gaps 空 | 【旁路·时间】[../design/market-data.md](../design/market-data.md)；BUG-002 |
+| read_market_snapshot | 标的行情 | 在用（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011 已闭 |
+| read_market_overview | 大盘结构 | 问询验收中（结构性半边定修落地 08-31：盘前占位降级不拒链；盘前实弹确认 = 09-01 08:55 premarket 班 gap 消失） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 修复落地待盘前确认 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
 | read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；选材层残余：相关性门空转 + 公司空帖占位双重损耗，见 BUG-012 残余二【主线】） | 当天老师相关提问，验工具被调 + 有料则注入 | 【主线】BUG-012 |
 | read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（08-30 公告探针过：外搜带时点、持仓联动正确；现役面=外搜 MCP 辅助面） | 公告类问题，验工具被调 + gaps 空 | BUG-012 公告腿已闭 |
@@ -106,7 +106,6 @@
 | --- | --- | --- | --- |
 | 主线 | 2 | BUG-012 残余二修复：实弹四发已裁（08-30 晚）——公告类腿过、两融描述腿顺带过（BUG-004 闭）、置顶换装实弹过；普通栏腿两发 items 空，根因=选材门空转+公司空帖占位双重损耗（目标帖四门全过仍未浮出，门级仪表化定位，见 BUGS.md BUG-012 残余二）。核心链路选材，动代码前走设计门 | 主线顺位（无外部等待） |
 | 主线 | 3 | 深化收尾：01/03/05 prompt 调优（定向修覆盖不足/翻译层失真/拼接标注三实锤面）→ 二轮复盲评（同协议新 seed，均分>7 闭环）；08-30 复盲评 6.83<7 的再裁 owner 已裁走此路径 | 前序=主线2 |
-| 旁路·时间触发 | 5 | BUG-002 结构性半边定修 + BUG-011 EASTMONEY 源复查（同一 repro，单会话；需实弹盘面） | 周一 08-31 09:00–09:20 盘前窗口 |
 | 旁路·使用触发 | 6 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 随部署 | 8 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
 | 旁路·P5 前 | 9 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |

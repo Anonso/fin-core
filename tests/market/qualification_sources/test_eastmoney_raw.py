@@ -369,6 +369,26 @@ def test_wrong_symbol_and_market_are_retained_and_fail_closed(tmp_path: Path) ->
 
 
 @pytest.mark.parametrize(
+    ("f48", "expected"),
+    [
+        # 2026-08-31（BUG-011）：push2delay 盘中实弹形态——f48 成交额带分位
+        # 浮点（8/8 样本跨 svr 一致，如 793325655.17），整型假设是 push2
+        # 时代契约；接受并 faithfully 保真为字符串。
+        (793325655.17, "793325655.17"),
+        (185184000.0, "185184000.0"),
+        (185184000, "185184000"),
+    ],
+)
+def test_turnover_accepts_push2delay_float_form(f48: object, expected: str) -> None:
+    normalized = EastmoneyRawQualificationSource().replay_normalize(
+        SAMPLE,
+        _fixture_payload(f48=f48),
+    )
+
+    assert normalized.turnover == expected
+
+
+@pytest.mark.parametrize(
     "fields",
     [
         {"f59": None},
@@ -377,6 +397,10 @@ def test_wrong_symbol_and_market_are_retained_and_fail_closed(tmp_path: Path) ->
         {"f59": 20},
         {"f43": 1500.0},
         {"f51": "165000"},
+        {"f48": float("nan")},
+        {"f48": float("inf")},
+        {"f48": -1.5},
+        {"f48": True},
     ],
 )
 def test_invalid_price_scaling_is_preserved_and_fails_replay(
