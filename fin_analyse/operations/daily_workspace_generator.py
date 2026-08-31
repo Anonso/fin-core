@@ -56,7 +56,7 @@ _ATTEMPT_TIMEOUT_SECONDS = 300.0
 _MAX_ANSWER_CHARS = 8000
 _FAILURE_SENTINELS = frozenset({"[]", "null", "none", "''", '""'})
 
-_MATERIAL_KEYS: tuple[str, ...] = ("portfolio", "market_overview", "g_reference")
+_MATERIAL_KEYS: tuple[str, ...] = ("portfolio", "market_overview", "g_context", "g_reference")
 
 # The two data faces a briefing is made of.  With both broken there is no
 # briefing left to generate: the checkpoint must fall to the deterministic
@@ -155,17 +155,24 @@ def build_default_material_provider(
 
     def _provider(question: str) -> Mapping[str, str | None]:
         materials: dict[str, str | None] = dict.fromkeys(_MATERIAL_KEYS)
+        position_symbols: tuple[str, ...] = ()
         try:
             from fin_analyse.portfolio.actual_advisory import ActualAdvisoryPortfolioStore
 
             store = ActualAdvisoryPortfolioStore(clock=as_of_clock)
+            portfolio_read = store.read()
             materials["portfolio"] = _render_portfolio(
-                store.read(),
+                portfolio_read,
                 name_resolver=_portfolio_name_resolver(),
                 quote_reader=(
                     quote_reader if quote_reader is not None else _registry_quote_reader()
                 ),
             )
+            snapshot = getattr(portfolio_read, "snapshot", None)
+            if snapshot is not None:
+                position_symbols = tuple(
+                    position.symbol for position in getattr(snapshot, "positions", ())
+                )
         except Exception as exc:
             logger.warning("daily workspace portfolio material unavailable: %s", type(exc).__name__)
         try:
@@ -182,6 +189,35 @@ def build_default_material_provider(
         except Exception as exc:
             logger.warning(
                 "daily workspace market overview material unavailable: %s", type(exc).__name__
+            )
+        try:
+            # G 认知材料（daily-g-context-material 设计稿，2026-08-31 设计门 8/8
+            # 采纳）：与 read_g_context 同源 resolve；持仓标的作选材锚；懒 import
+            # 于函数内；构造/resolve 异常 = material None + typed gap，不击穿班次。
+            from fin_analyse.guo_teacher_research.runtime_context import (
+                AgentRuntimeContextProvider,
+                AgentRuntimeContextRequest,
+            )
+
+            provider_ = AgentRuntimeContextProvider(kb_root=Path(knowledge_base_root))
+            resolved = provider_.resolve(
+                AgentRuntimeContextRequest(
+                    agent_id="guo_teacher",
+                    question=question,
+                    tickers=position_symbols,
+                    now=as_of_clock().isoformat(),
+                )
+            )
+            resolved_gaps = tuple(getattr(resolved, "data_gaps", ()) or ())
+            if resolved_gaps:
+                # resolve 层细节不进产品 data_gaps（一码一因），日志可见。
+                logger.info(
+                    "daily workspace g context resolve gaps: %s", ",".join(resolved_gaps)
+                )
+            materials["g_context"] = _render_g_context(resolved)
+        except Exception as exc:
+            logger.warning(
+                "daily workspace g context material unavailable: %s", type(exc).__name__
             )
         try:
             from fin_analyse.knowledge.reference_evidence import (
@@ -253,6 +289,10 @@ def _render_portfolio(
         payload = to_safe()
     except Exception:
         return None
+    # owner 拍板 2026-08-31：无两融且永远不会有——两融项从持仓面删除
+    # （store schema 不动，投影层剔除；margin_debt 恒 0 由快照承载）。
+    payload.pop("margin_debt", None)
+    payload.pop("margin_debt_status", None)
     positions = payload.get("positions")
     if isinstance(positions, list):
         for position in positions:
@@ -359,6 +399,60 @@ def _render_market_overview(result: Any) -> str | None:
     return text[:4000]
 
 
+# strict-G 桶（daily-g-context-material 设计稿 P1-2 裁决）：recent_reference
+# 等非 G 桶绝不混入「老师体系证据」材料——守住 G/Z 边界。
+_G_CONTEXT_STRICT_BUCKETS = frozenset({"pinned_source", "fresh_g", "latest_commentary"})
+_G_CONTEXT_MAX_CHARS = 4000
+
+
+def _render_g_context(resolved: Any) -> str | None:
+    """Render resolve's strict-G items into a bounded prompt section.
+
+    daily-g-context-material 设计稿（2026-08-31 设计门 8/8 采纳）：flat 渲染
+    resolve 的 g_context 条目（六字段冻结映射：title/guidance_brief/source_ref/
+    published_at/usage_boundary/why_available）；4000 字上限按整条丢弃，不半条
+    切断（弃条数记日志）。resolve 层 typed gaps 不进产品 data_gaps（与既有材料
+    键同规，一码一因）。空（无条目或全被过滤）→ None → typed gap。
+    """
+
+    context = getattr(resolved, "llm_context", None)
+    items = context.get("g_context") if isinstance(context, Mapping) else None
+    if not isinstance(items, list):
+        return None
+    lines: list[str] = []
+    used = 0
+    dropped = 0
+    for item in items:
+        if not isinstance(item, Mapping):
+            continue
+        if str(item.get("source_bucket") or "") not in _G_CONTEXT_STRICT_BUCKETS:
+            continue
+        title = str(item.get("title") or "").strip()
+        brief = str(item.get("guidance_brief") or "").strip()
+        if not title and not brief:
+            continue
+        published_at = str(item.get("published_at") or "").strip()
+        usage = str(item.get("usage_boundary") or "").strip()
+        source_ref = str(item.get("source_ref") or "").strip()
+        headline = f"{title}：{brief}" if title and brief else (title or brief)
+        suffixes = [part for part in (usage, source_ref) if part]
+        line = " | ".join(
+            (published_at, headline, f"（{'；'.join(suffixes)}）" if suffixes else "")
+        ).strip()
+        if not line:
+            continue
+        if used + len(line) > _G_CONTEXT_MAX_CHARS:
+            dropped += 1
+            continue
+        lines.append(f"- {line}")
+        used += len(line) + 2
+    if dropped:
+        logger.info("daily workspace g context items dropped by budget: %d", dropped)
+    if not lines:
+        return None
+    return "\n".join(lines)
+
+
 def _render_prompt(
     *,
     question: str,
@@ -401,6 +495,7 @@ def _render_prompt(
     labels = {
         "portfolio": "# 持仓快照（最新确认）",
         "market_overview": "# 市场概览",
+        "g_context": "# G 认知参考（老师体系证据）",
         "g_reference": "# 知识库参考（非 G 基准，仅参考）",
     }
     for key in _MATERIAL_KEYS:
@@ -416,8 +511,11 @@ def _render_prompt(
     sections.append(
         "# 输出要求\n"
         "一条连贯简报：先给「最值得处理」的 1-3 项与理由，"
+        "判定必须对照「G 认知参考」（一致或不一致都点名；该材料缺席时明说「无体系对照」），"
         + changes_requirement
-        + "最后给「哪里未知」。直接输出正文，不要标题、不要 JSON。"
+        + "最后给「哪里未知」。"
+        "持仓以最新已确认快照为准，不要输出任何提示更新持仓或强调快照过期的文字。"
+        "直接输出正文，不要标题、不要 JSON。"
     )
     return "\n\n".join(sections)
 

@@ -32,12 +32,6 @@ from fin_analyse.external_evidence import ExternalEvidenceReader
 from fin_analyse.guo_teacher_research.ready_evidence import (
     RecentReferenceReadyEvidenceReader,
 )
-from fin_analyse.read_capabilities.types import (
-    ProductionReadRequest,
-    ProductionReadResult,
-    SourceKind,
-    SourceTrust,
-)
 from fin_analyse.guo_teacher_research.runtime_context import (
     AgentRuntimeContextProvider,
     AgentRuntimeContextRequest,
@@ -70,6 +64,12 @@ from fin_analyse.portfolio.actual_advisory import (
     ActualAdvisoryPortfolioStatus,
 )
 from fin_analyse.portfolio.user_watchlist import WatchlistRead
+from fin_analyse.read_capabilities.types import (
+    ProductionReadRequest,
+    ProductionReadResult,
+    SourceKind,
+    SourceTrust,
+)
 from fin_analyse.researcher.context import (
     ExternalResearchContextRequest,
     ExternalResearchContextResult,
@@ -1485,6 +1485,10 @@ def _actual_portfolio_value(
     core_usable = False
     if snapshot is not None:
         projected_snapshot = snapshot.to_safe_dict()
+        # owner 拍板 2026-08-31：无两融且永远不会有——两融项从用户面投影删除
+        # （store schema 不动；margin_debt 恒 0 由快照承载）。
+        projected_snapshot.pop("margin_debt", None)
+        projected_snapshot.pop("margin_debt_status", None)
         projected_snapshot["revision"] = snapshot.revision
         market_values = [position.market_value for position in snapshot.positions]
         total_market_value = (

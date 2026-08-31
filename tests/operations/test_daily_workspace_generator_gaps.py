@@ -74,6 +74,7 @@ def test_material_gaps_splits_missing_from_unrenderable() -> None:
         {
             "portfolio": None,
             "market_overview": _OVERVIEW_REPR,
+            "g_context": "G 认知参考正文",
             "g_reference": "参考材料正文",
         }
     )
@@ -86,7 +87,12 @@ def test_material_gaps_splits_missing_from_unrenderable() -> None:
 def test_both_core_faces_broken_raises_typed_unavailable(tmp_path: Path) -> None:
     backend = _SealedBackend()
     generator = _generator(
-        {"portfolio": None, "market_overview": _OVERVIEW_REPR, "g_reference": None},
+        {
+            "portfolio": None,
+            "market_overview": _OVERVIEW_REPR,
+            "g_context": None,
+            "g_reference": None,
+        },
         tmp_path=tmp_path,
         backend=backend,
     )
@@ -98,6 +104,7 @@ def test_both_core_faces_broken_raises_typed_unavailable(tmp_path: Path) -> None
     assert raised.value.data_gaps == (
         "l1_material_portfolio_unavailable",
         "l1_material_market_overview_unrenderable",
+        "l1_material_g_context_unavailable",
         "l1_material_g_reference_unavailable",
     )
     assert backend.calls == 0
@@ -109,6 +116,7 @@ def test_single_broken_face_still_generates_with_gap_codes(tmp_path: Path) -> No
         {
             "portfolio": "持仓快照正文",
             "market_overview": None,
+            "g_context": "G 认知参考正文",
             "g_reference": "参考材料正文",
         },
         tmp_path=tmp_path,

@@ -111,7 +111,7 @@ Daily 链涉及四个独立持久化边界，owner 各一：
 - **脱钩前后内容不降级（隔离库两臂验收，W2② 施工时执行——盲评 P1-3/P2-12 裁决后口径）**：同库同键重放会被 idempotency 短路直接返回旧 product、新 generator 不被执行，故验收**不在生产 state root 重放**：
   1. 基线臂：脱钩前对固定交易日+checkpoint 的 owner 判定 baseline（已存 `$STATE/w2-daily-decoupling-design-gate-20260828/baseline-20260827/`，8-27 三个完整 checkpoint 产物）。
   2. 新臂：临时隔离 state root + 固定时钟，同一 checkpoint 输入跑新 generator 全链（prepare→finalize→claim→FakeSender dispatch→settle）。
-  3. 比对：脚本断言结构契约（schema/键集/必填段非空、`generated_via` 换值合法、data_gaps 不新增缺口码）+ owner 对两臂样本盲比内容语义（理解准确/密度/去噪不降）。
+  3. 比对：脚本断言结构契约（schema/键集/必填段非空、`generated_via` 换值合法、data_gaps 不新增缺口码；材料键集合经设计门变更时允许新增 `l1_material_<key>_*` 码——2026-08-31 daily-g-context-material 设计稿 P2-3 裁决修订）+ owner 对两臂样本盲比内容语义（理解准确/密度/去噪不降）。
   4. 投递不中断：隔离库 obligation 全链 PENDING→CLAIMED→SETTLED 且无失配；生产侧以当日真实 checkpoints 兑现（至少一条真实 Hermes 对照）。
   5. 状态机不动证明：脱钩 diff 只允许触碰 generator（迁址+重写）与装配一处（`scripts/run_daily_workspace.py:156-168`），repository/outbox/delivery 零改动。
 - **重放幂等验收**：同 idempotency key 重跑不新增 product_version；同 claim token 重放 settle no-op；旧 token 迟到 settle 在 SETTLED 态报 `daily_delivery_claim_token_mismatch`、在回退 PENDING 态报 `daily_delivery_obligation_not_claimed`（盲评 P2-10 两分支都要断言）。
