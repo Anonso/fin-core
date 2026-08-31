@@ -3,7 +3,7 @@
 set -euo pipefail
 
 WORKSPACE="/home/ypk/fin-core"
-RELAY_AUTH_FILE="${XDG_DATA_HOME:-${HOME:?}/.local/share}/codex-open/auth.json"
+AUTH_FILE="${XDG_DATA_HOME:-${HOME:?}/.local/share}/opencode/auth.json"
 MODEL_CATALOG="${HOME:?}/.codex/models.json"
 CODEX_BINARY="$(command -v codex || true)"
 JQ_BINARY="$(command -v jq || true)"
@@ -16,12 +16,12 @@ if [[ -z "$JQ_BINARY" || ! -x "$JQ_BINARY" ]]; then
     printf 'codex-open: jq is unavailable\n' >&2
     exit 78
 fi
-if [[ -L "$RELAY_AUTH_FILE" || ! -f "$RELAY_AUTH_FILE" ]]; then
-    printf 'codex-open: relay credential file is unavailable\n' >&2
+if [[ -L "$AUTH_FILE" || ! -f "$AUTH_FILE" ]]; then
+    printf 'codex-open: OpenCode Go credential file is unavailable\n' >&2
     exit 78
 fi
-if [[ "$(stat -c '%u:%a:%h' "$RELAY_AUTH_FILE")" != "$(id -u):600:1" ]]; then
-    printf 'codex-open: relay credential file must be owner-only\n' >&2
+if [[ "$(stat -c '%u:%a:%h' "$AUTH_FILE")" != "$(id -u):600:1" ]]; then
+    printf 'codex-open: credential file must be owner-only\n' >&2
     exit 78
 fi
 if [[ ! -r "$MODEL_CATALOG" ]]; then
@@ -29,14 +29,14 @@ if [[ ! -r "$MODEL_CATALOG" ]]; then
     exit 78
 fi
 
-RELAY_KEY_VALUE="$($JQ_BINARY -er \
-    '.["relay-19851117"] | select(.type == "api") | .key | strings | select(length > 0)' \
-    "$RELAY_AUTH_FILE")" || {
-    printf 'codex-open: relay credential is invalid\n' >&2
+OPENCODE_GO_KEY_VALUE="$($JQ_BINARY -er \
+    '.["opencode-go"] | select(.type == "api") | .key | strings | select(length > 0)' \
+    "$AUTH_FILE")" || {
+    printf 'codex-open: OpenCode Go credential is invalid\n' >&2
     exit 78
 }
-export RELAY_API_KEY="$RELAY_KEY_VALUE"
-unset RELAY_KEY_VALUE
+export OPENCODE_GO_API_KEY="$OPENCODE_GO_KEY_VALUE"
+unset OPENCODE_GO_KEY_VALUE
 
 # 非 TTY 调用方（agent 会话/管道）没有交互式 TUI，缺 exec 子命令会直接
 # "Error: stdin is not a terminal" 退出——自动补 exec，人在终端手跑不受影响。
@@ -65,14 +65,14 @@ fi
 cd "$WORKSPACE"
 run_codex() {
     exec "$CODEX_BINARY" \
-        -c model_provider=relay_19851117 \
-        -c 'model_providers.relay_19851117.name=Relay 19851117' \
-        -c model_providers.relay_19851117.base_url=https://www.19851117.xyz/v1 \
-        -c model_providers.relay_19851117.env_key=RELAY_API_KEY \
-        -c model_providers.relay_19851117.wire_api=responses \
+        -c model_provider=opencode_go \
+        -c 'model_providers.opencode_go.name=OpenCode Go' \
+        -c model_providers.opencode_go.base_url=https://opencode.ai/zen/go/v1 \
+        -c model_providers.opencode_go.env_key=OPENCODE_GO_API_KEY \
+        -c model_providers.opencode_go.wire_api=responses \
         -c "model_catalog_json=${MODEL_CATALOG}" \
         -c model_reasoning_effort=max \
-        -m gpt-5.6 \
+        -m deepseek-v4-pro \
         --sandbox read-only \
         "$@"
 }
