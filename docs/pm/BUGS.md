@@ -496,3 +496,13 @@
   `263ecd8b`（代码内容仍包含 `3b2fd30`），unit 期望 SHA 已同步；
   `uv.lock` SHA-256=`c32179b2…`，公共 RPC 再验通过。
 - 状态：已部署，尚未经过下一次真实 Daily 正文验收；需确认正文不再只写缺口。
+
+## BUG-017 Daily L1 多 backend 预算未共享（2026-08-31）
+
+- 发现：隔离真实预演中，单个 GLM backend 连续三次约 60 秒超时后才返回空；
+  generator 随后仍给第二个 backend 重开完整预算，失败链最坏耗时约翻倍。
+- 根因：`L1DirectWorkspaceGenerator._complete` 只在进入链路前计算一次预算，
+  没有把多个 backend 绑定到同一个 monotonic 总截止点。
+- 修复：多个 backend 预先等分同一总预算，单 backend 保持完整预算；既有路由、
+  backend 内重试和失败语义不变。focused 41 项、默认套件 2938 项均通过。
+- 状态：文件层已修，待部署后下一次真实 Daily 观察耗时与正文。
