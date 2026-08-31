@@ -141,3 +141,52 @@ def test_prompt_carries_g_context_section_and_alignment_instruction() -> None:
     assert "# G 认知参考（老师体系证据）" in prompt
     assert "对照「G 认知参考」" in prompt
     assert "不要输出任何提示更新持仓" in prompt
+
+
+def test_overview_material_uses_live_clock_not_frozen_checkpoint_clock(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
+    """08-31 14:25 班后核对复现的确定性缺料根因。
+
+    概览服务若被绑到检查点冻结时钟，fetch 期间新于截止瞬间的 provider 行
+    时间戳必触发 PROVIDER_TIME_AFTER_QUERY 整链拒绝——交易日盘中班次确定性
+    缺料，周末/盘后数据不更新故既有实证未暴露。概览是活读取，必须真实时钟；
+    证据截止记账仍归检查点层。
+    """
+
+    from datetime import datetime, timedelta, timezone
+    from types import SimpleNamespace
+
+    import fin_analyse.operations.daily_workspace_generator as gen
+
+    captured: dict[str, object] = {}
+
+    class _FakeService:
+        def read(self, request: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                status="PARTIAL",
+                to_capability_value=lambda: {"ok": True},
+            )
+
+    def _fake_builder(*, clock: object = None) -> _FakeService:
+        captured["clock"] = clock
+        return _FakeService()
+
+    monkeypatch.setattr(
+        "fin_analyse.market.current_overview.build_default_a_share_market_overview",
+        _fake_builder,
+    )
+    monkeypatch.setattr(gen, "_portfolio_name_resolver", lambda: None)
+    monkeypatch.setattr(gen, "_registry_quote_reader", lambda: None)
+
+    cst = timezone(timedelta(hours=8))
+    frozen = datetime(2026, 8, 31, 13, 55, 0, 348519, tzinfo=cst)
+    provider = gen.build_default_material_provider(
+        knowledge_base_root=str(tmp_path),
+        as_of_clock=lambda: frozen,
+    )
+    materials = provider("15:30 工作区检查点：今天盘面与持仓结论？")
+
+    assert captured["clock"] is None
+    assert materials["market_overview"] is not None

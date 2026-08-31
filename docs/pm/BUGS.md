@@ -456,3 +456,21 @@
   端到端实弹 290.8s 出 5 单元 0 警告。
 - 状态：修复已合入（5a6f12b）；低峰重生成（regen_driver_v4，regen-if-better）
   待 08-31 凌晨照跑复核。
+
+## BUG-015 Daily 概览材料冻结时钟——交易日盘中班次确定性缺料（2026-08-31 14:25 班后核对立案并修复闭环）
+
+- 现象：08-31 premarket/morning/close 三班 `l1_material_market_overview_unavailable`
+  （close 班已在 BUG-002/011 修复后运行，排除旧拒链）；interactive 探针同时段
+  全 PARTIAL。14:25 核对复现：material provider 以检查点冻结时钟
+  （13:55:00.348）构造概览服务 → overview None；活时钟 → PARTIAL。
+- 根因：generator 材料装配把概览服务绑到检查点 evidence_cutoff 冻结时钟，而
+  fetch 返回的行情行时间戳是真实墙钟——fetch 期间任何新于冻结瞬间的时间戳
+  触发 `MARKET_OVERVIEW_PROVIDER_TIME_AFTER_QUERY` 整链拒绝。交易日盘中
+  数据秒级更新 → 必然触发；周末/盘后数据不更新 → 通过。既有「四班 L1 实证
+  已通」与 B1 盲评「差距全在带伤班次」由此解释：带伤班次即盘中班的该缺料。
+  上午两班 gap 主因是本条，非仅 BUG-002（盘前占位为叠加因素）。
+- 修复（c174dfd 之后的 fix 提交）：概览是活读取——材料装配改用真实时钟构造
+  服务（`build_default_a_share_market_overview()`），检查点 evidence_cutoff
+  记账不变；回归测试钉「冻结时钟下服务必须以非冻结时钟构造 + 材料非 None」。
+  实证：冻结时钟探针 None → 4000 字。
+- 状态：已关闭（2026-08-31，15:05 postmarket 班为首次生产实弹）。

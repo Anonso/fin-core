@@ -183,7 +183,11 @@ def build_default_material_provider(
 
             # build_default_* returns the SERVICE, not data — the read must
             # actually run here or the prompt renders an object address.
-            service = build_default_a_share_market_overview(clock=as_of_clock)
+            # 概览是活读取：必须用真实时钟——冻结到检查点 evidence_cutoff 会使
+            # fetch 期间新于截止瞬间的 provider 行时间戳触发
+            # PROVIDER_TIME_AFTER_QUERY 整链拒绝（交易日盘中班次确定性缺料，
+            # 08-31 14:25 核对复现；周末/盘后数据不更新故既有实证未暴露）。
+            service = build_default_a_share_market_overview()
             result = service.read(AshareMarketOverviewRequest())
             materials["market_overview"] = _render_market_overview(result)
         except Exception as exc:
