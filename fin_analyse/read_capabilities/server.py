@@ -112,16 +112,20 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     "read_g_context": (
         "Read the layered G (Guo teacher) cognition mainline: pinned sources, "
         "fresh commentary, framework, facts, associations. Supports point-in-time "
-        "audit via as_of. Advisory reference only, never a trade instruction."
+        "audit via as_of. Advisory reference only, never a trade instruction. "
+        "HARD RULE: any analysis/opinion question (怎么样/怎么看/该不该/要不要) "
+        "calls this FIRST — analysis always consults the G mainline. Only a pure "
+        "factual lookup (what holdings, what cost, how many) skips it; when in "
+        "doubt, call it."
     ),
     "read_actual_portfolio": (
         "Read the latest user-confirmed actual portfolio snapshot: holdings, "
         "quantities, costs, cash, exposure, per-holding owner thesis. Read-only; "
         "never changes the portfolio. HARD RULE for any instrument/holdings "
-        "question: call this plus read_market_snapshot FIRST, and call "
-        "read_g_context when the topic relates to the teacher's mainline — "
-        "or whenever relevance is uncertain (default to calling it). Never "
-        "invent holdings, names, or portfolio rules from memory."
+        "question: call this plus read_market_snapshot FIRST. For any "
+        "analysis/opinion question about holdings, call read_g_context FIRST "
+        "as well — only a pure factual lookup (what holdings, what cost) skips "
+        "G. Never invent holdings, names, or portfolio rules from memory."
     ),
     "read_market_snapshot": (
         "Read on-demand tactical market context for up to 5 A-share instruments "
