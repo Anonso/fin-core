@@ -161,3 +161,34 @@ def test_disabled_t0_entry_is_skipped_on_l1_chain(tmp_path: Path) -> None:
     generator = L1DirectWorkspaceGenerator(config_path=str(config_path))
 
     assert generator._resolve_backends() == ()
+
+
+def test_disabled_priority_entry_does_not_consume_l1_chain_slot(tmp_path: Path) -> None:
+    config_path = tmp_path / "llm.yaml"
+    config_path.write_text(
+        "models:\n"
+        "  disabled_first:\n"
+        "    provider: openai_compatible\n"
+        "    model: sealed-model\n"
+        "    api_key: sk-sealed\n"
+        "    base_url: http://127.0.0.1:9\n"
+        "    enabled: false\n"
+        "  second:\n"
+        "    provider: openai_compatible\n"
+        "    model: sealed-model\n"
+        "    api_key: sk-sealed\n"
+        "    base_url: http://127.0.0.1:9\n"
+        "    enabled: true\n"
+        "  third:\n"
+        "    provider: openai_compatible\n"
+        "    model: sealed-model\n"
+        "    api_key: sk-sealed\n"
+        "    base_url: http://127.0.0.1:9\n"
+        "    enabled: true\n"
+        "priorities:\n"
+        "  t0: [disabled_first, second, third]\n",
+        encoding="utf-8",
+    )
+    generator = L1DirectWorkspaceGenerator(config_path=str(config_path))
+
+    assert [name for name, _backend in generator._resolve_backends()] == ["second", "third"]

@@ -826,7 +826,7 @@ class L1DirectWorkspaceGenerator:
 
         order = get_backend_priority(
             load_llm_config(self._config_path), "t0", _T0_FALLBACK_ORDER
-        )[:_T0_MAX_ENDPOINTS]
+        )
         resolved: list[tuple[str, Any]] = []
         for name in order:
             try:
@@ -838,6 +838,8 @@ class L1DirectWorkspaceGenerator:
                 continue
             if backend is not None:
                 resolved.append((name, backend))
+                if len(resolved) >= _T0_MAX_ENDPOINTS:
+                    break
         self._backends = tuple(resolved)
         return self._backends
 
