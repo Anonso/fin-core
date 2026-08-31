@@ -3,20 +3,22 @@
 
 models:
   # GLM-5.3 (官方 bigmodel coding plan，CC 同款凭据) - 难题质量锚（T0）
+  # 暂时禁用（owner 2026-08-31：GLM 额度耗尽，二轮盲评质量锚已用完）
   glm53:
     provider: openai_compatible
     model: glm-5.3
     api_key: ${GLM_API_KEY}
     base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
-    enabled: true
+    enabled: false
 
   # GLM-5.3-Flash (官方 bigmodel coding plan，同款凭据) - 简单任务吞吐锚（T1）
+  # 暂时禁用（owner 2026-08-31：GLM 额度耗尽）
   glm53_flash:
     provider: openai_compatible
     model: glm-5.3-flash
     api_key: ${GLM_API_KEY}
     base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
-    enabled: true
+    enabled: false
 
   # 通义千问 Qwen3.6-35B (硅基流动 SiliconFlow)
   qwen:
@@ -65,13 +67,14 @@ models:
 
   # 智谱 GLM-4.6V-Flash（免费额度）- 识图链第二优先（OpenAI 兼容）
   # 官方 key 2026-08-28 起存于 llm.env GLM_VISION_API_KEY（旧 key 已 401 失效）
+  # 暂时禁用（owner 2026-08-31：GLM 额度耗尽）
   glm-vision:
     provider: openai_compatible
     model: glm-4.6v-flash
     api_key: ${GLM_VISION_API_KEY}
     base_url: "https://open.bigmodel.cn/api/paas/v4"
     timeout: 90
-    enabled: true
+    enabled: false
 
   # 自定义 - 任意 OpenAI 兼容端点 (Ollama/vLLM/硅基流动等)
   custom:
