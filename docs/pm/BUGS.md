@@ -492,4 +492,7 @@
 - 部署（2026-08-31 17:27）：目标 SHA `5e64c43`，`uv sync` 无依赖变更，
   systemd daemon-reload 后 gateway PID `497795` 正常运行；薄 server 公共
   `read_market_overview` RPC 返回 `PARTIAL`、四指数点位与涨跌家数。
+- 身份收口（2026-08-31 17:32）：状态文档提交后 HEAD 为
+  `263ecd8b`（代码内容仍包含 `3b2fd30`），unit 期望 SHA 已同步；
+  `uv.lock` SHA-256=`c32179b2…`，公共 RPC 再验通过。
 - 状态：已部署，尚未经过下一次真实 Daily 正文验收；需确认正文不再只写缺口。
