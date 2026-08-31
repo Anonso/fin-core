@@ -41,7 +41,7 @@
 - 按需行情：每个 frame 带 cutoff/coverage/source/provider version/qfq adjustment/raw revision/typed gaps；provenance 逐条 `provider_id@provider_version`（`on_demand_tactical_context.py:621`）。
 - 两融：结果携带 `source_revision` 与 `denominator_source_revision`（`margin/evidence.py:50,320,434`）。
 - 官方记录：capture `revision`（raw `payload_sha256`）随官方更正改变，同一 document 的 canonical row hash 也随更正改变（`official_records/evidence.py:218-219`；目录条目）。
-- 概览：结果固定单源 `PARTIAL` external reference，显式声明 observation age/延迟/BJ 未覆盖/持续性未评估（目录条目）。
+- 概览：结果固定单源 `PARTIAL` external reference，显式声明 observation age/延迟/BJ 未覆盖/持续性未评估（目录条目）；四大指数的点位（`level`）与涨跌/成交额一并透传（Tencent 成交额取原始 amount 字段并换算为元），缺失点位保持 `null`，不推断。
 
 ### deadline 语义
 

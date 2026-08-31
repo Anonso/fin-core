@@ -8,6 +8,7 @@ data_gaps(一码一因);④两融项从持仓面投影删除(owner 拍板 2026-0
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from fin_analyse.operations.daily_workspace_generator import (
@@ -166,7 +167,11 @@ def test_overview_material_uses_live_clock_not_frozen_checkpoint_clock(
         def read(self, request: object) -> SimpleNamespace:
             return SimpleNamespace(
                 status="PARTIAL",
-                to_capability_value=lambda: {"ok": True},
+                to_capability_value=lambda: {
+                    "major_indices": [
+                        {"name": "上证指数", "change_pct": 1.0, "turnover_yuan": 1}
+                    ]
+                },
             )
 
     def _fake_builder(*, clock: object = None) -> _FakeService:

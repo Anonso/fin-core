@@ -96,9 +96,16 @@ def _index(
 class _RecordingSource:
     snapshot: EastmoneyMarketOverviewSnapshot
     calls: list[datetime | None] = field(default_factory=list)
+    completed_session_preferences: list[bool] = field(default_factory=list)
 
-    def fetch(self, *, deadline_at: datetime | None) -> EastmoneyMarketOverviewSnapshot:
+    def fetch(
+        self,
+        *,
+        deadline_at: datetime | None,
+        prefer_completed_session: bool = False,
+    ) -> EastmoneyMarketOverviewSnapshot:
         self.calls.append(deadline_at)
+        self.completed_session_preferences.append(prefer_completed_session)
         return self.snapshot
 
 
@@ -267,6 +274,7 @@ def test_weekend_query_uses_latest_completed_trading_day_and_names_evidence_lead
         "MARKET_OVERVIEW_DELAYED_REFERENCE",
     )
     assert len(source.calls) == 1
+    assert source.completed_session_preferences == [True]
 
 
 @pytest.mark.parametrize("capture_offset_seconds", (0, 2, 3))
@@ -278,13 +286,14 @@ def test_current_query_accepts_evidence_captured_within_inclusive_local_read_win
     provider_updated_at = captured_at - timedelta(seconds=1)
     fetch_returned_at = read_started_at + timedelta(seconds=3)
     clock_values = iter((read_started_at, fetch_returned_at))
+    source = _RecordingSource(
+        replace(
+            _snapshot(provider_updated_at=provider_updated_at),
+            captured_at=captured_at,
+        )
+    )
     service = AshareMarketOverviewService(
-        source=_RecordingSource(
-            replace(
-                _snapshot(provider_updated_at=provider_updated_at),
-                captured_at=captured_at,
-            )
-        ),
+        source=source,
         calendar=AShareTradingCalendar.from_file(_CALENDAR_PATH),
         clock=lambda: next(clock_values),
     )
@@ -295,6 +304,7 @@ def test_current_query_accepts_evidence_captured_within_inclusive_local_read_win
     assert result.queried_at == captured_at
     assert result.provider_updated_at == provider_updated_at.astimezone(UTC)
     assert result.provider_observation_age_seconds == 1
+    assert source.completed_session_preferences == [False]
 
 
 def test_current_query_rejects_provider_timestamp_after_capture() -> None:
@@ -670,7 +680,13 @@ def test_deadline_expiring_during_fetch_prevents_late_result_publication() -> No
     class _LateSource:
         snapshot: EastmoneyMarketOverviewSnapshot
 
-        def fetch(self, *, deadline_at: datetime | None) -> EastmoneyMarketOverviewSnapshot:
+        def fetch(
+            self,
+            *,
+            deadline_at: datetime | None,
+            prefer_completed_session: bool = False,
+        ) -> EastmoneyMarketOverviewSnapshot:
+            assert prefer_completed_session is True
             assert deadline_at == deadline
             current[0] = deadline + timedelta(microseconds=1)
             return self.snapshot
@@ -911,6 +927,38 @@ def _tencent_index_text() -> str:
     return "\n".join(lines)
 
 
+def test_completed_session_prefers_eastmoney_indices_for_breadth(monkeypatch: pytest.MonkeyPatch) -> None:
+    source = EastmoneyCurrentMarketOverviewSource(
+        http_get=lambda *args, **kwargs: None,  # type: ignore[return-value]
+        clock=lambda: _SUNDAY_QUERY.astimezone(UTC),
+    )
+    calls: list[str] = []
+    eastmoney = _snapshot().indices
+    tencent = tuple(dict(row) for row in eastmoney)
+
+    def _eastmoney(*, deadline_at: datetime | None) -> tuple[Mapping[str, object], ...]:
+        del deadline_at
+        calls.append("eastmoney")
+        return eastmoney
+
+    def _tencent(*, deadline_at: datetime | None) -> tuple[Mapping[str, object], ...]:
+        del deadline_at
+        calls.append("tencent")
+        return tencent
+
+    monkeypatch.setattr(source, "_fetch_eastmoney_indices", _eastmoney)
+    monkeypatch.setattr(source, "_fetch_tencent_indices", _tencent)
+
+    indices, provider = source._fetch_indices(
+        deadline_at=_SUNDAY_QUERY.astimezone(UTC) + timedelta(seconds=10),
+        prefer_completed_session=True,
+    )
+
+    assert provider == "EASTMONEY"
+    assert indices == eastmoney
+    assert calls == ["eastmoney"]
+
+
 def test_source_prefers_tencent_realtime_indices_and_degrades_breadth() -> None:
     calls: list[tuple[str, dict[str, object], float]] = []
 
@@ -1023,6 +1071,8 @@ def test_source_prefers_tencent_realtime_indices_and_degrades_breadth() -> None:
     assert {index.code for index in result.major_indices} == {"000001", "399001", "399006", "000688"}
     assert all(index.advancers is None for index in result.major_indices)
     assert all(index.change_pct is not None for index in result.major_indices)
+    assert result.major_indices[0].level == 3946.68
+    assert result.major_indices[0].turnover_yuan == 1_000_000_000
 
 
 def test_source_falls_back_to_eastmoney_when_tencent_indices_unavailable() -> None:

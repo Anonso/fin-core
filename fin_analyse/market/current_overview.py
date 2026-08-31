@@ -217,7 +217,12 @@ class ThreadSafeEastmoneyOverviewHttpClient:
 
 
 class MarketOverviewSource(Protocol):
-    def fetch(self, *, deadline_at: datetime | None) -> EastmoneyMarketOverviewSnapshot: ...
+    def fetch(
+        self,
+        *,
+        deadline_at: datetime | None,
+        prefer_completed_session: bool = False,
+    ) -> EastmoneyMarketOverviewSnapshot: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -345,11 +350,13 @@ class MarketIndexObservation:
     advancers: int | None
     decliners: int | None
     unchanged: int | None
+    level: float | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
             "code": self.code,
             "name": self.name,
+            "level": self.level,
             "change_pct": self.change_pct,
             "turnover_yuan": self.turnover_yuan,
             "advancers": self.advancers,
@@ -480,7 +487,12 @@ class EastmoneyCurrentMarketOverviewSource:
         self._http_get = http_get or ThreadSafeEastmoneyOverviewHttpClient()
         self._clock = clock or (lambda: datetime.now(UTC))
 
-    def fetch(self, *, deadline_at: datetime | None) -> EastmoneyMarketOverviewSnapshot:
+    def fetch(
+        self,
+        *,
+        deadline_at: datetime | None,
+        prefer_completed_session: bool = False,
+    ) -> EastmoneyMarketOverviewSnapshot:
         industry_change = self._fetch_rows(
             section="industry_change",
             market_filter=_INDUSTRY_FILTER,
@@ -513,7 +525,10 @@ class EastmoneyCurrentMarketOverviewSource:
             page_size=_BOARD_PAGE_SIZE,
             deadline_at=deadline_at,
         )
-        indices, indices_provider = self._fetch_indices(deadline_at=deadline_at)
+        indices, indices_provider = self._fetch_indices(
+            deadline_at=deadline_at,
+            prefer_completed_session=prefer_completed_session,
+        )
         equity_turnover = self._fetch_rows(
             section="equity_turnover",
             market_filter=_A_SHARE_FILTER,
@@ -621,14 +636,30 @@ class EastmoneyCurrentMarketOverviewSource:
         self,
         *,
         deadline_at: datetime | None,
+        prefer_completed_session: bool = False,
     ) -> tuple[tuple[Mapping[str, object], ...], Literal["TENCENT", "EASTMONEY"]]:
         """Major indices: Tencent realtime primary, Eastmoney delayed fallback.
 
         Tencent ``qt.gtimg.cn`` rows carry code/name/change/turnover with a
         realtime provider timestamp but no advancer/decliner breadth; those
         fields are left unset and the delayed Eastmoney host is used only
-        when the realtime fetch itself fails.
+        when the realtime fetch itself fails.  After the session closes, the
+        existing Eastmoney index endpoint is preferred so breadth is available
+        without treating a delayed completed-session read as intraday data.
         """
+        if prefer_completed_session:
+            try:
+                return (
+                    self._fetch_eastmoney_indices(deadline_at=deadline_at),
+                    "EASTMONEY",
+                )
+            except MarketOverviewDeadlineReachedError:
+                raise
+            except MarketOverviewSourceError:
+                return (
+                    self._fetch_tencent_indices(deadline_at=deadline_at),
+                    "TENCENT",
+                )
         try:
             return (
                 self._fetch_tencent_indices(deadline_at=deadline_at),
@@ -762,7 +793,10 @@ class AshareMarketOverviewService:
             )
 
         try:
-            raw = self._source.fetch(deadline_at=request.deadline_at)
+            raw = self._source.fetch(
+                deadline_at=request.deadline_at,
+                prefer_completed_session=session_phase in {"AFTER_CLOSE", "CLOSED_DAY"},
+            )
         except MarketOverviewDeadlineReachedError:
             return _unknown(
                 queried_at=queried_at,
@@ -1276,10 +1310,11 @@ def _provider_timestamp(row: Mapping[str, object]) -> datetime | None:
 def _parse_tencent_index_row(line: str) -> Mapping[str, object] | None:
     """Map one ``qt.gtimg.cn`` index line onto the Eastmoney row shape.
 
-    Tencent payload fields: [1]=name [3]=price [31]=change [32]=change_pct
-    [36]=volume [30]=YYYYMMDDHHMMSS timestamp.  No advancer/decliner breadth
-    exists on the realtime quote, so f104/f105/f106 stay absent and the
-    overview breadth degrades with an explicit gap.
+    Tencent payload fields: [1]=name [3]=price [31]=change [32]=change_pct,
+    [36]=volume, [37]=amount in 10,000 yuan, and [30]=YYYYMMDDHHMMSS
+    timestamp.  No advancer/decliner breadth exists on the realtime quote, so
+    f104/f105/f106 stay absent and the overview breadth degrades with an
+    explicit gap.
     """
     if "=" not in line:
         return None
@@ -1296,8 +1331,14 @@ def _parse_tencent_index_row(line: str) -> Mapping[str, object] | None:
         return None
     code_raw = parts[2] if len(parts) > 2 else ""
     timestamp_raw = parts[30] if len(parts) > 30 else ""
+    level = _finite_float(parts[3] if len(parts) > 3 else None)
     change_pct = _finite_float(parts[32] if len(parts) > 32 else None)
-    turnover_yuan = _finite_float(parts[36] if len(parts) > 36 else None)
+    amount_10k_yuan = _finite_float(parts[37] if len(parts) > 37 else None)
+    turnover_yuan = (
+        amount_10k_yuan * 10_000
+        if amount_10k_yuan is not None and amount_10k_yuan >= 0
+        else None
+    )
     timestamp = _parse_tencent_index_timestamp(timestamp_raw)
     if (
         not code_raw
@@ -1310,6 +1351,7 @@ def _parse_tencent_index_row(line: str) -> Mapping[str, object] | None:
     return {
         "f12": code_raw,
         "f14": _bounded_text(parts[1] if len(parts) > 1 else "", max_chars=80),
+        "f2": level,
         "f3": change_pct,
         "f6": turnover_yuan,
         "f124": timestamp.timestamp(),
@@ -1371,6 +1413,7 @@ def _project_equity(row: Mapping[str, object]) -> MarketEquityObservation | None
 def _project_index(row: Mapping[str, object]) -> MarketIndexObservation | None:
     code = _bounded_text(row.get("f12"), max_chars=32)
     name = _bounded_text(row.get("f14"), max_chars=80)
+    level = _finite_float(row.get("f2"))
     change_pct = _finite_float(row.get("f3"))
     turnover_yuan = _finite_float(row.get("f6"))
     # Tencent realtime rows carry no advancer/decliner breadth; a missing
@@ -1394,6 +1437,7 @@ def _project_index(row: Mapping[str, object]) -> MarketIndexObservation | None:
         advancers=advancers,
         decliners=decliners,
         unchanged=unchanged,
+        level=level if level is not None and level > 0 else None,
     )
 
 

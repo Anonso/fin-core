@@ -103,6 +103,7 @@ Daily 链涉及四个独立持久化边界，owner 各一：
 - 生成：checkpoint 固定问题 + snapshot 可用上下文渲染为单轮 prompt，经 llm.yaml `priorities.t0` 序**截前 2 端点**（现配置 glm53 → deepseek）直调，复用 `claims/config_loader.load_llm_config` + `OpenAICompatibleBackend`（`build_deepseek_guide_backend` 的 fail-closed 凭据校验模式：key/base_url 非空、无 `${ENV}` 字面量、HTTPS）；作业级重试交给 checkpoint 语义，客户端内不做长尾重试。
 - unavailable 语义不降级：两端点皆失败/空响应/超时 → `DailyWorkspaceGenerationUnavailableError`（typed gap），不落 product，不伪造完成。
 - 输出：直接产出 `fin.daily_workspace_product/v1` 形状 dict，同键齐备——`generated_via="l1-direct-v1"`；`agent_provenance` 保持形状但如实（runtime_invoked=false/output_used=false/generation 标 l1-direct）；`input_snapshot_receipt`、`first_screen`（top_items 单条=答案全文，不升格 summary）、`data_gaps`、`consultation_product` 段保留同形（product 字段承载结构化答案）。honesty 规则逐条保持：plain summary 不升格、unavailable 拒于落库前、context boundaries 标注不变。
+- Daily prompt 的市场概览材料使用 FIN-owned 的有界整行投影，保留四大指数点位/涨跌/成交额、宽度、行业/概念榜与成交额靠前个股；不得把完整 JSON 从中间截断后当作可用材料。闭市读取优先既有 Eastmoney 指数端点以取得涨跌家数，盘中仍保留 Tencent 实时优先；来源限制继续显式标注但不得替代当日事实判断。
 - turn key 派生式不变（`_daily_consultation_turn_key` 同式），保证脱钩前后同 checkpoint 的幂等键连续。
 
 ## 验证方式

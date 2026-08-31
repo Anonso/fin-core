@@ -21,6 +21,7 @@ import json
 import logging
 from collections.abc import Callable, Mapping
 from datetime import datetime
+from math import isfinite
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -55,6 +56,7 @@ _T0_MAX_ENDPOINTS = 2
 _ATTEMPT_TIMEOUT_SECONDS = 300.0
 _MAX_ANSWER_CHARS = 8000
 _FAILURE_SENTINELS = frozenset({"[]", "null", "none", "''", '""'})
+_MARKET_OVERVIEW_MAX_CHARS = 4000
 
 _MATERIAL_KEYS: tuple[str, ...] = ("portfolio", "market_overview", "g_context", "g_reference")
 
@@ -383,10 +385,14 @@ def _registry_quote_reader() -> Callable[[str], Any] | None:
 
 
 def _render_market_overview(result: Any) -> str | None:
-    """Render a market overview READ RESULT (never the service object).
+    """Render a market overview READ RESULT as bounded, complete text.
 
     A ``UNKNOWN`` status read carries no usable evidence, so it maps to None
-    (typed gap) instead of rendering an empty shell.
+    (typed gap) instead of rendering an empty shell.  Do not dump and slice the
+    JSON envelope here: a mid-token cut makes the prompt look non-empty while
+    silently dropping the highest-value sections.  The text projection keeps
+    the facts that answer a postmarket question (index levels, breadth,
+    leaders, turnover) and truncates only at whole-line boundaries.
     """
 
     if getattr(result, "status", None) != "PARTIAL":
@@ -395,12 +401,204 @@ def _render_market_overview(result: Any) -> str | None:
     if not callable(to_value):
         return None
     try:
-        text = json.dumps(to_value(), ensure_ascii=False)
-    except (TypeError, ValueError):
+        payload = to_value()
+    except Exception:
         return None
-    if not text.strip():
+    if not isinstance(payload, Mapping):
         return None
-    return text[:4000]
+
+    lines: list[str] = []
+    trade_date = _market_text(payload.get("effective_trade_date"))
+    observation_mode = _market_text(payload.get("observation_mode"))
+    provider_updated_at = _market_text(payload.get("provider_updated_at"))
+    observation_age = payload.get("provider_observation_age_seconds")
+    if trade_date or observation_mode:
+        bits = []
+        if trade_date:
+            bits.append(f"有效交易日={trade_date}")
+        if observation_mode:
+            bits.append(f"观察模式={observation_mode}")
+        if provider_updated_at:
+            bits.append(f"源更新时间={provider_updated_at}")
+        if (
+            isinstance(observation_age, (int, float))
+            and not isinstance(observation_age, bool)
+            and isfinite(float(observation_age))
+            and observation_age >= 0
+        ):
+            bits.append(f"源延迟约{observation_age:.0f}秒")
+        lines.append("时点：" + "；".join(bits))
+
+    raw_indices = payload.get("major_indices")
+    index_lines: list[str] = []
+    if isinstance(raw_indices, (list, tuple)):
+        for raw in raw_indices[:4]:
+            if not isinstance(raw, Mapping):
+                continue
+            name = _market_text(raw.get("name")) or _market_text(raw.get("code"))
+            if not name:
+                continue
+            level = _format_market_number(raw.get("level"))
+            change = _format_market_pct(raw.get("change_pct"))
+            turnover = _format_market_turnover(raw.get("turnover_yuan"))
+            facts = [part for part in (f"点位 {level}" if level else "", change, turnover) if part]
+            index_lines.append(f"{name}（" + "，".join(facts) + "）" if facts else name)
+    if index_lines:
+        lines.append("主要指数：" + "；".join(index_lines))
+
+    breadth = payload.get("breadth")
+    if isinstance(breadth, Mapping):
+        breadth_bits = []
+        for key, label in (
+            ("advancers", "上涨"),
+            ("decliners", "下跌"),
+            ("unchanged", "平盘"),
+            ("covered_instruments", "覆盖"),
+        ):
+            value = breadth.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                breadth_bits.append(f"{label}{value:g}" if isinstance(value, float) else f"{label}{value}")
+        turnover = _format_market_turnover(breadth.get("total_turnover_yuan"))
+        if turnover:
+            breadth_bits.append(turnover)
+        lines.append("市场宽度：" + ("；".join(breadth_bits) if breadth_bits else "不可用"))
+    else:
+        lines.append("市场宽度：不可用（当前指数源未提供涨跌家数）")
+
+    _append_market_board_lines(
+        lines,
+        payload.get("industry"),
+        title="行业",
+    )
+    _append_market_board_lines(
+        lines,
+        payload.get("concept"),
+        title="概念",
+    )
+
+    raw_turnover = payload.get("turnover_leaders")
+    turnover_lines: list[str] = []
+    if isinstance(raw_turnover, (list, tuple)):
+        for raw in raw_turnover[:8]:
+            if not isinstance(raw, Mapping):
+                continue
+            name = _market_text(raw.get("name")) or _market_text(raw.get("code"))
+            change = _format_market_pct(raw.get("change_pct"))
+            amount = _format_market_turnover(raw.get("turnover_yuan"))
+            if name and (change or amount):
+                turnover_lines.append(
+                    f"{name}（" + "，".join(part for part in (change, amount) if part) + "）"
+                )
+    if turnover_lines:
+        lines.append("成交额靠前个股：" + "；".join(turnover_lines))
+    if len(lines) <= 1:
+        # A typed PARTIAL result should still carry at least one concrete
+        # market fact.  Do not let a malformed/future-shaped envelope turn
+        # into a green, non-empty material section.
+        return None
+
+    limitations = payload.get("limitations")
+    limitation_labels = {
+        "MARKET_OVERVIEW_BREADTH_UNAVAILABLE": "市场宽度不可用",
+        "MARKET_OVERVIEW_SINGLE_SOURCE": "单一来源",
+        "MARKET_OVERVIEW_PERSISTENCE_NOT_EVALUATED": "持续性未评估",
+        "MARKET_OVERVIEW_BJ_NOT_COVERED": "不含北交所",
+        "MARKET_OVERVIEW_PROVIDER_CONCEPT_TAXONOMY_LIMITED": "概念分类有限",
+        "MARKET_OVERVIEW_DELAYED_REFERENCE": "延迟行情，仅作参考",
+        "MARKET_OVERVIEW_SECTION_ROWS_UNPROJECTABLE": "部分榜单行不可投影",
+    }
+    if isinstance(limitations, (list, tuple)):
+        labels = [
+            limitation_labels.get(str(item), str(item))
+            for item in limitations
+            if str(item).strip()
+        ]
+        if labels:
+            lines.append("限制：" + "；".join(dict.fromkeys(labels)))
+
+    text = _join_bounded_lines(lines, max_chars=_MARKET_OVERVIEW_MAX_CHARS)
+    return text or None
+
+
+def _append_market_board_lines(
+    lines: list[str],
+    raw_section: object,
+    *,
+    title: str,
+) -> None:
+    if not isinstance(raw_section, Mapping):
+        return
+    for key, label in (
+        ("leaders_by_change", "涨幅"),
+        ("leaders_by_turnover", "成交额"),
+    ):
+        raw_items = raw_section.get(key)
+        if not isinstance(raw_items, (list, tuple)):
+            continue
+        entries: list[str] = []
+        for raw in raw_items[:5]:
+            if not isinstance(raw, Mapping):
+                continue
+            name = _market_text(raw.get("name")) or _market_text(raw.get("code"))
+            if not name:
+                continue
+            change = _format_market_pct(raw.get("change_pct"))
+            turnover = _format_market_turnover(raw.get("turnover_yuan"))
+            detail = "，".join(part for part in (change, turnover) if part)
+            entries.append(f"{name}（{detail}）" if detail else name)
+        if entries:
+            lines.append(f"{title}{label}靠前：" + "；".join(entries))
+
+
+def _join_bounded_lines(lines: list[str], *, max_chars: int) -> str:
+    selected: list[str] = []
+    used = 0
+    for raw in lines:
+        line = " ".join(str(raw).split()).strip()
+        if not line:
+            continue
+        extra = len(line) if not selected else len(line) + 1
+        if used + extra > max_chars:
+            break
+        selected.append(line)
+        used += extra
+    return "\n".join(selected)
+
+
+def _market_text(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.split())[:160]
+
+
+def _format_market_number(value: object) -> str:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return ""
+    if not isfinite(float(value)) or value <= 0:
+        return ""
+    if isinstance(value, float) and not value.is_integer():
+        return f"{value:.2f}"
+    return f"{int(value)}"
+
+
+def _format_market_pct(value: object) -> str:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return ""
+    if not isfinite(float(value)):
+        return ""
+    return f"涨跌 {value:+.2f}%"
+
+
+def _format_market_turnover(value: object) -> str:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+        return ""
+    if not isfinite(float(value)):
+        return ""
+    if value >= 100_000_000:
+        return f"成交额 {value / 100_000_000:.2f}亿元"
+    if value >= 10_000:
+        return f"成交额 {value / 10_000:.2f}万元"
+    return f"成交额 {value:.0f}元"
 
 
 # strict-G 桶（daily-g-context-material 设计稿 P1-2 裁决）：recent_reference
@@ -517,6 +715,9 @@ def _render_prompt(
         "一条连贯简报：先给「最值得处理」的 1-3 项与理由，"
         "判定必须对照「G 认知参考」（一致或不一致都点名；该材料缺席时明说「无体系对照」），"
         + changes_requirement
+        + "有可用行情事实时，至少引用两条带数字的当日事实并说明其含义；"
+        "G 认知若包含数值锚点或主线假设，逐条给出「支持/未兑现/无直接证据」对照；"
+        "不要把材料限制本身写成唯一结论，也不要用缺口清单替代复盘。"
         + "最后给「哪里未知」。"
         "持仓以最新已确认快照为准，不要输出任何提示更新持仓或强调快照过期的文字。"
         "直接输出正文，不要标题、不要 JSON。"
