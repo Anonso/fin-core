@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -21,6 +22,10 @@ from fin_analyse.guo_teacher_research.runtime_context import (
 from fin_analyse.read_capabilities.types import ProductionReadRequest
 
 _CST = timezone(timedelta(hours=8))
+# available_at 取文章文件 mtime（st_mtime，诚实溯源：字节最后写入之时即可用
+# 时点）。fixture 日期锚定 2026-08-30，运行日更晚时 mtime 会晚于 as_of 被判
+# 「未来材料」——时间炸弹（08-31 起两测必挂的存量根因），故钉死 mtime。
+_FIXTURE_MTIME = datetime(2026, 8, 30, 9, 35, tzinfo=_CST).timestamp()
 
 
 def _write_article(kb: Path, article_id: str, *, date: str, title: str) -> Path:
@@ -45,6 +50,7 @@ def _write_article(kb: Path, article_id: str, *, date: str, title: str) -> Path:
         "锅师回复：算电协同的核心是低成本绿电加算力负荷的闭环，绿证核销是门槛。\n",
         encoding="utf-8",
     )
+    os.utime(path, (_FIXTURE_MTIME, _FIXTURE_MTIME))
     return path
 
 
