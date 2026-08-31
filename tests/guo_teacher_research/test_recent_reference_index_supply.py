@@ -341,3 +341,21 @@ def test_reference_fact_rows_rank_before_empty_rows(tmp_path: Path) -> None:
     assert fact_id in ids
     assert empty_id in ids
     assert ids.index(fact_id) < ids.index(empty_id)
+
+
+def test_domain_specific_question_is_not_latest_focus() -> None:
+    """BUG-012 残余二延伸：含具体领域词的问句不走 latest-focus 宽松分支。"""
+
+    from fin_analyse.guo_teacher_research.runtime_context import (
+        AgentRuntimeContextRequest,
+        _build_intent_tokens,
+        _is_latest_focus_query,
+    )
+
+    specific = AgentRuntimeContextRequest(
+        question="保偏光纤和CPO今天有什么新说法？请对照相关公司和主线。"
+    )
+    assert not _is_latest_focus_query(specific, _build_intent_tokens(specific))
+
+    broad = AgentRuntimeContextRequest(question="最近关注什么变化？")
+    assert _is_latest_focus_query(broad, _build_intent_tokens(broad))

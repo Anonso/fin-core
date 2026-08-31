@@ -1662,7 +1662,11 @@ def _is_latest_focus_query(
     """
     if request.ticker or request.company or request.topic:
         return False
-    if intent_tokens.get("tickers") or intent_tokens.get("companies"):
+    if (
+        intent_tokens.get("tickers")
+        or intent_tokens.get("companies")
+        or intent_tokens.get("topics")
+    ):
         return False
     question = request.question or ""
     if not question:
