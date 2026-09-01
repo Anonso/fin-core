@@ -208,3 +208,23 @@
   scraper/config.py；7 篇 deep-read 产物；备份 `~/fin-data/backups/g-new-columns-20260901/`。
 - 追加（2026-09-01 方案A）：每日热点 usage 细化为 `ai_summary_reference`——
   老师 AI 汇总的参考信息，非老师看法；时效档（commentary）与列闭集不变。
+
+## D-030 · 2026-09-01 · Daily 四班推送停用，聚焦手动 CLI（owner 拍板）
+- 决策：停用 fin-daily-workspace-prepare/delivery 共 8 个 systemd timer
+  （`systemctl --user disable --now`），单元文件与 durable 状态机保留、可一键恢复；
+  ZSXQ 采集不动。推送改由问询环境生成的设计已归档（D-031 待办），后续再做。
+- 为什么：当前推送由 fin-core L1 生产管线生成，不是问询环境产出；owner 近期聚焦
+  手动 CLI（finqa/finqai/finqac），先停推避免噪音与错误面（今日 close/postmarket
+  已 failed）。
+- 否决了什么：删除单元或状态机（保留恢复能力）；立即实现问询环境生成器（归入待办）。
+- 状态：active（停用中）· 证据：`systemctl --user list-timers` 已无 fin-daily 条目；
+  NOW.md 生产声明；本条目。
+
+## D-031 · 2026-09-01 · Daily 推送改由问询环境生成（设计已定，实施待办）
+- 决策：Daily 生成器从 L1 直调换回问询环境（CC 默认/codex 备选），兜底链
+  `CC(glm)→codex(ds)→L1 直调→降级通知` 只生效于推送；手动 CLI 不参与自动兜底；
+  投递/durable 层零改动。
+- 为什么：owner 认为推送应由问询环境产出；兜底链保证 glm 关闭时推送不断。
+- 否决了什么：删除 L1 兜底（会断推送）；手动 CLI 接入自动兜底（保持直连单旋钮）。
+- 状态：待办（owner 09-01 指示先聚焦手动 CLI，实施顺序见设计稿）· 证据：
+  docs/design/daily-consult-agent-generator.md（commit 87d0f1d）。

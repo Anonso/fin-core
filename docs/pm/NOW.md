@@ -26,6 +26,8 @@
 旧飞书/Hermes 咨询入口已停用（2026-08-27 拍板，允许报错不可用）；gateway 本体
 （飞书 WS，Hermes venv）继续运行未动。当前生产：Daily/ZSXQ 单元与薄 server =
 `~/fin-core`（consult-agent/.mcp.json + systemd 单元，2026-08-29 步5 重指向）。
+Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disable，
+单元与 durable 状态机保留，可一键恢复；ZSXQ 采集不受影响）。
 老仓 `~/fin-analyse` 已归档（2026-08-29 步7）；release 退役后保留 `current`
 （→`319faf62`）+ `ff7441e2`（BUG-002 回滚候选）+ `13c791ca`（Daily 脱钩回滚候选）
 至 P5，其余 10 个已删；保留三个仅为回滚资产，无运行时读方。
