@@ -109,3 +109,44 @@ class TestIncompleteArticleRepair:
 
         not_found = scraper._find_by_topic_id("nonexistent")
         assert not_found is None
+
+    def test_truncated_stored_body_upgrades_only_on_strictly_longer_capture(
+        self, tmp_path
+    ):
+        """截断跳转文章：新正文更长才升级；否则保留，避免每轮重写。"""
+        scraper = CdpBridgeScraper()
+        article_path = tmp_path / "20260831_zsxq-t1.md"
+        article_path.write_text(
+            "---\nid: zsxq-t1\n---\n\n# 星大派特刊：报告\n\n报告日期：…\n目 ...",
+            encoding="utf-8",
+        )
+        existing = {
+            "id": "zsxq-t1",
+            "topic_id": "t1",
+            "char_count": 30,
+            "path": str(article_path),
+            "completeness_version": 1,
+        }
+        scraper._index = {existing["id"]: existing}
+
+        assert scraper._existing_body_truncated(existing)
+        # 新正文严格更长 → 升级
+        assert scraper._should_recapture(
+            "t1", new_content_len=5000, new_completeness_version=1
+        )
+        # 新正文不长于存稿 → 跳过
+        assert not scraper._should_recapture(
+            "t1", new_content_len=len("目 ..."), new_completeness_version=1
+        )
+
+    def test_complete_body_not_reclassified_as_truncated(self, tmp_path):
+        """完整正文（截断尾只在 frontmatter/其他位置出现）不算截断。"""
+        scraper = CdpBridgeScraper()
+        article_path = tmp_path / "complete.md"
+        article_path.write_text(
+            "---\nid: complete\n---\n\n# 完整文章\n\n正文不截断，结尾完整。",
+            encoding="utf-8",
+        )
+        existing = {"id": "complete", "topic_id": "t2", "path": str(article_path)}
+        scraper._index = {existing["id"]: existing}
+        assert not scraper._existing_body_truncated(existing)

@@ -152,6 +152,9 @@ _TIMELINE_TIMESTAMP_LINE_RE = re.compile(
     r"|刚刚"
     r")"
 )
+#: cursor 教师 talk 截断尾（…/...）——feed/detail 双侧都截断的跳转链接文章，
+#: 必须诚实标 incomplete，供 _should_recapture 与 derive_quality 识别升级。
+_TRUNCATED_TAIL_RE = re.compile(r"(?:\.{3}|…)\s*$")
 
 
 _TIMELINE_TIMESTAMP_EVIDENCE_SCRIPT = r"""
@@ -1863,6 +1866,8 @@ class CdpBridgeScraper:
             topic.content_text,
         )
         content = re.sub(r"<[^>]+>", "", content).strip()
+        # 免责声明是账号固定页脚，不入正文（与 Windows cleanInlineArticleText 同语义）。
+        content = content.split("免责声明", 1)[0].rstrip()
         title = topic.title.strip()
         if not title:
             title = next(
@@ -1886,6 +1891,14 @@ class CdpBridgeScraper:
         post["content_source"] = "zsxq_topic_cursor"
         post["source_classification"] = "teacher_original"
         post["answer_state"] = topic.answer_state
+        # 跳转链接文章：feed/detail 双侧都截断时正文以 …/... 结尾。诚实标
+        # incomplete，等更完整 capture 升级（_should_recapture 文件尾判据）。
+        if _TRUNCATED_TAIL_RE.search(content):
+            post["incomplete"] = True
+            post["incomplete_reason"] = "cursor_content_truncated"
+        else:
+            post["incomplete"] = False
+            post["incomplete_reason"] = ""
         return post
 
     # ── 增量抓取 ────────────────────────────────────────────
@@ -2112,24 +2125,34 @@ class CdpBridgeScraper:
 
             topic_id = str(post.get("topic_id", ""))
             legacy_topic_id = str(post.get("legacy_topic_id", ""))
+            post_id = self._make_id(post)
+            existing_topic_entry = None
+            if topic_id.isascii() and topic_id.isdecimal():
+                existing_topic_entry = self._find_by_topic_id(topic_id)
             if (
-                topic_id.isascii()
-                and topic_id.isdecimal()
-                and (
-                    self._find_by_topic_id(topic_id) is not None
-                    or (
-                        legacy_topic_id.isascii()
-                        and legacy_topic_id.isdecimal()
-                        and self._find_by_topic_id(legacy_topic_id) is not None
-                    )
-                )
+                existing_topic_entry is None
+                and legacy_topic_id.isascii()
+                and legacy_topic_id.isdecimal()
             ):
+                existing_topic_entry = self._find_by_topic_id(legacy_topic_id)
+            if existing_topic_entry is not None:
                 # A native topic identity survives title/content edits.  The
                 # legacy date+title hash remains only for anonymous DOM cards;
                 # it must never create a second article for an indexed topic.
-                continue
+                # 例外：截断/不完整存稿拿到严格更长的正文时原位升级（跳转链接
+                # 文章补抓场景），否则跳过。
+                bound_topic_id = str(
+                    existing_topic_entry.get("topic_id") or topic_id or legacy_topic_id
+                )
+                if self._should_recapture(
+                    bound_topic_id,
+                    new_content_len=len(post.get("content", "")),
+                    new_completeness_version=post.get("completeness_version", 1),
+                ):
+                    existing_ids.discard(post_id)
+                else:
+                    continue
 
-            post_id = self._make_id(post)
             if post_id in existing_ids:
                 continue
 
@@ -2713,6 +2736,31 @@ class CdpBridgeScraper:
                 return article
         return None
 
+    def _existing_article_body(self, existing: dict) -> str:
+        """Read the stored article body (frontmatter stripped); empty on failure.
+
+        The index ``char_count`` can drift from the file (legacy captures), so
+        truncation/upgrade decisions must read the file body, not the index.
+        """
+        raw_path = existing.get("path")
+        path = Path(str(raw_path)) if raw_path else None
+        if path is None or not path.is_file():
+            return ""
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return ""
+        if text.startswith("---"):
+            parts = text.split("\n---", 1)
+            if len(parts) == 2:
+                return parts[1]
+        return text
+
+    def _existing_body_truncated(self, existing: dict) -> bool:
+        """True when the stored body ends with the cursor truncation tail."""
+        body = self._existing_article_body(existing).rstrip()
+        return bool(body) and _TRUNCATED_TAIL_RE.search(body) is not None
+
     def _should_recapture(
         self,
         topic_id: str,
@@ -2733,9 +2781,12 @@ class CdpBridgeScraper:
         if existing is None:
             return True  # New article
 
-        # Repair: existing is incomplete → always recapture
-        if existing.get("incomplete", False):
-            return True
+        # Repair: existing is incomplete or truncated → recapture only when the
+        # new capture is strictly longer (avoids rewriting on every run when the
+        # jump-link article keeps failing to backfill).
+        if existing.get("incomplete", False) or self._existing_body_truncated(existing):
+            existing_body_len = len(self._existing_article_body(existing).strip())
+            return new_content_len > existing_body_len
 
         # Upgrade: new version is more complete
         existing_version: int = existing.get("completeness_version", 1)
@@ -2908,6 +2959,12 @@ class CdpBridgeScraper:
         native_source_frontmatter = (
             "\n".join(native_source_lines) + "\n" if native_source_lines else ""
         )
+        incomplete_flag = bool(post.get("incomplete", False))
+        completeness_yml = (
+            f"incomplete: {incomplete_flag}\n"
+            f"incomplete_reason: {post.get('incomplete_reason', '')}\n"
+            f"completeness_version: {post.get('completeness_version', 1)}\n"
+        )
 
         md = f"""---
 id: {post_id}
@@ -2922,7 +2979,7 @@ type: {article_type}
 image_count: {len(image_paths)}
 images: [{image_paths_str}]
 image_provenance: [{", ".join(vision_providers)}]
----
+{completeness_yml}---
 
 # {post.get("title", "")}
 
@@ -2948,6 +3005,9 @@ image_provenance: [{", ".join(vision_providers)}]
             "image_count": len(image_paths),
             "path": str(filepath),
             "file": filename,
+            "incomplete": incomplete_flag,
+            "incomplete_reason": post.get("incomplete_reason", ""),
+            "completeness_version": post.get("completeness_version", 1),
         }
         if topic_id.isascii() and topic_id.isdecimal():
             index_entry["topic_id"] = topic_id

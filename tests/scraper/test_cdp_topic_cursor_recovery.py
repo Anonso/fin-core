@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from fin_analyse.scraper import cdp_scraper as subject
+from fin_analyse.scraper.cdp_scraper import CdpBridgeScraper
 
 TZ = timezone(timedelta(hours=8))
 
@@ -69,6 +70,46 @@ def test_topic_cursor_page_decoder_accepts_only_typed_native_topics():
     assert page.topics[0].legacy_topic_id == "123456789"
     assert page.topics[0].created_at == now
     assert page.topics[0].is_teacher_source is True
+
+
+def test_cursor_post_marks_truncation_and_strips_disclaimer():
+    """截断尾标 incomplete；免责声明固定页脚不入正文。"""
+    now = datetime.now(TZ).replace(microsecond=123000)
+    raw = _topic(
+        "55521154248821484",
+        now,
+        title="星大派特刊：Trump Zone 现象研究报告",
+        content_text=(
+            "星大派特刊：Trump Zone 现象研究报告\n报告日期：2026年8月16日\n目 ..."
+        ),
+    )
+    page = subject._decode_topic_cursor_page(_raw_page(raw))
+    assert page is not None
+
+    scraper = CdpBridgeScraper()
+    post = scraper._post_from_topic_cursor_item(page.topics[0])
+    assert post is not None
+    assert post["incomplete"] is True
+    assert post["incomplete_reason"] == "cursor_content_truncated"
+
+
+def test_cursor_post_strips_disclaimer_footer():
+    """免责声明段落整体裁掉，正文保留其前内容。"""
+    now = datetime.now(TZ).replace(microsecond=123000)
+    raw = _topic(
+        "1",
+        now,
+        title="星大派锐评：示例",
+        content_text="正文第一段。\n\n免责声明：锅师和助理们不是财务顾问，请注意风险。",
+    )
+    page = subject._decode_topic_cursor_page(_raw_page(raw))
+    assert page is not None
+
+    scraper = CdpBridgeScraper()
+    post = scraper._post_from_topic_cursor_item(page.topics[0])
+    assert post is not None
+    assert "免责声明" not in post["content"]
+    assert post["incomplete"] is False
 
 
 def test_topic_cursor_page_decoder_rejects_ambiguous_or_malformed_payloads():
