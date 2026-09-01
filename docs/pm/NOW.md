@@ -19,7 +19,7 @@
 > 7. 推进位五词：`先决 / 主线 / 旁路（时间·使用·owner·随手）/ 随部署 / 最后`；
 >    主线同一时刻只推一项，完成即出队。
 >
-> 最后核对：2026-08-31（Asia/Shanghai）。
+> 最后核对：2026-09-01（Asia/Shanghai）。
 
 ## 生产声明
 
@@ -54,7 +54,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 问询探针 = 一次真实提问，看 trace 三字段（`~/fin-data/trace/read-capability/calls.jsonl`：
 工具被调、`data_gaps` 空、`status` 正常）判「起了作用没」；效果好坏归打分/盲评，不混判。
 
-推进位标记（执行顺序，与状态六档无关；主线当前 = BUG-016/017（已部署，待下一真实 Daily 正文确认）；时间窗项放旁路·时间触发到点执行、不占主线位（owner 08-30 裁定）；完整顺序看待办队列）：
+推进位标记（执行顺序，与状态六档无关；主线当前 = CLI 实弹三连验（BUG-005/012/002，手动 CLI 随用随验）；时间窗项放旁路·时间触发到点执行、不占主线位（owner 08-30 裁定）；完整顺序看待办队列）：
 `【先决】【主线】【旁路·时间/使用/owner/随手】【随部署】`。
 
 问询面运行源：薄 server 与 Daily/ZSXQ 单元均由本仓起（单元绑 HEAD，
@@ -77,10 +77,10 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | --- | --- | --- | --- | --- |
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
-| read_market_snapshot | 标的行情 | 在用（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011 已闭 |
-| read_market_overview | 大盘结构 | 问询验收中（08-31 定修 + 09-01 修复尝试2〔gate 5 + 失败诊断〕已部署；**09-01 08:55 盘前实弹 gap 仍在 → 未闭环**；09:35 盘中 gaps=[]；待 09-02 09:10 盘前实弹〔新调度〕） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 |
+| read_market_snapshot | 标的行情 | 在用（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修；**09-01 21:01 夜间实弹 4 调全 gaps，语义待判定，见待办3**） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011 已闭 |
+| read_market_overview | 大盘结构 | 问询验收中（08-31 定修 + 09-01 修复尝试2〔gate 5 + 失败诊断〕已部署；**09-01 08:55 盘前实弹 gap 仍在 → 未闭环**；09:35 盘中 gaps=[]；D-030 停推后无自动窗口，待手动 CLI 盘前实弹） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
-| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；08-31 残余二定修：标题 4 字门 + 有事实帖优先 + latest-focus 误判修正，公共 RPC 端到端仅返回目标帖，待实弹问询确认） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 |
+| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；08-31 残余二定修：标题 4 字门 + 有事实帖优先 + latest-focus 误判修正，公共 RPC 端到端仅返回目标帖；**09-01 21:01/21:08 实弹仍 ready_evidence_unavailable → 未闭环**） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 |
 | read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（08-30 公告探针过：外搜带时点、持仓联动正确；现役面=外搜 MCP 辅助面） | 公告类问题，验工具被调 + gaps 空 | BUG-012 公告腿已闭 |
 | read_user_watchlist | 自选股清单（user context 注意力焦点，永非投资证据） | 在用（08-29 接入；探针「看下当前自选股」ok 无 gaps，22 只如实分组） | 「看下当前自选股」，验工具被调 + 空表诚实答空 | 短设计已按规则 5 归档（git 历史：read-user-watchlist-tool）；写通道=manage_user_watchlist.py |
 
@@ -91,7 +91,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006 已闭 |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
-| 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | 【主线】[../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
+| 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | [../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | G 准入/工作集 | G 注入新鲜度 | 问询验收中（深化第一刀后的 manifest 契约失配已消——08-29 晚六题 g_context 零失配码；fresh pair 专项探针待跑） | 老师体系问题，验 fresh pair | [../design/g-cognition.md](../design/g-cognition.md)；CC 收口 b2da8d9c |
 | 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（两卡已点亮进问询上下文；方法论探针未命中） | 方法论类问题，验命中卡（risk_check/高PE 关键词） | knowledge_brain/seed_methodology_qa.py（541368d8） |
 | 薄 server 装配 | 六缝可用性（单缝失败隔离降级） | 在用 | 任一问询，验 gaps 可查 | read_capabilities/ |
@@ -100,18 +100,24 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 产品面 | 状态 | 验收手段 | 指针 |
 | --- | --- | --- | --- |
-| Daily 简报 | 问询验收中（四班 L1 实证已通；B1 盲评 7.67<9 不闭环，同条件 9=9 打平、差距全在带伤班次——带伤主因 BUG-015 冻结时钟已修，08-31 postmarket 班实弹 gaps=[]+行情+G 对表齐活；gap 记账哑已修 08-30；08-31 G 认知接为第四材料键〔设计门 8/8 采纳〕+ 两融项删除、不催更新；BUG-016/017 已部署，**09-01 09:35 morning 真实班 gaps=[]+正文带指数点位/成交额 → 首次真实正文确认通过**；**09-01 14:20/15:30 close+postmarket 推送因工作树脏被身份门拒、已放弃补发**；postmarket 复验顺延 09-02 15:25 班；盘前 08:55 概览 gap 未消失〔BUG-002 未闭环〕） | 四班交付记录 + B1 盲评 | 【主线】BUG-016/017；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008 |
+| Daily 简报 | 问询验收中（四班 L1 实证已通；B1 盲评 7.67<9 不闭环，同条件 9=9 打平、差距全在带伤班次——带伤主因 BUG-015 冻结时钟已修，08-31 postmarket 班实弹 gaps=[]+行情+G 对表齐活；gap 记账哑已修 08-30；08-31 G 认知接为第四材料键〔设计门 8/8 采纳〕+ 两融项删除、不催更新；BUG-016/017 已部署，**09-01 09:35 morning 真实班 gaps=[]+正文带指数点位/成交额 → 首次真实正文确认通过**；**09-01 14:20/15:30 close+postmarket 推送因工作树脏被身份门拒、已放弃补发**；D-030 09-01 停推，复验并入 D-031 验证；盘前 08:55 概览 gap 未消失〔BUG-002 未闭环〕） | 四班交付记录 + B1 盲评 | 【最后】BUG-016/017；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008 |
 
 ## 待办队列（只放未决项）
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 2 | BUG-016/017 盘后 Daily 修复：已部署；09-01 09:35 morning 真实班正文确认通过（gaps=[]、带指数点位/成交额）；09-01 postmarket 复验缺失（tree_dirty 拒绝，放弃补发） | 09-02 15:25 postmarket 班复验 |
-| 主线 | 3 | BUG-012 残余二定修：标题 4 字门 + 有事实帖优先排序 + latest-focus 误判修正（08-31 已施工，生产数据重放 9→1，公共 RPC 端到端仅返回目标帖，默认套件绿）；待实弹问询确认 | 前序=主线2 |
-| 旁路·使用触发 | 6 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
-| 随部署 | 8 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
-| 旁路·P5 前 | 9 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
-| 旁路·时间 | 10 | GLM 三节点恢复启用：llm.yaml glm53/glm53_flash/glm-vision enabled 改回 true（D-028 暂关） | 额度恢复 |
+| 主线 | 1 | CLI 实弹三连验：BUG-005 G-first 口径（分析必调 G）、BUG-012 ready 残余二、BUG-002 盘前概览——owner 常问三类（持仓复盘/老师体系/大盘板块）手动 CLI 随问随验，对照 trace 三字段 | 即日起随真实问询；BUG-012 今晚 21:01/21:08 实弹仍 unavailable |
+| 主线 | 2 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
+| 旁路·owner | 3 | 夜间 CLI 体检判定：09-01 21:01 trace 显示 read_market_snapshot 4 调全 gaps（PRIMARY_TRADING_STATUS_UNKNOWN/NON_CONTINUOUS_REFERENCE_QUOTE/CURRENT_TRADING_DAY_BAR_NOT_INCLUDED 等）+ overview/margin 剩余 gaps——判定哪些是预期语义、哪些要修 | owner 拍板是否接受夜间 reference-only |
+| 旁路·时间 | 4 | BUG-020/021 poller 发布验证：manifest 含新文章 + 重绑定 READY 复核 | 09-02 08:20 poller |
+| 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
+| 旁路·owner | 6 | BUG-014 cognition jsonl 权限 0664（P3）顺手修 | owner 随手 |
+| 随部署 | 7 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
+| 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
+| 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |
+| 旁路·P5 前 | 10 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
+| 旁路·时间 | 11 | GLM 三节点恢复启用：llm.yaml glm53/glm53_flash/glm-vision enabled 改回 true（D-028 暂关） | 额度恢复 |
+| 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
 
