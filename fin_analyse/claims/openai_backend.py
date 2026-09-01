@@ -350,7 +350,9 @@ class OpenAICompatibleBackend:
                 if remaining <= 0:
                     budget_exhausted = True
                     break
-                timeout = min(float(wire_timeout_seconds), remaining, 60.0)
+                # owner 2026-09-01：生成期间不得提前打断（含静默思考）；
+                # 单次请求只受后端分到的预算约束，整链预算才是硬上限。
+                timeout = min(float(wire_timeout_seconds), remaining)
                 if self.timeout is not None:
                     timeout = min(timeout, float(self.timeout))
                 try:

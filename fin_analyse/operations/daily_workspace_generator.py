@@ -55,7 +55,9 @@ _CHECKPOINT_QUESTIONS: dict[DailyWorkspaceCheckpoint, str] = {
 
 _T0_FALLBACK_ORDER: tuple[str, ...] = ("glm53", "deepseek", "qwen")
 _T0_MAX_ENDPOINTS = 2
-_ATTEMPT_TIMEOUT_SECONDS = 300.0
+# owner 2026-09-01：agent 运行预算最长 30 分钟，期间不因推送时点截断；
+# 到点未完成由 delivery 等待，结果一出立刻投递。
+_ATTEMPT_TIMEOUT_SECONDS = 1800.0
 _MAX_ANSWER_CHARS = 8000
 _FAILURE_SENTINELS = frozenset({"[]", "null", "none", "''", '""'})
 _MARKET_OVERVIEW_MAX_CHARS = 4000
@@ -100,24 +102,6 @@ def _daily_workspace_turn_key(
     """
     seed = f"fin-daily-workspace:{principal_id}:{trading_day_id}:{checkpoint}:{question}"
     return "fin.turn-idempotency/v1:" + hashlib.sha256(seed.encode("utf-8")).hexdigest()
-
-
-def _load_daily_workspace_deadline(raw: object) -> datetime | None:
-    """Decode the scheduler-owned deadline carried in an internal snapshot."""
-
-    if raw is None:
-        return None
-    if not isinstance(raw, str):
-        raise DailyWorkspaceGenerationUnavailableError(("daily_workspace_deadline_invalid",))
-    try:
-        deadline_at = datetime.fromisoformat(raw)
-    except ValueError as error:
-        raise DailyWorkspaceGenerationUnavailableError(
-            ("daily_workspace_deadline_invalid",)
-        ) from error
-    if deadline_at.tzinfo is None or deadline_at.utcoffset() is None:
-        raise DailyWorkspaceGenerationUnavailableError(("daily_workspace_deadline_invalid",))
-    return deadline_at
 
 
 class _L1Backend(Protocol):
@@ -904,7 +888,6 @@ class L1DirectWorkspaceGenerator:
             if isinstance(daily_workspace_context_raw, dict)
             else None
         )
-        deadline_at = _load_daily_workspace_deadline(snapshot.get("daily_workspace_deadline_at"))
         if checkpoint_value == "on_demand":
             user_context = snapshot.get("user_context")
             question = user_context.get("question") if isinstance(user_context, dict) else None
@@ -939,7 +922,7 @@ class L1DirectWorkspaceGenerator:
             as_of=self._clock(),
             trading_day_id=trading_day_id,
         )
-        answer_text = self._complete(prompt, deadline_at=deadline_at)
+        answer_text = self._complete(prompt)
         return _project_workspace_product(
             answer_text,
             checkpoint=checkpoint_value,
@@ -966,27 +949,17 @@ class L1DirectWorkspaceGenerator:
             ),
         )
 
-    def _complete(self, prompt: str, *, deadline_at: datetime | None) -> str:
+    def _complete(self, prompt: str) -> str:
         backends = self._resolve_backends()
         if not backends:
             raise DailyWorkspaceGenerationUnavailableError(
                 ("daily_workspace_l1_backend_unavailable",)
             )
-        budget = self._attempt_timeout_seconds
-        if deadline_at is not None:
-            remaining = (deadline_at - self._clock()).total_seconds()
-            if remaining <= 0:
-                raise DailyWorkspaceGenerationUnavailableError(
-                    ("daily_workspace_deadline_exhausted",)
-                )
-            budget = min(budget, remaining)
-        chain_deadline = monotonic() + budget
-        backend_budget = budget / len(backends)
+        chain_deadline = monotonic() + self._attempt_timeout_seconds
+        backend_budget = self._attempt_timeout_seconds / len(backends)
         failures: list[str] = []
         for name, backend in backends:
             remaining = min(backend_budget, chain_deadline - monotonic())
-            if deadline_at is not None:
-                remaining = min(remaining, (deadline_at - self._clock()).total_seconds())
             if remaining <= 0:
                 failures.append(f"{name}:deadline")
                 break
@@ -994,7 +967,7 @@ class L1DirectWorkspaceGenerator:
                 text = backend.complete_bounded(
                     prompt,
                     total_timeout_seconds=backend_budget,
-                    wire_timeout_seconds=min(240.0, backend_budget),
+                    wire_timeout_seconds=backend_budget,
                     before_attempt=lambda: None,
                 )
             except Exception as exc:

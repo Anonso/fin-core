@@ -72,7 +72,7 @@ def test_complete_bounded_caps_each_wire_call_and_disables_sdk_retries(monkeypat
 
     assert result == "bounded answer"
     assert heartbeats == ["beat"]
-    assert options == [{"timeout": 60.0, "max_retries": 0}]
+    assert options == [{"timeout": 90.0, "max_retries": 0}]
 
     options.clear()
     heartbeats.clear()

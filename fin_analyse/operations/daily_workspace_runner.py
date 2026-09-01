@@ -245,15 +245,7 @@ class _TimingBoundGenerator:
     clock: Callable[[], datetime]
 
     def generate(self, *, snapshot: object, principal: object) -> object:
-        timed_snapshot = (
-            {
-                **snapshot,
-                "daily_workspace_deadline_at": self.target_at.isoformat(),
-            }
-            if isinstance(snapshot, Mapping)
-            else snapshot
-        )
-        generated = self.generator.generate(snapshot=timed_snapshot, principal=principal)
+        generated = self.generator.generate(snapshot=snapshot, principal=principal)
         generated_at = _aware_shanghai(self.clock())
         # 2026-09-01（owner 拍板）：晚于推送点完成的结果不再拒绝落库；
         # delivery 会等待 prepare 结束并在结果可用时立刻投递（generated_at

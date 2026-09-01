@@ -254,7 +254,6 @@ def test_prepare_persists_one_timing_bound_product_and_reads_exact_version() -> 
     assert len(generator.calls) == 1
     assert generator.calls[0]["snapshot"] == {
         "parent_artifact_hash": "parent-hash",
-        "daily_workspace_deadline_at": _TARGET.isoformat(),
     }
     assert repository.calls[-1] == {
         "principal_id": "finp_daily",

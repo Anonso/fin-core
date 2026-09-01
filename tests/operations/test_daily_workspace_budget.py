@@ -32,7 +32,7 @@ def test_backend_chain_shares_one_total_budget() -> None:
     generator._backends = (("first", first), ("second", second))
 
     with pytest.raises(DailyWorkspaceGenerationUnavailableError):
-        generator._complete("brief", deadline_at=None)
+        generator._complete("brief")
 
     assert first.budgets[0][0] == pytest.approx(5, abs=0.1)
     assert second.budgets[0][0] == pytest.approx(5, abs=0.1)
@@ -46,6 +46,6 @@ def test_one_backend_keeps_the_full_budget() -> None:
     generator._backends = (("only", backend),)
 
     with pytest.raises(DailyWorkspaceGenerationUnavailableError):
-        generator._complete("brief", deadline_at=None)
+        generator._complete("brief")
 
     assert backend.budgets[0][0] == pytest.approx(10, abs=0.1)
