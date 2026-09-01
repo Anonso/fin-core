@@ -51,7 +51,10 @@ class _FakeResolver:
                 out.append(
                     ConsultationInstrumentIdentity(
                         status="RESOLVED",
-                        semantic_ref=target,
+                        semantic_ref=InstrumentRef(
+                            ticker=target.ticker or None,
+                            name=target.name or name,
+                        ),
                         market_symbol=symbol,
                         source="A_SHARE_DIRECTORY",
                         data_gaps=(),
@@ -104,11 +107,34 @@ def test_preview_tag_then_apply_adds_tags(tmp_path: Path) -> None:
     assert entry["tags"] == ["suggest_delete"]
 
 
-def test_remove_action_is_rejected_zero_write(tmp_path: Path) -> None:
+def test_remove_requires_explicit_token_flow_and_removes(tmp_path: Path) -> None:
     service = _service(tmp_path)
-    result = service.preview(({"action": "remove", "ref": "600259"},))
-    assert result["status"] == "REJECTED"
-    assert "watchlist_invalid_action" in result["reason_codes"]
+    add_token = service.preview(({"action": "add", "ref": "600259"},))["candidate_token"]
+    assert service.apply(str(add_token))["status"] == "APPLIED"
+
+    # preview 删除是零写；短语必须带「删除」供用户核对。
+    preview = service.preview(({"action": "remove", "ref": "600259"},))
+    assert preview["status"] == "PREVIEW_READY"
+    assert "删除 中稀有色(600259.SH)" in preview["confirmation_phrase"]
+    assert service.list()["entry_count"] == 1
+
+    applied = service.apply(str(preview["candidate_token"]))
+    assert applied["status"] == "APPLIED"
+    assert applied["outcomes"][0]["changed"] is True
+    assert service.list()["entry_count"] == 0
+
+
+def test_remove_rejects_tags_and_unknown_action(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    with_tags = service.preview(
+        ({"action": "remove", "ref": "600259", "tags": ["mainline_ai"]},)
+    )
+    assert with_tags["status"] == "REJECTED"
+    assert "watchlist_remove_with_tags_invalid" in with_tags["reason_codes"]
+
+    unknown = service.preview(({"action": "rename", "ref": "600259"},))
+    assert unknown["status"] == "REJECTED"
+    assert "watchlist_invalid_action" in unknown["reason_codes"]
     assert service.list()["entry_count"] == 0
 
 

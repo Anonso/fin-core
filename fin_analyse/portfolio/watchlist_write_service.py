@@ -1,11 +1,13 @@
-"""Local MCP-facing watchlist write service (add/tag only, preview → apply).
+"""Local MCP-facing watchlist write service (add/tag/remove, preview → apply).
 
 The consult-agent thin server stays read-only except this one bounded write
-seam (owner 2026-09-01 decision): the assistant may ADD entries and ADD tags,
-never remove or rename.  Assistant provenance is forced server-side.  apply
-accepts only a process-local single-use token issued by preview (TTL 15
-minutes; a server restart invalidates every outstanding token, which fails
-closed).  list is a zero-write mirror of ``read_user_watchlist``.
+seam (owner 2026-09-01 decision): the assistant may ADD entries, ADD tags,
+and REMOVE entries — but never automatically: every write, including remove,
+goes through preview → user confirmation → apply.  Assistant provenance is
+forced server-side for adds.  apply accepts only a process-local single-use
+token issued by preview (TTL 15 minutes; a server restart invalidates every
+outstanding token, which fails closed).  list is a zero-write mirror of
+``read_user_watchlist``.
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ from fin_analyse.portfolio.watchlist_write import (
 )
 
 _TOKEN_TTL_SECONDS = 15 * 60
-_ALLOWED_ACTIONS = frozenset({"add", "tag"})
+_ALLOWED_ACTIONS = frozenset({"add", "tag", "remove"})
 
 
 class LocalWatchlistPreviewTokenManager:
@@ -206,6 +208,8 @@ def _normalize_operations(
         )
         if action == "tag" and not tags:
             raise WatchlistRefError("watchlist_tags_required")
+        if action == "remove" and tags:
+            raise WatchlistRefError("watchlist_remove_with_tags_invalid")
         specs.append(
             WatchlistOperationSpec(action=action, ref=ref, tags=tags, provenance="assistant")
         )
@@ -233,6 +237,8 @@ def _confirmation_phrase(views: Sequence[WatchlistRefView]) -> str:
             parts.append(
                 f"为 {view.name}({view.market_symbol}) 添加标签：{','.join(view.tags)}"
             )
+        elif view.action == "remove":
+            parts.append(f"删除 {view.name}({view.market_symbol})")
     return "确认更新自选股：" + "；".join(parts) + "。"
 
 

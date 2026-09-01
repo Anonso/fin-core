@@ -67,6 +67,8 @@ def test_user_watchlist_description_keeps_user_context_rule() -> None:
 def test_update_user_watchlist_description_bounds_writes() -> None:
     text = _TOOL_DESCRIPTIONS["update_user_watchlist"]
     assert "add" in text
-    assert "FORBIDDEN" in text
+    assert "remove" in text
     assert "suggest_delete" in text
+    assert "NEVER delete" in text
+    assert "explicit" in text
     assert "Never apply without the user's explicit confirmation" in text

@@ -173,16 +173,20 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "update_user_watchlist": (
         "Maintain the user watchlist with bounded write semantics: list, "
-        "preview, or apply. ONLY add-new-entry (action=add) and add-tags "
-        "(action=tag) are allowed; removing or renaming is FORBIDDEN for "
-        "this tool (propose deletion by adding the reserved tag "
-        "suggest_delete). preview resolves operations zero-write and returns "
-        "a confirmation phrase plus a candidate token; apply takes ONLY that "
-        "token (TTL 15 min, single use). Assistant provenance is forced "
-        "server-side. Never apply without the user's explicit confirmation "
-        "of the exact preview phrase; in headless/one-shot sessions only "
-        "preview, never apply. One operation = {action: add|tag, ref: "
-        "six-digit code or exact canonical name, tags: [..]}."
+        "preview, or apply. Actions: add-new-entry (action=add), add-tags "
+        "(action=tag), and remove-entry (action=remove). NEVER delete or "
+        "rename automatically: remove requires the user's explicit "
+        "instruction, and any write (including remove) only happens through "
+        "preview → user confirmation → apply. Without an explicit delete "
+        "instruction, propose deletion by adding the reserved tag "
+        "suggest_delete instead. preview resolves operations zero-write and "
+        "returns a confirmation phrase plus a candidate token; apply takes "
+        "ONLY that token (TTL 15 min, single use). Assistant provenance is "
+        "forced server-side for adds. Never apply without the user's "
+        "explicit confirmation of the exact preview phrase; in "
+        "headless/one-shot sessions only preview, never apply. One operation "
+        "= {action: add|tag|remove, ref: six-digit code or exact canonical "
+        "name, tags: [..]} (remove takes no tags)."
     ),
 }
 
