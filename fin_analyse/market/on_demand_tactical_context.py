@@ -125,6 +125,8 @@ class TradingCalendarPort(Protocol):
 
     def next_open_date(self, *, after, known_at: datetime): ...
 
+    def previous_open_date(self, *, before, known_at: datetime): ...
+
 
 @dataclass(frozen=True, slots=True)
 class _UnavailableSession:
@@ -138,6 +140,9 @@ class _UnavailableTradingCalendar:
         return _UnavailableSession()
 
     def next_open_date(self, *, after, known_at: datetime):
+        raise ValueError("TRADING_CALENDAR_UNAVAILABLE")
+
+    def previous_open_date(self, *, before, known_at: datetime):
         raise ValueError("TRADING_CALENDAR_UNAVAILABLE")
 
 
@@ -239,12 +244,19 @@ class TacticalInstrumentContext:
     provider_provenance: tuple[str, ...]
     data_gaps: tuple[str, ...]
     timeframes: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    observation_mode: Literal[
+        "LIVE", "CLOSE_REFERENCE", "REFERENCE_ONLY", "UNAVAILABLE"
+    ] = "REFERENCE_ONLY"
+    context_limitations: tuple[str, ...] = ()
 
     def to_agent_dict(self) -> dict[str, object]:
         return {
             "symbol": self.symbol,
             "status": self.status,
             "evidence_id": self.evidence_id,
+            "price": self.quote_price,
+            "observation_mode": self.observation_mode,
+            "context_limitations": list(self.context_limitations),
             "quote": {
                 "qualified_price": self.quote_price,
                 "qualified_volume": self.quote_facts[0].volume if self.quote_facts else None,
@@ -280,6 +292,7 @@ class OnDemandTacticalContext:
     instruments: tuple[TacticalInstrumentContext, ...]
     session_phase: str
     data_gaps: tuple[str, ...] = ()
+    context_limitations: tuple[str, ...] = ()
 
     def to_agent_dict(self) -> dict[str, object]:
         return {
@@ -289,6 +302,7 @@ class OnDemandTacticalContext:
             "session_phase": self.session_phase,
             "instruments": [item.to_agent_dict() for item in self.instruments],
             "data_gaps": list(self.data_gaps),
+            "context_limitations": list(self.context_limitations),
         }
 
 
@@ -399,6 +413,13 @@ class OnDemandTacticalContextService:
         gaps = tuple(
             dict.fromkeys((*session_gaps, *(gap for item in ordered for gap in item.data_gaps)))
         )
+        context_limitations = tuple(
+            dict.fromkeys(
+                limitation
+                for item in ordered
+                for limitation in item.context_limitations
+            )
+        )
         evidence_as_of = max(
             (item.quote_observed_at or request.as_of for item in ordered),
             default=request.as_of,
@@ -418,6 +439,7 @@ class OnDemandTacticalContextService:
             instruments=ordered,
             session_phase=phase,
             data_gaps=gaps,
+            context_limitations=context_limitations,
         )
 
     def refresh_quotes(
@@ -640,23 +662,73 @@ class OnDemandTacticalContextService:
         )
         if intraday is not None:
             provider_provenance.append(f"{intraday.provider_id}@{intraday.provider_version}")
+        close_session = phase in {
+            TradingSessionPhase.AFTER_CLOSE.value,
+            TradingSessionPhase.CLOSED_DAY.value,
+        }
+        expected_close_date = self._expected_close_trade_date(as_of) if close_session else None
+        quote_facts_ok = (
+            len(quote.facts) == 2
+            and quote.disagreement_ratio is not None
+            and Decimal(quote.disagreement_ratio) <= _READY_DISAGREEMENT
+            and not any(
+                gap in quote.data_gaps
+                for gap in (
+                    "DUAL_SOURCE_QUOTE_CONFLICT",
+                    "DUAL_SOURCE_QUOTE_INCOMPLETE",
+                    "DUAL_SOURCE_QUOTE_DISAGREEMENT",
+                )
+            )
+        )
+        close_qualified = (
+            close_session
+            and expected_close_date is not None
+            and quote_facts_ok
+            and quote.qualified_price is not None
+            and not quote.primary_suspended
+            and all(
+                fact.source_event_at is not None
+                and fact.source_event_at.astimezone(_SHANGHAI).date() == expected_close_date
+                for fact in quote.facts
+            )
+        )
+
         gaps = [*quote.data_gaps, *bars_gap, *session_gaps]
-        if phase == TradingSessionPhase.AFTER_CLOSE.value and (
-            session_open
-            or session_gaps
-            or latest_date != as_of.astimezone(_SHANGHAI).date().isoformat()
-        ):
-            gaps.append("CURRENT_TRADING_DAY_BAR_NOT_INCLUDED")
-        if not session_open:
-            gaps.append("MARKET_SESSION_REFERENCE_ONLY")
+        limitations: list[str] = []
+        if close_qualified:
+            gaps = [
+                gap
+                for gap in gaps
+                if gap
+                not in {
+                    "PRIMARY_TRADING_STATUS_UNKNOWN",
+                    "NON_CONTINUOUS_REFERENCE_QUOTE",
+                }
+            ]
+            limitations.extend(bars_gap)
+            limitations.append("MARKET_SESSION_REFERENCE_ONLY")
+            if latest_date != expected_close_date.isoformat():
+                limitations.append("CURRENT_TRADING_DAY_BAR_NOT_INCLUDED")
+        else:
+            if phase == TradingSessionPhase.AFTER_CLOSE.value and (
+                session_open
+                or session_gaps
+                or latest_date != as_of.astimezone(_SHANGHAI).date().isoformat()
+            ):
+                gaps.append("CURRENT_TRADING_DAY_BAR_NOT_INCLUDED")
+            if not session_open:
+                gaps.append("MARKET_SESSION_REFERENCE_ONLY")
         if quote.primary_suspended:
             gaps.append("PRIMARY_SOURCE_REPORTS_SUSPENDED")
 
         status = quote.status
-        if (bars is None or not daily_adjustment_qualified) and status == "READY":
-            status = "PARTIAL"
-        if session_gaps and status == "READY":
-            status = "PARTIAL"
+        if close_qualified:
+            status = "READY"
+        else:
+            if (bars is None or not daily_adjustment_qualified) and status == "READY":
+                status = "PARTIAL"
+            if session_gaps and status == "READY":
+                status = "PARTIAL"
         if quote.status == "UNKNOWN":
             status = "UNKNOWN"
         reference_only = (
@@ -665,6 +737,16 @@ class OnDemandTacticalContextService:
             or quote.primary_suspended
             or not quote.primary_present
         )
+        if close_qualified:
+            observation_mode: Literal[
+                "LIVE", "CLOSE_REFERENCE", "REFERENCE_ONLY", "UNAVAILABLE"
+            ] = "CLOSE_REFERENCE"
+        elif session_open and not reference_only:
+            observation_mode = "LIVE"
+        elif quote.qualified_price is not None:
+            observation_mode = "REFERENCE_ONLY"
+        else:
+            observation_mode = "UNAVAILABLE"
         manual_eligible = (
             status == "READY" and quote.primary_trading and session_open and not reference_only
         )
@@ -705,7 +787,20 @@ class OnDemandTacticalContextService:
             provider_provenance=tuple(provider_provenance),
             data_gaps=tuple(dict.fromkeys(gaps)),
             timeframes=timeframes,
+            observation_mode=observation_mode,
+            context_limitations=tuple(dict.fromkeys(limitations)),
         )
+
+    def _expected_close_trade_date(self, as_of: datetime) -> date | None:
+        local = as_of.astimezone(_SHANGHAI)
+        try:
+            decision = self._calendar.previous_open_date(
+                before=local.date() + timedelta(days=1),
+                known_at=as_of,
+            )
+        except Exception:
+            return None
+        return decision.previous_open_date
 
     def _collect_quotes(
         self,

@@ -630,4 +630,12 @@
   必补（2026-09-01）。方向：盘后双源同价按「收盘参考」合格化（价格照常投影 +
   显式盘后标注），今日 daily bar 未落作为独立 typed gap 按问题面取舍；核心语义
   变更，动代码前先短设计（规则5）。
-- 状态：开放（排 NOW 主线2）。
+- 修复进展（2026-09-01 晚，已实现）：close-reference 合格化合入——盘后
+  （AFTER_CLOSE/CLOSED_DAY）双源同价且事件日期=最近完成交易日时，status=READY、
+  price 投影、data_gaps=()、observation_mode=CLOSE_REFERENCE；真实缺料
+  （MARKET_SESSION_REFERENCE_ONLY / CURRENT_TRADING_DAY_BAR_NOT_INCLUDED /
+  bars_gap）进 context_limitations，不伪造不静默。新增 3 回归测试；
+  晚间直调实弹 000657/600879 均 READY、gaps=()、price=62.33/14.67；
+  全量 2989 绿。
+- 状态：修复已实现 + 直调实弹过；待真实 CLI 晚间问询「最新价」一次闭环后关闭
+  （NOW 主线2）。

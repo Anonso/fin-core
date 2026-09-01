@@ -77,7 +77,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | --- | --- | --- | --- | --- |
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
-| read_market_snapshot | 标的行情 | 问询验收中（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修；**BUG-022 夜间收盘价未闭环，排主线2**） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011 已闭；BUG-022 |
+| read_market_snapshot | 标的行情 | 问询验收中（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修；BUG-022 修复已实现 + 直调实弹 READY/gaps=()，待真实 CLI 确认） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011 已闭；BUG-022 |
 | read_market_overview | 大盘结构 | 问询验收中（08-31 定修 + 09-01 修复尝试2〔gate 5 + 失败诊断〕已部署；**09-01 08:55 盘前实弹 gap 仍在 → 未闭环**；09:35 盘中 gaps=[]；D-030 停推后无自动窗口，待手动 CLI 盘前实弹） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
 | read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；08-31 残余二定修：标题 4 字门 + 有事实帖优先 + latest-focus 误判修正，公共 RPC 端到端仅返回目标帖；**09-01 21:01/21:08 实弹仍 ready_evidence_unavailable → 未闭环**） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 |
@@ -108,7 +108,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
 | 主线 | 1 | CLI 实弹三连验：BUG-005 G-first 口径（分析必调 G）、BUG-012 ready 残余二、BUG-002 盘前概览——owner 常问三类（持仓复盘/老师体系/大盘板块）手动 CLI 随问随验，对照 trace 三字段 | 即日起随真实问询；BUG-012 今晚 21:01/21:08 实弹仍 unavailable |
-| 主线 | 2 | BUG-022 夜间行情：盘后也能干净给出今日收盘价 + 盘后标注（gaps=()）；根因已定位（报价在位、盘后合格化语义缺失），修前先短设计；修后晚间实弹验证 | 前序=主线1；owner 已拍板必补 |
+| 主线 | 2 | BUG-022 夜间行情：盘后也能干净给出今日收盘价 + 盘后标注（gaps=()）；已实现 + 直调实弹过（READY/gaps=()），待真实 CLI 晚间问询闭环 | 前序=主线1；owner 已拍板必补 |
 | 主线 | 3 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
 | 旁路·时间 | 4 | BUG-020/021 poller 发布验证：manifest 含新文章 + 重绑定 READY 复核 | 09-02 08:20 poller |
 | 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
