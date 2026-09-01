@@ -3,28 +3,23 @@
 set -euo pipefail
 
 WORKSPACE="/home/ypk/fin-core"
-AUTH_FILE="${XDG_DATA_HOME:-${HOME:?}/.local/share}/opencode/auth.json"
+KEY_FILE="/tmp/open.txt"
 # 项目自定义模型目录（2026-09-01）：deepseek-v4-pro 声明 supports_search_tool=false，
 # 使 zhipu-web MCP（webSearchPrime/webReader）直接注入会话；原生 hosted search
 # 由 provider 能力独立控制，不受影响，仍作兜底。勿改回全局目录。
 MODEL_CATALOG="/home/ypk/fin-core/.codex/models.json"
 CODEX_BINARY="$(command -v codex || true)"
-JQ_BINARY="$(command -v jq || true)"
 
 if [[ -z "$CODEX_BINARY" || ! -x "$CODEX_BINARY" ]]; then
     printf 'codex-open: native Codex is unavailable\n' >&2
     exit 78
 fi
-if [[ -z "$JQ_BINARY" || ! -x "$JQ_BINARY" ]]; then
-    printf 'codex-open: jq is unavailable\n' >&2
+if [[ -L "$KEY_FILE" || ! -f "$KEY_FILE" || ! -r "$KEY_FILE" ]]; then
+    printf 'codex-open: OpenCode Go key file /tmp/open.txt is unavailable\n' >&2
     exit 78
 fi
-if [[ -L "$AUTH_FILE" || ! -f "$AUTH_FILE" ]]; then
-    printf 'codex-open: OpenCode Go credential file is unavailable\n' >&2
-    exit 78
-fi
-if [[ "$(stat -c '%u:%a:%h' "$AUTH_FILE")" != "$(id -u):600:1" ]]; then
-    printf 'codex-open: credential file must be owner-only\n' >&2
+if [[ "$(stat -c '%u:%a:%h' "$KEY_FILE")" != "$(id -u):600:1" ]]; then
+    printf 'codex-open: key file /tmp/open.txt must be owner-only (0600)\n' >&2
     exit 78
 fi
 if [[ ! -r "$MODEL_CATALOG" ]]; then
@@ -32,12 +27,14 @@ if [[ ! -r "$MODEL_CATALOG" ]]; then
     exit 78
 fi
 
-OPENCODE_GO_KEY_VALUE="$($JQ_BINARY -er \
-    '.["opencode-go"] | select(.type == "api") | .key | strings | select(length > 0)' \
-    "$AUTH_FILE")" || {
-    printf 'codex-open: OpenCode Go credential is invalid\n' >&2
+OPENCODE_GO_KEY_VALUE="$(tr -d '[:space:]' < "$KEY_FILE")" || {
+    printf 'codex-open: OpenCode Go key read failed\n' >&2
     exit 78
 }
+if [[ -z "$OPENCODE_GO_KEY_VALUE" ]]; then
+    printf 'codex-open: OpenCode Go key is empty\n' >&2
+    exit 78
+fi
 export OPENCODE_GO_API_KEY="$OPENCODE_GO_KEY_VALUE"
 unset OPENCODE_GO_KEY_VALUE
 
