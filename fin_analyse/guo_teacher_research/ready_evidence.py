@@ -41,7 +41,9 @@ _REFERENCE_SCOPE = "reference"
 _REQUIRED_REFERENCE_FLAGS = frozenset({"same_day_reference", "reference_not_g_source"})
 _REFERENCE_CLASSIFICATIONS = frozenset({"market_observation", "observation"})
 _QA_COLUMNS = frozenset({"星大派好问题", "好问题", "问题回答", "回答问题"})
-_STRICT_G_COLUMNS = frozenset({"星大派特刊", "星大派锐评", "凤仙郡小故事", "星大派"})
+_STRICT_G_COLUMNS = frozenset(
+    {"星大派特刊", "星大派锐评", "星大派好问题", "星大派每日热点", "星大派人脉", "凤仙郡小故事", "星大派"}
+)
 _MATERIAL_KINDS = frozenset({"inline_candidate", "deep_read_compact", "knowledge_markdown"})
 
 

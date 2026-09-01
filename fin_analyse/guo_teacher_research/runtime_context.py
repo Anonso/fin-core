@@ -97,7 +97,7 @@ _LATEST_FOCUS_FOCUS_TOKENS = (
 # (FreshGContextProvider constants win where they differ)
 
 _G_SOURCE_CLASSIFICATIONS = frozenset({"teacher_original"})
-_COMMENTARY_COLUMNS = frozenset({"星大派锐评"})
+_COMMENTARY_COLUMNS = frozenset({"星大派锐评", "星大派每日热点"})
 _SPECIAL_REPORT_COLUMNS = frozenset({"星大派特刊", "凤仙郡小故事"})
 # 星大派好问题 = 老师回答会员提问（teacher_original 原文观点）；
 # 与特刊并列按相关性排序进入 G 上下文。
