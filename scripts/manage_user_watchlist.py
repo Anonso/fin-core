@@ -79,13 +79,35 @@ def _parser() -> argparse.ArgumentParser:
     parser = _Parser(description=__doc__)
     commands = parser.add_subparsers(dest="operation", required=True)
     commands.add_parser("list", help="Show current entries without writing")
-    for name in ("add", "remove"):
+    for name in ("add", "remove", "tag", "untag"):
         sub = commands.add_parser(name, help=f"{name} one resolved instrument")
         sub.add_argument(
             "--ref-token",
             required=True,
             help="UTF-8 hex-encoded ref: six-digit code or exact canonical name",
         )
+        if name == "add":
+            sub.add_argument(
+                "--provenance",
+                choices=("owner", "assistant"),
+                default="owner",
+                help="who added this entry (default: owner)",
+            )
+            sub.add_argument(
+                "--tag",
+                action="append",
+                default=[],
+                metavar="TAG",
+                help="semantic tag, repeatable (max 8 per entry)",
+            )
+        if name in ("tag", "untag"):
+            sub.add_argument(
+                "--tag",
+                action="append",
+                required=True,
+                metavar="TAG",
+                help="tag to add/remove, repeatable",
+            )
         sub.add_argument("--apply", action="store_true", help="commit the mutation")
     return parser
 
@@ -186,7 +208,13 @@ def main(argv: list[str] | None = None) -> int:
                 "revision": read.revision,
                 "as_of": read.as_of,
                 "entries": [
-                    {"market_symbol": e.market_symbol, "name": e.name, "added_at": e.added_at}
+                    {
+                        "market_symbol": e.market_symbol,
+                        "name": e.name,
+                        "added_at": e.added_at,
+                        "provenance": e.provenance,
+                        "tags": list(e.tags),
+                    }
                     for e in read.entries
                 ],
             },
@@ -238,6 +266,8 @@ def main(argv: list[str] | None = None) -> int:
                 "ref": ref,
                 "name": name,
                 "market_symbol": identity.market_symbol,
+                "provenance": getattr(args, "provenance", "owner"),
+                "tags": getattr(args, "tag", []),
             },
             0,
         )
@@ -252,6 +282,8 @@ def main(argv: list[str] | None = None) -> int:
         ref=identity.semantic_ref.name or identity.market_symbol,
         name=name,
         market_symbol=identity.market_symbol,
+        provenance=getattr(args, "provenance", "owner"),
+        tags=tuple(getattr(args, "tag", [])),
     )
     # 单 ref，CAS expected = 启动时 revision（O4 冻结语义）；不再二次 list()，
     # 报告用 revision 直接来自 outcome（audit round 2 修正）。
@@ -268,6 +300,8 @@ def main(argv: list[str] | None = None) -> int:
                 "ref": ref,
                 "name": name,
                 "market_symbol": outcome.market_symbol,
+                "provenance": view.provenance,
+                "tags": list(view.tags),
             },
             0,
         )
@@ -284,6 +318,7 @@ def main(argv: list[str] | None = None) -> int:
                 "market_symbol": outcome.market_symbol,
                 "changed": False,
                 "current_revision": outcome.revision,
+                "tags": list(view.tags),
             },
             3,
         )

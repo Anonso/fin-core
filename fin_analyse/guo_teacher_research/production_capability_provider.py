@@ -1180,6 +1180,7 @@ def _g_layered_context_value(
         external_gaps.append("external_brain_unavailable")
 
     # ── attestation ──
+    quality_flags = getattr(resolved, "quality_flags", None) or {}
     attestation: dict[str, object] = {
         "schema_version": "fin.g-layered-context/v1",
         "retrieval_mode": "layered",
@@ -1191,6 +1192,12 @@ def _g_layered_context_value(
             "external_brain": len(external_brain),
         },
         "data_gaps": list(dict.fromkeys(gaps)),
+        "quality": {
+            "pinned_injected": bool(quality_flags.get("pinned_injected", False)),
+            "pinned_candidate_seen": bool(quality_flags.get("pinned_candidate_seen", False)),
+            "pinned_layer_count": len(pinned_items),
+            "pinned_data_gaps": list(pinned_gaps),
+        },
     }
 
     # ── assemble ──
@@ -1451,6 +1458,8 @@ def _user_watchlist_value(result: WatchlistRead | None) -> dict[str, object]:
                 "market_symbol": entry.market_symbol,
                 "name": entry.name,
                 "added_at": entry.added_at,
+                "provenance": entry.provenance,
+                "tags": list(entry.tags),
             }
             for entry in result.entries
         ]

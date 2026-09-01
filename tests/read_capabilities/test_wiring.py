@@ -108,6 +108,22 @@ class TestConstruction:
         )
         assert "user_watchlist_reader_unavailable" in result.data_gaps
 
+    def test_watchlist_write_service_wired_when_state_available(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        _provision_watchlist_state(tmp_path)
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        assert wiring.watchlist_write is not None
+        result = wiring.watchlist_write.list()
+        assert result["status"] == "LISTED"
+        assert result["entry_count"] == 0
+
+    def test_watchlist_write_service_absent_when_state_missing(
+        self, kb_root: Path, isolated_env: dict[str, str]
+    ) -> None:
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        assert wiring.watchlist_write is None
+
     def test_market_overview_failure_degrades_to_registered_tool(
         self, kb_root: Path, isolated_env: dict[str, str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -173,6 +189,8 @@ class TestHappyPaths:
         assert result.data_gaps == ()
         assert result.value["entry_count"] == 1
         assert result.value["entries"][0]["market_symbol"] == "600259.SH"
+        assert result.value["entries"][0]["provenance"] == "owner"
+        assert result.value["entries"][0]["tags"] == []
         assert result.value["revision"] == store.list().revision
         assert principal.startswith("finp_")
 
@@ -186,6 +204,13 @@ class TestHappyPaths:
         # Layered G projection (pinned/framework/facts/associations).
         assert isinstance(result.value, dict)
         assert "pinned" in result.value
+        quality = result.value["attestation"]["quality"]
+        assert set(quality) == {
+            "pinned_injected",
+            "pinned_candidate_seen",
+            "pinned_layer_count",
+            "pinned_data_gaps",
+        }
 
     def test_read_ready_evidence_requires_as_of_filled_by_server(
         self, kb_root: Path, isolated_env: dict[str, str]
@@ -261,6 +286,8 @@ class TestReadUserWatchlistProviderStates:
                     market_symbol="600259.SH",
                     name="中稀有色",
                     added_at="2026-08-12T09:21:59+00:00",
+                    provenance="assistant",
+                    tags=("mainline_ai", "suggest_delete"),
                 ),
             ),
             revision="r1-0123456789abcdef",
@@ -273,6 +300,8 @@ class TestReadUserWatchlistProviderStates:
         assert result.data_gaps == ()
         assert result.value["entry_count"] == 1
         assert result.value["entries"][0]["market_symbol"] == "600259.SH"
+        assert result.value["entries"][0]["provenance"] == "assistant"
+        assert result.value["entries"][0]["tags"] == ["mainline_ai", "suggest_delete"]
         assert result.value["revision"] == "r1-0123456789abcdef"
         assert "never investment evidence" in str(result.value["semantics"])
 

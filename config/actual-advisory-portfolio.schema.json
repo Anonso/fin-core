@@ -48,6 +48,16 @@
     "margin_debt": {
       "$ref": "#/$defs/optionalDecimal"
     },
+    "buyable_board_rule": {
+      "anyOf": [
+        {
+          "const": "main_board_only"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "positions": {
       "type": "array",
       "maxItems": 128,

@@ -92,6 +92,15 @@ class TestStdioRoundTrip:
                         "arguments": {"question": "roundtrip 我的持仓"},
                     },
                 },
+                {
+                    "jsonrpc": "2.0",
+                    "id": 4,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "read_g_context",
+                        "arguments": {"question": "roundtrip 老师最近怎么看"},
+                    },
+                },
             ]
             assert proc.stdin is not None
             for frame in frames:
@@ -99,7 +108,7 @@ class TestStdioRoundTrip:
             proc.stdin.flush()
 
             responses: dict[int, dict] = {}
-            for _ in range(3):
+            for _ in range(4):
                 line = proc.stdout.readline()
                 assert line, "server closed stdout early"
                 payload = json.loads(line)
@@ -122,6 +131,7 @@ class TestStdioRoundTrip:
             "read_market_snapshot",
             "read_ready_evidence",
             "read_user_watchlist",
+            "update_user_watchlist",
         ]
         call_result = responses[3]["result"]
         assert not call_result.get("isError", False)
@@ -133,6 +143,21 @@ class TestStdioRoundTrip:
         assert record["tool"] == "read_actual_portfolio"
         assert record["status"] == "gaps"
         assert record["schema_version"] == 1
+
+        g_records = [
+            json.loads(line)
+            for line in trace_path.read_text(encoding="utf-8").splitlines()
+            if json.loads(line)["tool"] == "read_g_context"
+        ]
+        assert g_records
+        g_summary = g_records[-1]["summary"]["g_pinned"]
+        assert set(g_summary) == {
+            "pinned_injected",
+            "pinned_candidate_seen",
+            "pinned_layer_count",
+            "pinned_data_gaps",
+        }
+        assert isinstance(g_summary["pinned_layer_count"], int)
 
     def test_invalid_params_returns_jsonrpc_error(
         self, smoke_env: tuple[Path, dict[str, str]]

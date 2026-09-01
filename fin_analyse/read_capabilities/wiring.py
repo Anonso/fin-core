@@ -32,6 +32,12 @@ from fin_analyse.market.on_demand_tactical_context import (
 from fin_analyse.portfolio.actual_advisory import ActualAdvisoryPortfolioStore
 from fin_analyse.portfolio.user_watchlist import UserWatchlistError
 from fin_analyse.portfolio.watchlist_state import require_production_watchlist_state
+from fin_analyse.portfolio.watchlist_write_service import WatchlistWriteService
+from fin_analyse.runtime.knowledge_root import KnowledgeRootConfigurationError
+from fin_analyse.consultation.instrument_identity import (
+    AShareConsultationInstrumentIdentityResolver,
+)
+from fin_analyse.market.instrument_directory import RuntimeAshareInstrumentDirectory
 
 READ_TOOL_NAMES: tuple[str, ...] = (
     "read_g_context",
@@ -42,6 +48,7 @@ READ_TOOL_NAMES: tuple[str, ...] = (
     "read_ready_evidence",
     "read_user_watchlist",
 )
+WRITE_TOOL_NAMES: tuple[str, ...] = ("update_user_watchlist",)
 
 
 class ReadToolRunner(Protocol):
@@ -56,6 +63,7 @@ class ReaderWiring:
 
     runners: dict[str, ReadToolRunner]
     unavailable_tools: tuple[tuple[str, str], ...]  # (tool, reason code)
+    watchlist_write: WatchlistWriteService | None = None
 
     def tool_names(self) -> tuple[str, ...]:
         return tuple(self.runners)
@@ -123,12 +131,32 @@ def build_reader_wiring(
     # Watchlist 推导是 fail-closed（identity 缺失/坏权限 root 抛 RuntimeError 系），
     # 必须在此降级为单工具 unavailable——绝不能让 server 启动崩溃（设计门 F2）。
     user_watchlist = None
+    user_watchlist_principal: str | None = None
     try:
-        _, _, user_watchlist = require_production_watchlist_state(
+        _, principal, user_watchlist = require_production_watchlist_state(
             environ=environment,
         )
+        user_watchlist_principal = principal
     except (OSError, ValueError, UserWatchlistError, PrincipalBindingError) as exc:
         _stderr_note(f"user_watchlist construction failed: {type(exc).__name__}")
+
+    watchlist_write: WatchlistWriteService | None = None
+    if user_watchlist is not None and user_watchlist_principal is not None:
+        try:
+            directory = RuntimeAshareInstrumentDirectory(
+                path=Path(knowledge_base_root) / "runtime" / "a_share_name_map.json"
+            )
+            watchlist_write = WatchlistWriteService(
+                store=user_watchlist,
+                resolver=AShareConsultationInstrumentIdentityResolver(
+                    directory=directory
+                ),
+                directory=directory,
+                principal_id=user_watchlist_principal,
+                clock=effective_clock,
+            )
+        except (OSError, ValueError, KnowledgeRootConfigurationError) as exc:
+            _stderr_note(f"watchlist_write construction failed: {type(exc).__name__}")
 
     unavailable: list[tuple[str, str]] = []
 
@@ -157,4 +185,8 @@ def build_reader_wiring(
             (tool, "read_provider_unavailable") for tool in READ_TOOL_NAMES
         )
 
-    return ReaderWiring(runners=runners, unavailable_tools=tuple(unavailable))
+    return ReaderWiring(
+        runners=runners,
+        unavailable_tools=tuple(unavailable),
+        watchlist_write=watchlist_write,
+    )

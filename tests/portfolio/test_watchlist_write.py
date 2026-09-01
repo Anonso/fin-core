@@ -11,11 +11,13 @@ from fin_analyse.guo_teacher_research.semantic_contract import InstrumentRef
 from fin_analyse.portfolio.user_watchlist import (
     UserWatchlistConflictError,
     UserWatchlistStore,
+    UserWatchlistTagError,
 )
 from fin_analyse.portfolio.watchlist_write import (
     WatchlistBatchCollisionError,
     WatchlistBatchEmptyError,
     WatchlistBatchTooLargeError,
+    WatchlistOperationSpec,
     WatchlistRefError,
     WatchlistRefView,
     apply_watchlist_operations,
@@ -309,3 +311,88 @@ class TestApply:
         assert outcomes[0].revision != outcomes[1].revision
         entries = store.list().entries
         assert {e.market_symbol for e in entries} == {"600519.SH", "000876.SZ"}
+
+    def test_apply_tag_and_untag_roundtrip(self, tmp_path: Path) -> None:
+        store = UserWatchlistStore(root=tmp_path, principal_id="finp_test")
+        apply_watchlist_operations(
+            store,
+            (
+                WatchlistRefView(
+                    action="add",
+                    ref="600519",
+                    name="贵州茅台",
+                    market_symbol="600519.SH",
+                ),
+            ),
+        )
+        tagged = apply_watchlist_operations(
+            store,
+            (
+                WatchlistRefView(
+                    action="tag",
+                    ref="600519",
+                    name="贵州茅台",
+                    market_symbol="600519.SH",
+                    tags=("suggest_delete", "mainline_ai"),
+                ),
+            ),
+        )
+        assert tagged[0].status == "succeeded"
+        assert store.list().entries[0].tags == ("suggest_delete", "mainline_ai")
+
+        untagged = apply_watchlist_operations(
+            store,
+            (
+                WatchlistRefView(
+                    action="untag",
+                    ref="600519",
+                    name="贵州茅台",
+                    market_symbol="600519.SH",
+                    tags=("mainline_ai",),
+                ),
+            ),
+        )
+        assert untagged[0].changed is True
+        assert store.list().entries[0].tags == ("suggest_delete",)
+
+
+class TestTagsInPreview:
+    def test_preview_add_carries_provenance_and_tags(self) -> None:
+        views = preview_watchlist_operations(
+            _RESOLVER,
+            _DIRECTORY,
+            (
+                WatchlistOperationSpec(
+                    action="add",
+                    ref="600519",
+                    tags=("mainline_ai",),
+                    provenance="assistant",
+                ),
+            ),
+        )
+        assert views[0].provenance == "assistant"
+        assert views[0].tags == ("mainline_ai",)
+
+    def test_preview_tag_requires_tags(self) -> None:
+        with pytest.raises(WatchlistRefError):
+            preview_watchlist_operations(
+                _RESOLVER,
+                _DIRECTORY,
+                (WatchlistOperationSpec(action="tag", ref="600519"),),
+            )
+
+    def test_preview_untag_requires_tags(self) -> None:
+        with pytest.raises(WatchlistRefError):
+            preview_watchlist_operations(
+                _RESOLVER,
+                _DIRECTORY,
+                (WatchlistOperationSpec(action="untag", ref="600519"),),
+            )
+
+    def test_preview_rejects_bad_tags(self) -> None:
+        with pytest.raises(UserWatchlistTagError):
+            preview_watchlist_operations(
+                _RESOLVER,
+                _DIRECTORY,
+                (WatchlistOperationSpec(action="add", ref="600519", tags=("bad tag",)),),
+            )

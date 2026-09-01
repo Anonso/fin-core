@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from fin_analyse.consultation.instrument_identity import (
     AShareConsultationInstrumentIdentityResolver,
@@ -43,10 +43,22 @@ from fin_analyse.portfolio.user_watchlist import (
     UserWatchlistMissingError,
     UserWatchlistStateError,
     UserWatchlistStore,
+    UserWatchlistTagError,
+    _validate_provenance,
+    _validate_tags,
 )
 
-WatchlistAction = Literal["add", "remove"]
+WatchlistAction = Literal["add", "remove", "tag", "untag"]
 ApplyStatus = Literal["succeeded", "noop", "conflict", "not_attempted", "failed"]
+
+
+class WatchlistOperationSpec(NamedTuple):
+    """One ordered operation input (preview entry; tags/provenance optional)."""
+
+    action: str
+    ref: str
+    tags: tuple[str, ...] = ()
+    provenance: str = "owner"
 
 
 class WatchlistWriteError(RuntimeError):
@@ -77,9 +89,17 @@ class WatchlistRefView:
     ref: str
     name: str
     market_symbol: str
+    provenance: str = "owner"
+    tags: tuple[str, ...] = ()
 
     def to_token_dict(self) -> dict[str, str]:
-        return {"action": self.action, "market_symbol": self.market_symbol, "name": self.name}
+        return {
+            "action": self.action,
+            "market_symbol": self.market_symbol,
+            "name": self.name,
+            "provenance": self.provenance,
+            "tags": ",".join(self.tags),
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,7 +145,7 @@ def resolve_watchlist_ref(
 def preview_watchlist_operations(
     resolver: AShareConsultationInstrumentIdentityResolver,
     directory: AShareInstrumentDirectory,
-    operations: Sequence[tuple[WatchlistAction, str]],
+    operations: Sequence[WatchlistOperationSpec | tuple[str, str]],
 ) -> tuple[WatchlistRefView, ...]:
     """Resolve an ordered operation batch, zero writes.
 
@@ -139,9 +159,25 @@ def preview_watchlist_operations(
         raise WatchlistBatchTooLargeError("watchlist_batch_too_large")
     views: list[WatchlistRefView] = []
     symbols: set[str] = set()
-    for action, ref in ordered:
-        if action not in ("add", "remove"):
+    for raw in ordered:
+        if isinstance(raw, WatchlistOperationSpec):
+            action, ref, tags, provenance = raw
+        elif (
+            isinstance(raw, (tuple, list))
+            and len(raw) == 2
+            and isinstance(raw[0], str)
+            and isinstance(raw[1], str)
+        ):
+            action, ref = raw
+            tags, provenance = (), "owner"
+        else:
+            raise WatchlistRefError("watchlist_operation_invalid")
+        if action not in ("add", "remove", "tag", "untag"):
             raise WatchlistRefError("watchlist_invalid_action")
+        provenance = _validate_provenance(provenance)
+        tags = _validate_tags(tags)
+        if action in ("tag", "untag") and not tags:
+            raise WatchlistRefError("watchlist_tags_required")
         identity = resolve_watchlist_ref(resolver, directory, ref)
         assert identity.market_symbol is not None
         if identity.market_symbol in symbols:
@@ -154,6 +190,8 @@ def preview_watchlist_operations(
                 ref=ref,
                 name=name,
                 market_symbol=identity.market_symbol,
+                provenance=provenance,
+                tags=tags,
             )
         )
     return tuple(views)
@@ -189,10 +227,24 @@ def apply_watchlist_operations(
                 result = store.add(
                     _identity_from_view(view),
                     expected_revision=current,
+                    provenance=view.provenance,
+                    tags=view.tags,
                 )
-            else:
+            elif view.action == "remove":
                 result = store.remove(
                     _identity_from_view(view),
+                    expected_revision=current,
+                )
+            elif view.action == "tag":
+                result = store.add_tags(
+                    view.market_symbol,
+                    view.tags,
+                    expected_revision=current,
+                )
+            else:
+                result = store.remove_tags(
+                    view.market_symbol,
+                    view.tags,
                     expected_revision=current,
                 )
             outcomes.append(
@@ -230,6 +282,19 @@ def apply_watchlist_operations(
                     changed=False,
                     revision=current,
                     error="watchlist_missing_symbol",
+                )
+            )
+        except UserWatchlistTagError:
+            outcomes.append(
+                WatchlistApplyOutcome(
+                    action=view.action,
+                    ref=view.ref,
+                    name=view.name,
+                    market_symbol=view.market_symbol,
+                    status="failed",
+                    changed=False,
+                    revision=current,
+                    error="watchlist_tags_invalid",
                 )
             )
         except UserWatchlistConflictError:

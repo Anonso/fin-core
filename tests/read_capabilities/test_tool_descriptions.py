@@ -45,7 +45,7 @@ def test_market_snapshot_description_keeps_gap_honesty_rule() -> None:
     assert "DATA UNAVAILABLE" in text
 
 
-def test_seven_read_tools_all_described() -> None:
+def test_all_tools_described() -> None:
     assert set(_TOOL_DESCRIPTIONS) == {
         "read_g_context",
         "read_actual_portfolio",
@@ -54,6 +54,7 @@ def test_seven_read_tools_all_described() -> None:
         "read_margin_evidence",
         "read_ready_evidence",
         "read_user_watchlist",
+        "update_user_watchlist",
     }
 
 
@@ -61,3 +62,11 @@ def test_user_watchlist_description_keeps_user_context_rule() -> None:
     text = _TOOL_DESCRIPTIONS["read_user_watchlist"]
     assert "never investment evidence" in text
     assert "not an error" in text
+
+
+def test_update_user_watchlist_description_bounds_writes() -> None:
+    text = _TOOL_DESCRIPTIONS["update_user_watchlist"]
+    assert "add" in text
+    assert "FORBIDDEN" in text
+    assert "suggest_delete" in text
+    assert "Never apply without the user's explicit confirmation" in text

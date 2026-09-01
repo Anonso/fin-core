@@ -29,6 +29,7 @@ from fin_analyse.common.owner_only_snapshot import (
 
 ACTUAL_ADVISORY_PORTFOLIO_SCHEMA = "actual-advisory-portfolio.v1"
 ACTUAL_ADVISORY_PORTFOLIO_FRESHNESS = timedelta(hours=24)
+BUYABLE_BOARD_RULE_MAIN_ONLY = "main_board_only"
 ActualAdvisorySourceKind = Literal[
     "USER_CONFIRMED_BROKER_SCREENSHOT",
     "USER_CONFIRMED_MANUAL",
@@ -53,6 +54,7 @@ _FIELDS = frozenset(
         "positions",
     }
 )
+_FIELDS_WITH_BUYABLE_RULE = _FIELDS | {"buyable_board_rule"}
 _POSITION_FIELDS = frozenset(
     {
         "symbol",
@@ -138,6 +140,7 @@ class ActualAdvisoryPortfolioSnapshot:
     positions: tuple[ActualAdvisoryPosition, ...]
     content_hash: str
     revision: str
+    buyable_board_rule: str | None = None
 
     def to_safe_dict(self) -> dict[str, Any]:
         return {
@@ -153,6 +156,7 @@ class ActualAdvisoryPortfolioSnapshot:
             "margin_debt": _decimal_text(self.margin_debt),
             "margin_debt_status": "KNOWN" if self.margin_debt is not None else "UNKNOWN",
             "positions": [position.to_safe_dict() for position in self.positions],
+            "buyable_board_rule": self.buyable_board_rule,
         }
 
 
@@ -344,13 +348,16 @@ def _parse(
         raise ValueError
     value = cast(dict[str, Any], raw)
     if (
-        set(value) != _FIELDS
+        set(value) not in (_FIELDS, _FIELDS_WITH_BUYABLE_RULE)
         or value.get("schema_version") != ACTUAL_ADVISORY_PORTFOLIO_SCHEMA
         or value.get("confirmation") != "USER_CONFIRMED"
         or value.get("source_kind")
         not in {"USER_CONFIRMED_BROKER_SCREENSHOT", "USER_CONFIRMED_MANUAL"}
         or value.get("positions_complete") is not True
     ):
+        raise ValueError
+    buyable_board_rule = value.get("buyable_board_rule")
+    if buyable_board_rule is not None and buyable_board_rule != BUYABLE_BOARD_RULE_MAIN_ONLY:
         raise ValueError
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError
@@ -466,6 +473,7 @@ def _parse(
         positions=tuple(positions),
         content_hash=content_hash,
         revision=f"sha256:{content_hash}",
+        buyable_board_rule=buyable_board_rule,
     )
     return snapshot, tuple(dict.fromkeys(reasons))
 
@@ -615,6 +623,7 @@ def _unknown(reason: ActualAdvisoryPortfolioReason) -> ActualAdvisoryPortfolioRe
 __all__ = [
     "ACTUAL_ADVISORY_PORTFOLIO_FRESHNESS",
     "ACTUAL_ADVISORY_PORTFOLIO_SCHEMA",
+    "BUYABLE_BOARD_RULE_MAIN_ONLY",
     "ActualAdvisoryPortfolioPublicationOperator",
     "ActualAdvisoryPortfolioPublicationRequest",
     "ActualAdvisoryPortfolioPublicationResult",

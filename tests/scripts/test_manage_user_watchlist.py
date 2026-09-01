@@ -217,12 +217,12 @@ def test_external_write_between_read_and_apply_is_conflict(
     real_add = UserWatchlistStore.add
     resolver = AShareConsultationInstrumentIdentityResolver()
 
-    def add_after_external_write(self, identity, *, expected_revision):
+    def add_after_external_write(self, identity, *, expected_revision, **kwargs):
         # 模拟 read 与 apply 之间的外部写入（600519 提交成功，r1 -> r2）
         ext_identity = resolver.resolve_many((InstrumentRef(ticker="600519"),))[0]
-        real_add(self, ext_identity, expected_revision=expected_revision)
+        real_add(self, ext_identity, expected_revision=expected_revision, **kwargs)
         # CLI 仍用启动时 revision（r1）CAS -> 冲突
-        return real_add(self, identity, expected_revision=expected_revision)
+        return real_add(self, identity, expected_revision=expected_revision, **kwargs)
 
     monkeypatch.setattr(UserWatchlistStore, "add", add_after_external_write)
     assert main(["add", "--ref-token", _token("000876"), "--apply"]) == 5

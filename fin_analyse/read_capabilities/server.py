@@ -91,6 +91,7 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_margin_evidence": 30.0,
     "read_ready_evidence": 30.0,
     "read_user_watchlist": 10.0,
+    "update_user_watchlist": 10.0,
 }
 _MAX_DEADLINE_SECONDS = 300.0
 _MAX_SESSION_HINT_CHARS = 128
@@ -106,6 +107,13 @@ _READ_ANNOTATIONS = ToolAnnotations(
     destructiveHint=False,
     idempotentHint=True,
     openWorldHint=True,
+)
+
+_WRITE_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False,
 )
 
 _TOOL_DESCRIPTIONS: dict[str, str] = {
@@ -154,13 +162,27 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "read_user_watchlist": (
         "Read the user-maintained A-share watchlist (自选股/观察票): codes, "
-        "names, added dates, list revision. USER CONTEXT ONLY — a focus-of-"
-        "attention list the owner curates; never investment evidence and "
-        "never a trade instruction. Call it when the question mentions the "
-        "watchlist (自选/自选股/观察票) or asks what to watch next; pair with "
-        "read_market_snapshot for prices. An empty list means the watchlist "
-        "is empty — say that plainly, it is not an error. Read-only; "
-        "watchlist changes go through the owner CLI, never through this tool."
+        "names, added dates, add provenance (owner/assistant), tags, list "
+        "revision. USER CONTEXT ONLY — a focus-of-attention list the owner "
+        "curates; never investment evidence and never a trade instruction. "
+        "Call it when the question mentions the watchlist (自选/自选股/观察票) "
+        "or asks what to watch next; pair with read_market_snapshot for "
+        "prices. An empty list means the watchlist is empty — say that "
+        "plainly, it is not an error. Read-only; watchlist updates go "
+        "through update_user_watchlist (add/tag only)."
+    ),
+    "update_user_watchlist": (
+        "Maintain the user watchlist with bounded write semantics: list, "
+        "preview, or apply. ONLY add-new-entry (action=add) and add-tags "
+        "(action=tag) are allowed; removing or renaming is FORBIDDEN for "
+        "this tool (propose deletion by adding the reserved tag "
+        "suggest_delete). preview resolves operations zero-write and returns "
+        "a confirmation phrase plus a candidate token; apply takes ONLY that "
+        "token (TTL 15 min, single use). Assistant provenance is forced "
+        "server-side. Never apply without the user's explicit confirmation "
+        "of the exact preview phrase; in headless/one-shot sessions only "
+        "preview, never apply. One operation = {action: add|tag, ref: "
+        "six-digit code or exact canonical name, tags: [..]}."
     ),
 }
 
@@ -204,24 +226,25 @@ class CallTrace:
         latency_ms: int,
         session_hint: str,
         as_of: datetime | None,
+        summary: Mapping[str, object] | None = None,
     ) -> None:
         try:
             self._ensure_file()
-            line = json.dumps(
-                {
-                    "schema_version": TRACE_SCHEMA_VERSION,
-                    "ts": datetime.now(UTC).isoformat(),
-                    "tool": tool,
-                    "question_digest": _digest(question),
-                    "args_digest": _digest(json.dumps(args, sort_keys=True, default=str)),
-                    "status": status,
-                    "data_gaps": list(data_gaps),
-                    "latency_ms": latency_ms,
-                    "session_hint": session_hint[:_MAX_SESSION_HINT_CHARS],
-                    "as_of": as_of.isoformat() if as_of is not None else None,
-                },
-                ensure_ascii=False,
-            )
+            record: dict[str, object] = {
+                "schema_version": TRACE_SCHEMA_VERSION,
+                "ts": datetime.now(UTC).isoformat(),
+                "tool": tool,
+                "question_digest": _digest(question),
+                "args_digest": _digest(json.dumps(args, sort_keys=True, default=str)),
+                "status": status,
+                "data_gaps": list(data_gaps),
+                "latency_ms": latency_ms,
+                "session_hint": session_hint[:_MAX_SESSION_HINT_CHARS],
+                "as_of": as_of.isoformat() if as_of is not None else None,
+            }
+            if summary is not None:
+                record["summary"] = summary
+            line = json.dumps(record, ensure_ascii=False)
             with open(self._path, "a", encoding="utf-8") as handle:
                 handle.write(line + "\n")
         except OSError as exc:
@@ -360,6 +383,7 @@ def _invoke_tool(
         return {"value": {}, "data_gaps": list(gaps)}
 
     status = "ok" if not result.data_gaps else "gaps"
+    summary = _trace_summary(tool, result.value)
     trace.record(
         tool=tool,
         question=question,
@@ -369,8 +393,29 @@ def _invoke_tool(
         latency_ms=latency_ms,
         session_hint=session_hint,
         as_of=as_of,
+        summary=summary,
     )
     return {"value": result.value, "data_gaps": list(result.data_gaps)}
+
+
+def _trace_summary(tool: str, value: object) -> dict[str, object] | None:
+    """Optional per-tool trace enrichment (currently only G pinned summary)."""
+    if tool != "read_g_context" or not isinstance(value, dict):
+        return None
+    attestation = value.get("attestation")
+    if not isinstance(attestation, dict):
+        return None
+    quality = attestation.get("quality")
+    if not isinstance(quality, dict):
+        return None
+    keys = ("pinned_injected", "pinned_candidate_seen", "pinned_layer_count")
+    picked: dict[str, object] = {
+        key: quality[key] for key in keys if key in quality
+    }
+    pinned_gaps = quality.get("pinned_data_gaps")
+    if isinstance(pinned_gaps, list):
+        picked["pinned_data_gaps"] = pinned_gaps
+    return {"g_pinned": picked} if picked else None
 
 
 # ── Server assembly ─────────────────────────────────────────────────────────
@@ -425,12 +470,105 @@ def _make_tool_handler(tool: str):
     return _handler
 
 
+def _make_watchlist_handler():
+    """Bounded write tool: list/preview/apply, add+tag only (design §2)."""
+
+    def _handler(
+        action: str,
+        operations: list[dict[str, object]] | None = None,
+        token: str | None = None,
+        question: str = "",
+        session_hint: str = "",
+    ) -> dict[str, object]:
+        wiring, trace = _tool_session()
+        payload: dict[str, object] = {"action": action, "session_hint": session_hint}
+        if operations is not None:
+            payload["operations"] = operations
+        if token is not None:
+            payload["token"] = token
+        service = wiring.watchlist_write
+        started = monotonic()
+        if service is None:
+            trace.record(
+                tool="update_user_watchlist",
+                question=question,
+                args=payload,
+                status="unavailable",
+                data_gaps=("watchlist_write_unavailable",),
+                latency_ms=0,
+                session_hint=session_hint,
+                as_of=None,
+            )
+            return {
+                "value": {
+                    "status": "UNAVAILABLE",
+                    "reason_codes": ["watchlist_write_unavailable"],
+                },
+                "data_gaps": ["watchlist_write_unavailable"],
+            }
+        if action not in ("list", "preview", "apply"):
+            raise InvalidParamsError("invalid_params: action must be list|preview|apply")
+        try:
+            if action == "list":
+                if operations is not None or token is not None:
+                    raise InvalidParamsError(
+                        "invalid_params: list takes no operations/token"
+                    )
+                result = service.list()
+            elif action == "preview":
+                if token is not None or not isinstance(operations, list) or not operations:
+                    raise InvalidParamsError(
+                        "invalid_params: preview requires non-empty operations and no token"
+                    )
+                result = service.preview(operations)
+            else:
+                if operations is not None or not isinstance(token, str) or not token:
+                    raise InvalidParamsError(
+                        "invalid_params: apply requires token and no operations"
+                    )
+                result = service.apply(token)
+        except InvalidParamsError:
+            raise
+        except Exception:
+            result = {"status": "REJECTED", "reason_codes": ["watchlist_write_failed"]}
+        latency_ms = int((monotonic() - started) * 1000)
+        rejected = result.get("status") == "REJECTED"
+        gaps = (
+            tuple(str(code) for code in result.get("reason_codes", ()))
+            if rejected
+            else ()
+        )
+        trace.record(
+            tool="update_user_watchlist",
+            question=question,
+            args=payload,
+            status="gaps" if rejected else "ok",
+            data_gaps=gaps,
+            latency_ms=latency_ms,
+            session_hint=session_hint,
+            as_of=None,
+        )
+        return {"value": result, "data_gaps": list(gaps)}
+
+    _handler.__name__ = "update_user_watchlist"
+    _handler.__doc__ = _TOOL_DESCRIPTIONS["update_user_watchlist"]
+    return _handler
+
+
 for _tool_name in _TOOL_DEADLINE_SECONDS:
+    if _tool_name == "update_user_watchlist":
+        continue
     mcp.tool(
         name=_tool_name,
         description=_TOOL_DESCRIPTIONS.get(_tool_name, _tool_name),
         annotations=_READ_ANNOTATIONS,
     )(_make_tool_handler(_tool_name))
+
+mcp.tool(
+    name="update_user_watchlist",
+    description=_TOOL_DESCRIPTIONS["update_user_watchlist"],
+    annotations=_WRITE_ANNOTATIONS,
+)(_make_watchlist_handler())
 
 
 def run(runner=None) -> None:
@@ -443,7 +581,7 @@ def run(runner=None) -> None:
         _stderr(f"startup failed: {exc}")
         raise SystemExit(2) from exc
     initialize(root)
-    _stderr(f"serving {len(_TOOL_DEADLINE_SECONDS)} read tools; kb_root={root}")
+    _stderr(f"serving {len(_TOOL_DEADLINE_SECONDS)} tools; kb_root={root}")
     _run = mcp.run if runner is None else runner
     _run()
 

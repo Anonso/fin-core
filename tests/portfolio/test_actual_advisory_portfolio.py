@@ -591,3 +591,52 @@ def test_position_thesis_round_trips_and_legacy_snapshots_still_parse(
     validator = Draft202012Validator(schema)
     assert list(validator.iter_errors(payload)) == []
     assert list(validator.iter_errors(_payload())) == []
+
+
+def test_buyable_board_rule_main_only_round_trips(tmp_path: Path) -> None:
+    config_home = tmp_path / "config"
+    _target(config_home, _payload(buyable_board_rule="main_board_only"))
+
+    result = ActualAdvisoryPortfolioStore(
+        environ={"XDG_CONFIG_HOME": str(config_home)}, clock=lambda: NOW
+    ).read()
+
+    assert result.status is ActualAdvisoryPortfolioStatus.PARTIAL
+    assert result.snapshot is not None
+    assert result.snapshot.buyable_board_rule == "main_board_only"
+    assert result.snapshot.to_safe_dict()["buyable_board_rule"] == "main_board_only"
+
+
+def test_buyable_board_rule_unknown_value_rejected(tmp_path: Path) -> None:
+    config_home = tmp_path / "config"
+    _target(config_home, _payload(buyable_board_rule="any_board"))
+
+    result = ActualAdvisoryPortfolioStore(
+        environ={"XDG_CONFIG_HOME": str(config_home)}, clock=lambda: NOW
+    ).read()
+
+    assert result.status is ActualAdvisoryPortfolioStatus.UNKNOWN
+    assert result.snapshot is None
+
+
+def test_legacy_snapshot_without_buyable_rule_still_parses(tmp_path: Path) -> None:
+    config_home = tmp_path / "config"
+    _target(config_home, _payload())
+
+    result = ActualAdvisoryPortfolioStore(
+        environ={"XDG_CONFIG_HOME": str(config_home)}, clock=lambda: NOW
+    ).read()
+
+    assert result.snapshot is not None
+    assert result.snapshot.buyable_board_rule is None
+    assert result.snapshot.to_safe_dict()["buyable_board_rule"] is None
+
+
+def test_published_schema_accepts_buyable_board_rule() -> None:
+    schema_path = Path(__file__).resolve().parents[2] / (
+        "config/actual-advisory-portfolio.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    assert list(validator.iter_errors(_payload(buyable_board_rule="main_board_only"))) == []
+    assert list(validator.iter_errors(_payload(buyable_board_rule=None))) == []

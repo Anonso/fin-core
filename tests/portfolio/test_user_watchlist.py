@@ -22,6 +22,7 @@ from fin_analyse.portfolio.user_watchlist import (
     UserWatchlistMissingError,
     UserWatchlistRemoveError,
     UserWatchlistStateError,
+    UserWatchlistTagError,
     UserWatchlistStore,
 )
 
@@ -329,3 +330,108 @@ def test_principal_scoping(tmp_path: Path) -> None:
     store_a.add(_identity(), expected_revision="r0")
     assert store_b.list().entries == ()
     assert store_a.list().entries != ()
+
+
+# ── provenance / tags / legacy migration ────────────────────────────────────
+
+def test_add_with_provenance_and_tags_roundtrip(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    result = store.add(
+        _identity(),
+        expected_revision="r0",
+        provenance="assistant",
+        tags=("suggest_delete", "mainline_ai"),
+    )
+    assert result.changed is True
+    entry = store.list().entries[0]
+    assert entry.provenance == "assistant"
+    assert entry.tags == ("suggest_delete", "mainline_ai")
+
+
+def test_invalid_provenance_or_tags_rejected_zero_write(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    with pytest.raises(UserWatchlistTagError):
+        store.add(_identity(), expected_revision="r0", provenance="robot")
+    with pytest.raises(UserWatchlistTagError):
+        store.add(_identity(), expected_revision="r0", tags=("bad tag",))
+    with pytest.raises(UserWatchlistTagError):
+        store.add(
+            _identity(),
+            expected_revision="r0",
+            tags=tuple(f"tag{i}" for i in range(9)),
+        )
+    assert store.list().entries == ()
+
+
+def test_add_tags_merge_and_noop_is_zero_write(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.add(_identity(), expected_revision="r0")
+    revision = store.list().revision
+    result = store.add_tags(
+        "600259",
+        ("mainline_ai", "suggest_delete"),
+        expected_revision=revision,
+    )
+    assert result.changed is True
+    after = store.list()
+    assert after.entries[0].tags == ("mainline_ai", "suggest_delete")
+    assert after.revision != revision
+
+    noop = store.add_tags("600259", ("mainline_ai",), expected_revision=after.revision)
+    assert noop.changed is False
+    assert store.list().revision == after.revision
+
+
+def test_remove_tags_and_noop_is_zero_write(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.add(_identity(), expected_revision="r0", tags=("a", "b"))
+    revision = store.list().revision
+    result = store.remove_tags("600259", ("a",), expected_revision=revision)
+    assert result.changed is True
+    assert store.list().entries[0].tags == ("b",)
+
+    revision = store.list().revision
+    noop = store.remove_tags("600259", ("missing_tag",), expected_revision=revision)
+    assert noop.changed is False
+    assert store.list().revision == revision
+
+
+def test_legacy_schema_migrates_on_first_write(tmp_path: Path) -> None:
+    import sqlite3
+
+    store = _store(tmp_path)
+    db_path = store._db_path
+    db_path.parent.mkdir(mode=0o700)
+    connection = sqlite3.connect(db_path)
+    connection.executescript(
+        """
+        CREATE TABLE entries (
+            market_symbol TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            added_at TEXT NOT NULL,
+            revision TEXT NOT NULL
+        );
+        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        INSERT INTO entries VALUES ('600259', '中稀有色', '2026-08-12T00:00:00+00:00', 'r1-legacy');
+        INSERT INTO meta VALUES ('revision', 'r1-legacy');
+        """
+    )
+    connection.commit()
+    connection.close()
+    db_path.chmod(0o600)
+
+    # 只读路径不迁移但按默认语义读旧表（provenance=owner、tags 空）。
+    legacy = store.list()
+    assert legacy.entries[0].provenance == "owner"
+    assert legacy.entries[0].tags == ()
+
+    result = store.add(
+        _identity(ticker="600519", name="贵州茅台"),
+        expected_revision=legacy.revision,
+        tags=("mainline_ai",),
+    )
+    assert result.changed is True
+    entries = {e.market_symbol: e for e in store.list().entries}
+    assert entries["600259"].provenance == "owner"
+    assert entries["600519"].provenance == "owner"
+    assert entries["600519"].tags == ("mainline_ai",)
