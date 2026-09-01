@@ -34,6 +34,10 @@ def test_g_context_description_analysis_first_rule() -> None:
     assert "skips it" in text
     # Owner 2026-09-01: explicit user opt-out is the only other exemption.
     assert "explicit user opt-out" in text
+    # 方案A (2026-09-01): daily hot list = AI-summarized reference info,
+    # not teacher opinion; must not be presented as teacher judgment.
+    assert "AI-summarized reference information" in text
+    assert "not teacher opinions" in text
 
 
 def test_market_snapshot_description_keeps_gap_honesty_rule() -> None:

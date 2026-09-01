@@ -117,7 +117,9 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "calls this FIRST — analysis always consults the G mainline. Only a pure "
         "factual lookup (what holdings, what cost, how many) or an explicit "
         "user opt-out ('不用 G 认知' / don't use the teacher's framework) skips "
-        "it; when in doubt, call it."
+        "it; when in doubt, call it. 星大派每日热点 (daily hot list) items are "
+        "AI-summarized reference information, not teacher opinions — never "
+        "present them as 'the teacher thinks'."
     ),
     "read_actual_portfolio": (
         "Read the latest user-confirmed actual portfolio snapshot: holdings, "
