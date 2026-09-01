@@ -111,7 +111,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 主线 | 2 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
 | 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：列候选组件/方法，逐项举证使用日志具体抱怨或已发生故障；无举证项不施工 | owner 列候选范围 |
 | 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
-| 随部署 | 7 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |
 | 旁路·P5 前 | 10 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
