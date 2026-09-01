@@ -617,8 +617,17 @@
   CURRENT_TRADING_DAY_BAR_NOT_INCLUDED + MARKET_SESSION_REFERENCE_ONLY
   （一次含 COMPLETED_DAILY_BARS_UNAVAILABLE）——晚间问「最新价」只能拿到
   参考/缺口语义，给不出「今日收盘价」确定结论。
-- 根因：未诊断（待查盘后行情源快照与 completed daily bars 可用性、交易状态
-  判定在闭市后的行为）。
+- 诊断（2026-09-01 晚，直调复现）：双源报价实际在位且同价（000657=62.33、
+  600879=14.67，disagreement_ratio=0，事件时间戳=今日 15:34/16:11–16:14 盘后），
+  但 providers 闭市后 trading_status=unknown → `_qualify_quotes` 恒报
+  PRIMARY_TRADING_STATUS_UNKNOWN + PARTIAL，合格报价不投影为 price（price=null）；
+  `continuous` 按 session=OPEN 判定，闭市恒 false → NON_CONTINUOUS_REFERENCE_QUOTE；
+  daily bars 最新 completed=08-31（今日 bar 尚未落），CURRENT_TRADING_DAY_BAR_
+  NOT_INCLUDED 部分为真实缺料。
+- 根因：盘后行情合格化语义缺失——闭市后 trading_status=unknown 被当缺陷，
+  拦住本可确认的收盘价；「参考价+盘后标注」应作为合法合格态而非 gaps。
 - 修复：待办——盘后应干净返回今日收盘价 + 盘后标注、gaps=()；owner 已拍板
-  必补（2026-09-01）。
+  必补（2026-09-01）。方向：盘后双源同价按「收盘参考」合格化（价格照常投影 +
+  显式盘后标注），今日 daily bar 未落作为独立 typed gap 按问题面取舍；核心语义
+  变更，动代码前先短设计（规则5）。
 - 状态：开放（排 NOW 主线2）。
