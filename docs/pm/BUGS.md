@@ -609,3 +609,16 @@
   Trump Zone 全文（cursor 297→4171 字）；poller 消费后 KB 存稿 796→11362
   字节、`incomplete: False`、免责声明已裁；deep-read 重生成 5 units；
   G 工作集 manifest 重绑定在当次 run 收口阶段落盘（READY 无新 gap 待复核）。
+
+## BUG-022 夜间 read_market_snapshot 全 gaps，盘后给不出干净收盘价（2026-09-01）
+
+- 现象：09-01 21:01/21:08 手动 CLI 实弹，read_market_snapshot 4 调全 gaps：
+  PRIMARY_TRADING_STATUS_UNKNOWN + NON_CONTINUOUS_REFERENCE_QUOTE +
+  CURRENT_TRADING_DAY_BAR_NOT_INCLUDED + MARKET_SESSION_REFERENCE_ONLY
+  （一次含 COMPLETED_DAILY_BARS_UNAVAILABLE）——晚间问「最新价」只能拿到
+  参考/缺口语义，给不出「今日收盘价」确定结论。
+- 根因：未诊断（待查盘后行情源快照与 completed daily bars 可用性、交易状态
+  判定在闭市后的行为）。
+- 修复：待办——盘后应干净返回今日收盘价 + 盘后标注、gaps=()；owner 已拍板
+  必补（2026-09-01）。
+- 状态：开放（排 NOW 主线2）。
