@@ -50,6 +50,10 @@ docs/GLOSSARY.md（术语指路）；认知域深度词汇以 UBIQUITOUS_LANGUAG
     按契约各自实现、互不等待，真实对接修订契约需双方会话确认、
     不得单方追认；分支/worktree/临时文档随任务终态回收；
     共享追加目标（DECISIONS.md/NOW.md）按其文件头协议。
+14. 联网检索：会话可见 zhipu-web MCP（webSearchPrime / webReader，
+    智谱联网搜索/网页读取）时，外部联网检索优先调用它；不可用或
+    失败时退回客户端原生 search / open_page；外部检索引用一律带
+    来源与时点。
 
 废止：binding / design review 轮次 / 审核 failover / 四级完成等级 /
 五层 E2E / 唯一 writer 官僚 / opencode 双 writer 变体。

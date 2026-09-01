@@ -4,7 +4,10 @@ set -euo pipefail
 
 WORKSPACE="/home/ypk/fin-core"
 AUTH_FILE="${XDG_DATA_HOME:-${HOME:?}/.local/share}/opencode/auth.json"
-MODEL_CATALOG="${HOME:?}/.codex/models.json"
+# 项目自定义模型目录（2026-09-01）：deepseek-v4-pro 声明 supports_search_tool=false，
+# 使 zhipu-web MCP（webSearchPrime/webReader）直接注入会话；原生 hosted search
+# 由 provider 能力独立控制，不受影响，仍作兜底。勿改回全局目录。
+MODEL_CATALOG="/home/ypk/fin-core/.codex/models.json"
 CODEX_BINARY="$(command -v codex || true)"
 JQ_BINARY="$(command -v jq || true)"
 
