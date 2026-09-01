@@ -403,7 +403,12 @@
   umask/工具写入遗留。
 - 修复方向：批量 fchmod 0600 + `_append_jsonl` 追加路径补 chmod 防复发；
   顺带全库扫描同类漂移（P3，随手修，不阻塞任何链路）。
-- 状态：开放（P3）。
+- 修复进展（2026-09-01 晚）：`_append_jsonl` 追加路径补 `os.fchmod(0600)`
+  （创建时同样 0600）；新增 2 回归测试（已存在宽松文件收敛 0600 + 新文件
+  owner-only）。批量 chmod 0600 收拢生产 shared/state 数据根全部组/他位漂移
+  文件（market-cache json、priority_events/jobs、mcp_request_metrics 等；
+  release/trash/runtime-tools 归档树除外），复查漂移 0。
+- 状态：已关闭（2026-09-01，P3 顺手修）。
 - 改号注记（2026-08-30）：本条原误撞 BUG-010（与测试基线三簇条重号），改号
   BUG-014；改号前查引用面=仅本文件，无外部引用。
 

@@ -111,7 +111,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 主线 | 2 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
 | 旁路·时间 | 4 | BUG-020/021 poller 发布验证：manifest 含新文章 + 重绑定 READY 复核 | 09-02 08:20 poller |
 | 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
-| 旁路·owner | 6 | BUG-014 cognition jsonl 权限 0664（P3）顺手修 | owner 随手 |
 | 随部署 | 7 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |

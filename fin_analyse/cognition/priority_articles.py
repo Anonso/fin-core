@@ -173,6 +173,9 @@ def _append_jsonl(
             )
         except OSError as error:
             raise ValueError("priority outbox is unsafe") from error
+        # BUG-014：追加路径补 chmod——已存在文件不因创建 mode 收权，
+        # 漂移（如 0664）在下一次写入时收敛回 owner-only。
+        os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "r+b") as handle:
             _require_outbox_path_identity(filename, handle, parent_descriptor)
             fcntl.flock(descriptor, fcntl.LOCK_EX)
