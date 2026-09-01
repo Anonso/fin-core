@@ -19,8 +19,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 from collections.abc import Callable, Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from math import isfinite
 from pathlib import Path
 from time import monotonic
@@ -192,6 +193,7 @@ def build_default_material_provider(
             # 08-31 14:25 核对复现；周末/盘后数据不更新故既有实证未暴露）。
             service = build_default_a_share_market_overview()
             result = service.read(AshareMarketOverviewRequest())
+            _record_market_overview_failure_diagnostic(result)
             materials["market_overview"] = _render_market_overview(result)
         except Exception as exc:
             logger.warning(
@@ -248,6 +250,50 @@ def build_default_material_provider(
         return materials
 
     return _provider
+
+
+def _record_market_overview_failure_diagnostic(result: Any) -> None:
+    """Append one owner-only diagnostic line when the overview read is unusable.
+
+    2026-09-01 盘前实弹：`l1_material_market_overview_unavailable` 仍在，但
+    scheduled 入口吞掉 stderr，服务侧 data_gaps 无任何落盘，根因不可见。此
+    诊断只写 UNKNOWN/异常路径（PARTIAL 正常出料不写），供下一盘前班次定根因。
+    """
+    if getattr(result, "status", None) == "PARTIAL":
+        return
+    record = {
+        "recorded_at": datetime.now(UTC).isoformat(),
+        "status": getattr(result, "status", None),
+        "data_gaps": list(getattr(result, "data_gaps", ()) or ()),
+        "session_phase": getattr(result, "session_phase", None),
+        "effective_trade_date": _market_text(
+            getattr(result, "effective_trade_date", None)
+        )
+        or None,
+        "observation_mode": getattr(result, "observation_mode", None),
+        "provider_updated_at": getattr(result, "provider_updated_at", None),
+        "provider_observation_age_seconds": getattr(
+            result, "provider_observation_age_seconds", None
+        ),
+        "queried_at": getattr(result, "queried_at", None),
+    }
+    configured_state = os.environ.get("XDG_STATE_HOME")
+    state_root = Path(configured_state) if configured_state else Path.home() / ".local" / "state"
+    target = state_root / "fin-analyse" / "daily-workspace-overview-failures.jsonl"
+    try:
+        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        target.parent.chmod(0o700)
+        descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        try:
+            os.fchmod(descriptor, 0o600)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                descriptor = -1
+                stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+    except Exception as exc:
+        logger.warning("daily workspace overview diagnostic write failed: %s", type(exc).__name__)
 
 
 def _render_reference_bundle(bundle: Any) -> str | None:

@@ -56,7 +56,18 @@
   （运维铁律）。**部署已完成（08-31 12:05，97a9c74：post-commit 钩子重渲染
   + daemon-reload + LLM 快照；uv sync 零变更；盘前班次入口复核过）；随后
   c473ad4（仅测试修复）钩子已再渲染，生产行为不变**。
-- 状态：修复落地（2026-08-31），盘前实弹确认后关闭。
+- **09-01 08:55 盘前实弹（未闭环）**：premarket 班正常 PREPARED/DELIVERED，
+  但 `l1_material_market_overview_unavailable` gap 仍在（同日 09:35 morning
+  班 `data_gaps=[]`、正文带指数点位，盘中侧正常）。scheduled 入口
+  `redirect_stderr` 吞掉 provider warning，服务侧 data_gaps 无任何落盘 →
+  根因不可见。已加失败诊断 JSONL（`$XDG_STATE_HOME/fin-analyse/
+  daily-workspace-overview-failures.jsonl`，仅 UNKNOWN 写），下一盘前班次
+  定根因。候选根因（未证实，不按假设修）：盘前 PRE_OPEN 指数走腾讯实时
+  （昨收值）但 f124 为当日盘前时刻 → LATEST_COMPLETED_SESSION 的
+  trade-date/15:00 门拒链；或腾讯行盘前缺 f3/f6 → 回退东财盘前占位 → 指数
+  投影失败。
+- 状态：修复落地未闭环（09-01 08:55 实弹 gap 仍在），诊断增强已部署，
+  待下一盘前班次定根因后修。
 
 ## BUG-003 ZSXQ 问询空返回（2026-08-28 二次诊断改写，原「停更」结论有误）
 

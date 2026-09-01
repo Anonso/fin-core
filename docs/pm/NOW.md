@@ -76,7 +76,7 @@
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
 | read_market_snapshot | 标的行情 | 在用（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011 已闭 |
-| read_market_overview | 大盘结构 | 问询验收中（结构性半边定修落地 08-31：盘前占位降级不拒链；盘前实弹确认 = 09-01 08:55 premarket 班 gap 消失） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 修复落地待盘前确认 |
+| read_market_overview | 大盘结构 | 问询验收中（结构性半边定修落地 08-31：盘前占位降级不拒链；**09-01 08:55 盘前实弹 gap 仍在 → 未闭环**；09:35 盘中 gaps=[]；失败诊断已落盘，待下一盘前定根因） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
 | read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；08-31 残余二定修：标题 4 字门 + 有事实帖优先 + latest-focus 误判修正，公共 RPC 端到端仅返回目标帖，待实弹问询确认） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 |
 | read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（08-30 公告探针过：外搜带时点、持仓联动正确；现役面=外搜 MCP 辅助面） | 公告类问题，验工具被调 + gaps 空 | BUG-012 公告腿已闭 |
@@ -98,13 +98,13 @@
 
 | 产品面 | 状态 | 验收手段 | 指针 |
 | --- | --- | --- | --- |
-| Daily 简报 | 问询验收中（四班 L1 实证已通；B1 盲评 7.67<9 不闭环，同条件 9=9 打平、差距全在带伤班次——带伤主因 BUG-015 冻结时钟已修，08-31 postmarket 班实弹 gaps=[]+行情+G 对表齐活；gap 记账哑已修 08-30；08-31 G 认知接为第四材料键〔设计门 8/8 采纳〕+ 两融项删除、不催更新；BUG-016/017 已部署，薄 server RPC 与隔离真实预演均证实点位/宽度/事实对照，待下一真实 Daily 正文确认；盘前形态实弹确认待 09-01 08:55） | 四班交付记录 + B1 盲评 | 【主线】BUG-016/017；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-008 |
+| Daily 简报 | 问询验收中（四班 L1 实证已通；B1 盲评 7.67<9 不闭环，同条件 9=9 打平、差距全在带伤班次——带伤主因 BUG-015 冻结时钟已修，08-31 postmarket 班实弹 gaps=[]+行情+G 对表齐活；gap 记账哑已修 08-30；08-31 G 认知接为第四材料键〔设计门 8/8 采纳〕+ 两融项删除、不催更新；BUG-016/017 已部署，**09-01 09:35 morning 真实班 gaps=[]+正文带指数点位/成交额 → 首次真实正文确认通过**，postmarket 复验随 15:30 班；盘前 08:55 概览 gap 未消失〔BUG-002 未闭环〕） | 四班交付记录 + B1 盲评 | 【主线】BUG-016/017；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008 |
 
 ## 待办队列（只放未决项）
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 2 | BUG-016/017 盘后 Daily 修复：整行市场材料投影 + 指数点位/成交额/闭市宽度透传 + 有料先判断 prompt + 多 backend 总预算共享；已部署，薄 server RPC 与隔离真实预演均通过，待下一真实 Daily 班次确认正文 | 下一真实班次 |
+| 主线 | 2 | BUG-016/017 盘后 Daily 修复：已部署；09-01 09:35 morning 真实班正文确认通过（gaps=[]、带指数点位/成交额） | 09-01 15:30 postmarket 复验 |
 | 主线 | 3 | BUG-012 残余二定修：标题 4 字门 + 有事实帖优先排序 + latest-focus 误判修正（08-31 已施工，生产数据重放 9→1，公共 RPC 端到端仅返回目标帖，默认套件绿）；待实弹问询确认 | 前序=主线2 |
 | 旁路·使用触发 | 6 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 随部署 | 8 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |

@@ -9,8 +9,10 @@ existing handlers emit the deterministic degraded notice with these codes.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
+from types import SimpleNamespace
 
 import pytest
 
@@ -18,6 +20,7 @@ from fin_analyse.operations.daily_workspace_generator import (
     DailyWorkspaceGenerationUnavailableError,
     L1DirectWorkspaceGenerator,
     _material_gaps,
+    _record_market_overview_failure_diagnostic,
 )
 
 _OVERVIEW_REPR = "<AshareMarketOverviewService object at 0x7f0000000000>"
@@ -192,3 +195,36 @@ def test_disabled_priority_entry_does_not_consume_l1_chain_slot(tmp_path: Path) 
     generator = L1DirectWorkspaceGenerator(config_path=str(config_path))
 
     assert [name for name, _backend in generator._resolve_backends()] == ["second", "third"]
+
+
+def test_overview_failure_diagnostic_written_for_unknown(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    result = SimpleNamespace(
+        status="UNKNOWN",
+        data_gaps=("MARKET_OVERVIEW_INDEX_TRADE_DATE_MISMATCH", "MARKET_OVERVIEW_UNAVAILABLE"),
+        session_phase="PRE_OPEN",
+        effective_trade_date="2026-08-31",
+        observation_mode="LATEST_COMPLETED_SESSION",
+        provider_updated_at=None,
+        provider_observation_age_seconds=None,
+        queried_at=None,
+    )
+
+    _record_market_overview_failure_diagnostic(result)
+
+    lines = (
+        tmp_path / "fin-analyse" / "daily-workspace-overview-failures.jsonl"
+    ).read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["status"] == "UNKNOWN"
+    assert "MARKET_OVERVIEW_INDEX_TRADE_DATE_MISMATCH" in record["data_gaps"]
+    assert record["observation_mode"] == "LATEST_COMPLETED_SESSION"
+
+
+def test_overview_failure_diagnostic_skipped_for_partial(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    _record_market_overview_failure_diagnostic(SimpleNamespace(status="PARTIAL"))
+
+    target = tmp_path / "fin-analyse" / "daily-workspace-overview-failures.jsonl"
+    assert not target.exists()
