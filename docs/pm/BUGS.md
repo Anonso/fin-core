@@ -74,7 +74,8 @@
   `MARKET_OVERVIEW_SECTION_TRADE_DATE_MISMATCH` 拒绝。修复：仅存活分节
   参与 trade-date 门；回归测试钉死「盘前被丢弃分节带盘前时间戳 → PARTIAL」。
   同日另加失败诊断落盘，二者同批部署。
-- 状态：修复尝试 2 已部署（诊断 + gate 5），待 09-02 08:55 盘前实弹；
+- 状态：修复尝试 2 已部署（诊断 + gate 5），待 09-02 09:10 盘前实弹
+  （定时器 09-01 由并发会话重排：premarket prepare 08:55→09:10）；
   若仍失败，诊断 JSONL 直接给出剩余门名，按证据再修。
 
 ## BUG-003 ZSXQ 问询空返回（2026-08-28 二次诊断改写，原「停更」结论有误）
@@ -597,5 +598,7 @@
   风险提示固定页脚裁掉。WSL（fin-core 工作树）：cursor 截断尾标 incomplete +
   存稿文件尾截断判据 + `_should_recapture` 接线（严格更长才原位升级）；
   deep-read 按 content hash 自然重生，G 工作集按 manifest 重算。
-- 状态：代码修复完成（两仓测试绿：老仓 17、fin-core scraper 621）；待下一
-  真实 poller 班次验证 Trump Zone 全文 + deep-read 重建 + working set READY。
+- 状态：代码修复完成并已真实验证（2026-09-01 13:xx）：capture 侧补抓到
+  Trump Zone 全文（cursor 297→4171 字）；poller 消费后 KB 存稿 796→11362
+  字节、`incomplete: False`、免责声明已裁；deep-read 重生成 5 units；
+  G 工作集 manifest 重绑定在当次 run 收口阶段落盘（READY 无新 gap 待复核）。
