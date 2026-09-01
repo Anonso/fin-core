@@ -13,6 +13,8 @@
       "mcp__plugin_serena_serena__onboarding",
       "mcp__codegraph__codegraph_explore",
       "mcp__plugin_serena_serena__search_for_pattern",
+      "mcp__zhipu-web__web_search_prime",
+      "mcp__zhipu-web__webReader",
       "Skill(skill-creator:skill-creator)",
       "WebFetch(domain:github.com)"
     ]

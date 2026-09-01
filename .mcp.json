@@ -7,6 +7,13 @@
         "serve",
         "--mcp"
       ]
+    },
+    "zhipu-web": {
+      "type": "stdio",
+      "command": "/home/ypk/fin-core/.venv/bin/python",
+      "args": [
+        "/home/ypk/fin-data/mcp/zhipu_mcp_bridge.py"
+      ]
     }
   }
 }
