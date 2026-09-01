@@ -29,7 +29,7 @@ from fin_analyse.cognition.thesis_extractor import (
 )
 from fin_analyse.utils.ids import stable_id
 
-_XINGDAPAI_COLUMNS = {"星大派特刊", "星大派锐评", "星大派好问题"}
+_XINGDAPAI_COLUMNS = {"星大派特刊", "星大派锐评", "星大派好问题", "星大派每日热点", "星大派人脉"}
 _FENGXIANJUN_COLUMNS = {"凤仙郡小故事"}
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,13 @@ def _classify_source_rank(column: str, body: str) -> str:
         return "t0_xingdapai"
     if column in _FENGXIANJUN_COLUMNS:
         return "t0_fengxian"
-    if "星大派特刊" in body or "星大派锐评" in body or "星大派好问题" in body:
+    if (
+        "星大派特刊" in body
+        or "星大派锐评" in body
+        or "星大派好问题" in body
+        or "星大派每日热点" in body
+        or "星大派人脉" in body
+    ):
         return "unknown"
     return "external_context"
 

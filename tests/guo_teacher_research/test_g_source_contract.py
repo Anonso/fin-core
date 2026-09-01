@@ -13,6 +13,8 @@ from fin_analyse.guo_teacher_research.source_contract import classify_g_source
         ("星大派特刊", False, "星大派", "特刊", "systematic_framework"),
         ("星大派锐评", False, "星大派", "锐评", "recent_change_risk"),
         ("星大派好问题", True, "星大派", "好问题", "question_explanation_method"),
+        ("星大派每日热点", False, "星大派", "每日热点", "recent_change_risk"),
+        ("星大派人脉", False, "星大派", "人脉", "systematic_framework"),
         ("凤仙郡小故事", False, "凤仙郡小故事", "长期故事", "long_term_framework"),
     ],
 )

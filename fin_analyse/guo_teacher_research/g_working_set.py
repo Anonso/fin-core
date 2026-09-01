@@ -39,8 +39,10 @@ _SOURCE_COVERAGE_SCHEMA = "g-working-set-source-coverage.v2"
 _MANIFEST_RELATIVE_PATH = Path("runtime/operations/g_working_set/manifest.v1.json")
 _INDEX_RELATIVE_PATH = Path("index.json")
 _EVENTS_RELATIVE_PATH = Path("runtime/cognition/priority_events.jsonl")
-_COMMENTARY_COLUMNS = frozenset({"星大派锐评"})
-_STRICT_G_COLUMNS = frozenset({"星大派锐评", "星大派特刊", "星大派好问题", "凤仙郡小故事"})
+_COMMENTARY_COLUMNS = frozenset({"星大派锐评", "星大派每日热点"})
+_STRICT_G_COLUMNS = frozenset(
+    {"星大派锐评", "星大派特刊", "星大派好问题", "星大派每日热点", "星大派人脉", "凤仙郡小故事"}
+)
 
 
 def _active_window_projection() -> dict[str, int]:
