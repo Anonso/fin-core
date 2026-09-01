@@ -109,7 +109,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | --- | --- | --- | --- |
 | 主线 | 1 | CLI 实弹三连验：BUG-005 G-first 口径（分析必调 G）、BUG-012 ready 残余二、BUG-002 盘前概览——owner 常问三类（持仓复盘/老师体系/大盘板块）手动 CLI 随问随验，对照 trace 三字段 | 即日起随真实问询；BUG-012 今晚 21:01/21:08 实弹仍 unavailable |
 | 主线 | 2 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
-| 旁路·时间 | 4 | BUG-020/021 poller 发布验证：manifest 含新文章 + 重绑定 READY 复核 | 09-02 08:20 poller |
 | 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
 | 随部署 | 7 | 基础设施审计 A6：Hermes cron 注册表以 apply 脚本常量为源 | 随下次部署 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |

@@ -593,7 +593,10 @@
 - 修复：四层同步补列（每日热点=recent_change_risk/commentary 档；人脉=systematic_
   framework/special 档）；存量 7 篇 column 纠正（备份 `~/fin-data/backups/
   g-new-columns-20260901/`）；7 篇全部重做 deep-read（4-8 units/篇）。
-- 状态：已修复（代码+数据），待下一次 poller 发布验证 manifest 含新文章。
+- 验证（2026-09-01 晚）：poller 发布后 `g_working_set/manifest.v1.json`
+  status=READY、data_gaps=[]，14 篇全部 deep_read available；含星大派每日热点
+  （08-31/09-01）与人脉（08-31/09-01）各 2 条。
+- 状态：已关闭（2026-09-01，manifest 含新文章实证）。
 
 ## BUG-021 跳转链接文章只抓到开头（Trump Zone 特刊「目 ...」截断，2026-09-01）
 
@@ -614,6 +617,10 @@
   Trump Zone 全文（cursor 297→4171 字）；poller 消费后 KB 存稿 796→11362
   字节、`incomplete: False`、免责声明已裁；deep-read 重生成 5 units；
   G 工作集 manifest 重绑定在当次 run 收口阶段落盘（READY 无新 gap 待复核）。
+- 复核（2026-09-01 晚）：manifest 重绑定确认——Trump Zone
+  （zsxq-55521154248821484，特刊 08-31）在 manifest 内且 deep_read
+  available（generated 09-01 13:26）；存稿 11362B、incomplete=False。
+- 状态：已关闭（2026-09-01，manifest 重绑定 READY 复核通过）。
 
 ## BUG-022 夜间 read_market_snapshot 全 gaps，盘后给不出干净收盘价（2026-09-01）
 
