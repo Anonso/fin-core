@@ -37,9 +37,10 @@ _EXACT_SOURCE_TYPES = {
     "星大派特刊": ("星大派", "特刊", "systematic_framework"),
     "星大派锐评": ("星大派", "锐评", "recent_change_risk"),
     "星大派好问题": ("星大派", "好问题", "question_explanation_method"),
-    # owner 2026-09-01 拍板：每日热点=锐评同档（时效强、commentary 窗口）；
+    # owner 2026-09-01 拍板：每日热点=老师 AI 汇总的参考信息（非老师看法，
+    # usage=ai_summary_reference 作边界信号；时效档仍=commentary 窗口）；
     # 人脉=特刊同档（systematic_framework、special 窗口）。
-    "星大派每日热点": ("星大派", "每日热点", "recent_change_risk"),
+    "星大派每日热点": ("星大派", "每日热点", "ai_summary_reference"),
     "星大派人脉": ("星大派", "人脉", "systematic_framework"),
     "凤仙郡小故事": ("凤仙郡小故事", "长期故事", "long_term_framework"),
     # 「普通」栏 owner 撤项（2026-08-28 晚）：曾在 BUG-006③ 短暂放行为 general G，

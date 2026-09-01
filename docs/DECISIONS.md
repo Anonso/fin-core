@@ -206,3 +206,5 @@
   （每日内容时效强，commentary 档已够）；等新栏目出现再处理（漏网已发生，立即修复）。
 - 状态：active · 证据：source_contract.py / g_working_set.py / zsxq_apprentice.py /
   scraper/config.py；7 篇 deep-read 产物；备份 `~/fin-data/backups/g-new-columns-20260901/`。
+- 追加（2026-09-01 方案A）：每日热点 usage 细化为 `ai_summary_reference`——
+  老师 AI 汇总的参考信息，非老师看法；时效档（commentary）与列闭集不变。
