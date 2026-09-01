@@ -1086,21 +1086,27 @@ class AgentRuntimeContextProvider:
                 deduped = []
             semantically_usable: list[dict[str, Any]] = []
             no_extractable_units_count = 0
-            # M1（用户拍板 2026-08-19）：锐评只取 2 天窗口内最新一条。在语义
-            # 过滤前冻结该候选——最新一条空壳且 raw fallback 失败即整类不
-            # 注入（no_commentary_within_window），禁止回退到较旧锐评。
-            frozen_latest_commentary = _latest_commentary(deduped)
-            frozen_commentary_key = (
-                _candidate_key(frozen_latest_commentary) if frozen_latest_commentary else None
-            )
+            # M1（用户拍板 2026-08-19）：锐评只取 2 天窗口内最新一条。
+            # owner 2026-09-01 扩展：锐评（老师看法）与每日热点（老师 AI
+            # 汇总信息）是两个维度，可共存、各最多一条。在语义过滤前冻结
+            # 这两条——最新条空壳且 raw fallback 失败即该类不注入，禁止
+            # 回退到较旧文章。
+            frozen_commentary_keys = {
+                _candidate_key(item)
+                for item in (
+                    _latest_commentary(deduped, column="星大派锐评"),
+                    _latest_commentary(deduped, column="星大派每日热点"),
+                )
+                if item is not None
+            }
             for candidate in deduped:
                 article_id = str(candidate.get("article_id", "")).strip()
                 if (
-                    frozen_commentary_key is not None
+                    frozen_commentary_keys
                     and _candidate_column(candidate) in _COMMENTARY_COLUMNS
-                    and _candidate_key(candidate) != frozen_commentary_key
+                    and _candidate_key(candidate) not in frozen_commentary_keys
                 ):
-                    # 非最新锐评不参与语义选择（最新已冻结，旧锐评不回退）。
+                    # 非最新锐评/每日热点不参与语义选择（最新已冻结，旧文不回退）。
                     continue
                 snapshot = candidate.get("_fresh_deep_read_snapshot")
                 binding = manifest_bindings.get(article_id) if manifest_bindings else None
@@ -2899,15 +2905,19 @@ def _select_context_candidates(
     selected: list[dict[str, Any]] = []
     selected_keys: set[str] = set()
 
-    # 1 latest 锐评 (already time-filtered by the trading-day window)
-    latest_commentary = _latest_commentary(candidates)
-    if latest_commentary is not None:
-        _append_selected(
-            selected,
-            selected_keys,
-            latest_commentary,
-            bucket="latest_commentary",
-        )
+    # 1 两个维度各取最新一条（already time-filtered by the trading-day
+    # window）：锐评 = 老师看法，每日热点 = 老师 AI 汇总信息。可共存。
+    for commentary in (
+        _latest_commentary(candidates, column="星大派锐评"),
+        _latest_commentary(candidates, column="星大派每日热点"),
+    ):
+        if commentary is not None:
+            _append_selected(
+                selected,
+                selected_keys,
+                commentary,
+                bucket="latest_commentary",
+            )
 
     remaining = max_events - len(selected)
     if remaining <= 0:
@@ -2947,9 +2957,18 @@ def _select_context_candidates(
     return selected
 
 
-def _latest_commentary(candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Return the latest 锐评 from candidates."""
-    commentaries = [c for c in candidates if _candidate_column(c) in _COMMENTARY_COLUMNS]
+def _latest_commentary(
+    candidates: list[dict[str, Any]],
+    *,
+    column: str | None = None,
+) -> dict[str, Any] | None:
+    """Return the latest commentary candidate, optionally for one column only."""
+    commentaries = [
+        c
+        for c in candidates
+        if _candidate_column(c) in _COMMENTARY_COLUMNS
+        and (column is None or _candidate_column(c) == column)
+    ]
     if not commentaries:
         return None
     return sorted(commentaries, key=_candidate_time, reverse=True)[0]
