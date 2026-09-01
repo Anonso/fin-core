@@ -228,3 +228,16 @@
 - 否决了什么：删除 L1 兜底（会断推送）；手动 CLI 接入自动兜底（保持直连单旋钮）。
 - 状态：待办（owner 09-01 指示先聚焦手动 CLI，实施顺序见设计稿）· 证据：
   docs/design/daily-consult-agent-generator.md（commit 87d0f1d）。
+
+## D-032 · 2026-09-01 · P5 飞书家人候选方案 A：Hermes 直接当问询 agent（owner 拍板）
+- 决策：P5 飞书家人主路线定为候选方案 A——Hermes 作为问询 agent 的第三个客户端角色，
+  直接工作在 consult-agent 目录（同 CC/codex 的「目录即身份」）；落地时人格/工具/记忆
+  三缝同源（SOUL 引用或等价 CLAUDE.md、同 MCP 冻结契约、记忆规则同款），接入飞书前按
+  P1 六题级验收。方案 B（Hermes 只当传输层、用 consult-ask 调问询 agent）降为备用。
+- 为什么：Hermes 调问询 agent 的嵌套模式问题多（旧 fin profile 前台委托 Skill 质量/
+  超时不稳）、使用不便；Hermes 直接当问询 agent 少一跳，飞书多轮会话天然就是问询会话，
+  且与「目录即身份」同构。
+- 否决了什么：Hermes 当前台 + consult-ask 嵌套委托的默认路线（问题多、使用不便）；
+  在 CLI 使用质量/效果未跑透（NOW 主线1/2、D3 未过）前开工 P5（仍按 D-020 条件开放）。
+- 状态：active（候选方案 A，大概率采用；P5 前再设计细化）· 证据：本条目；
+  NOW.md 板 A P5 行。
