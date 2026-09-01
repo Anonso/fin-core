@@ -260,6 +260,10 @@ def main(
         execute_flag = (
             "--execute-prepare" if phase is DailyWorkspaceRunPhase.PREPARE else "--execute-delivery"
         )
+        # Delivery may wait for a late result, so its runner must read the
+        # physical clock again after waiting (delivered_at must be real);
+        # prepare keeps the frozen entry clock as its documented start time.
+        downstream_clock = now if phase is DailyWorkspaceRunPhase.DELIVER else lambda: frozen_now
         stdout = io.StringIO()
         operation_entered = True
         try:
@@ -274,7 +278,7 @@ def main(
                         phase.value,
                         execute_flag,
                     ],
-                    clock=lambda: frozen_now,
+                    clock=downstream_clock,
                 )
                 if phase is DailyWorkspaceRunPhase.DELIVER and exit_code == 75:
                     # The outbox proved that Hermes sent nothing. This is

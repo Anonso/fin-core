@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -91,7 +92,7 @@ def _prepared(
     data_gaps: tuple[str, ...] = (),
 ) -> PreparedDailyWorkspaceProduct:
     target = target_at or datetime(2026, 8, 3, 10, 0, tzinfo=_SHANGHAI)
-    prepared = prepared_at or datetime(2026, 8, 3, 9, 35, tzinfo=_SHANGHAI)
+    prepared = prepared_at or datetime(2026, 8, 3, 9, 55, tzinfo=_SHANGHAI)
     return PreparedDailyWorkspaceProduct(
         trading_day_id="2026-08-03",
         checkpoint=DailyWorkspaceCheckpoint.MORNING_1000,
@@ -113,12 +114,14 @@ def _runner(
     products: _Products,
     outbox: _Outbox,
     is_open: bool = True,
+    wait_for_result: Callable[[], None] | None = None,
 ) -> DailyWorkspaceCheckpointRunner:
     return DailyWorkspaceCheckpointRunner(
         schedule=DailyWorkspaceSchedulePolicy(is_open_date=lambda _day: is_open),
         products=products,
         outbox=outbox,
         clock=lambda: now,
+        wait_for_result=wait_for_result,
     )
 
 
@@ -131,7 +134,7 @@ def _request(phase: DailyWorkspaceRunPhase) -> DailyWorkspaceCheckpointRunReques
 
 
 def test_prepare_runs_at_prepare_cutoff_and_binds_product_times() -> None:
-    now = datetime(2026, 8, 3, 9, 35, tzinfo=_SHANGHAI)
+    now = datetime(2026, 8, 3, 9, 55, tzinfo=_SHANGHAI)
     product = _prepared(prepared_at=now, generated_at=now)
     products = _Products(product)
     outbox = _Outbox()
@@ -162,7 +165,7 @@ def test_prepare_runs_at_prepare_cutoff_and_binds_product_times() -> None:
     ("now", "expected_status"),
     (
         (
-            datetime(2026, 8, 3, 9, 34, 59, tzinfo=_SHANGHAI),
+            datetime(2026, 8, 3, 9, 54, 59, tzinfo=_SHANGHAI),
             DailyWorkspaceRunStatus.NOT_DUE,
         ),
         (
@@ -188,7 +191,7 @@ def test_prepare_never_starts_full_generation_outside_prepare_window(
 
 
 def test_unavailable_prepare_fails_without_freezing_a_product() -> None:
-    now = datetime(2026, 8, 3, 9, 35, tzinfo=_SHANGHAI)
+    now = datetime(2026, 8, 3, 9, 55, tzinfo=_SHANGHAI)
     products = _Products()
     outbox = _Outbox()
 
@@ -238,6 +241,74 @@ def test_missing_product_at_target_delivers_a_failure_notice() -> None:
     assert outbox.calls[0][0].degraded is True
 
 
+def test_delivery_waits_for_a_late_result_then_dispatches_immediately() -> None:
+    entry = datetime(2026, 8, 3, 10, 0, tzinfo=_SHANGHAI)
+    ready = datetime(2026, 8, 3, 10, 3, tzinfo=_SHANGHAI)
+    product = _prepared(generated_at=ready)
+    products = _Products()
+    outbox = _Outbox()
+    waited = False
+    clock = _LiveClock(entry)
+
+    def wait_for_result() -> None:
+        nonlocal waited
+        waited = True
+        products.prepared = product
+        clock.value = ready
+
+    runner = DailyWorkspaceCheckpointRunner(
+        schedule=DailyWorkspaceSchedulePolicy(is_open_date=lambda _day: True),
+        products=products,
+        outbox=outbox,
+        clock=clock,
+        wait_for_result=wait_for_result,
+    )
+
+    result = runner.run(_request(DailyWorkspaceRunPhase.DELIVER))
+
+    assert waited is True
+    assert result.status is DailyWorkspaceRunStatus.DELIVERED
+    assert result.delivered_at == ready
+    assert outbox.calls == [(product, ready)]
+    assert products.degraded_calls == []
+
+
+class _LiveClock:
+    def __init__(self, value: datetime) -> None:
+        self.value = value
+
+    def __call__(self) -> datetime:
+        return self.value
+
+
+def test_delivery_waiting_without_a_result_still_sends_the_failure_notice() -> None:
+    entry = datetime(2026, 8, 3, 10, 0, tzinfo=_SHANGHAI)
+    products = _Products()
+    outbox = _Outbox()
+    waited = False
+    clock = _LiveClock(entry)
+
+    def wait_for_result() -> None:
+        nonlocal waited
+        waited = True
+        clock.value = entry + timedelta(seconds=2)
+
+    runner = DailyWorkspaceCheckpointRunner(
+        schedule=DailyWorkspaceSchedulePolicy(is_open_date=lambda _day: True),
+        products=products,
+        outbox=outbox,
+        clock=clock,
+        wait_for_result=wait_for_result,
+    )
+
+    result = runner.run(_request(DailyWorkspaceRunPhase.DELIVER))
+
+    assert waited is True
+    assert result.status is DailyWorkspaceRunStatus.FAILURE_NOTICE_DELIVERED
+    assert len(outbox.calls) == 1
+    assert outbox.calls[0][0].degraded is True
+
+
 def test_delivery_retry_reuses_the_same_artifact_and_reports_existing_ack() -> None:
     now = datetime(2026, 8, 3, 10, 0, tzinfo=_SHANGHAI)
     product = _prepared()
@@ -281,7 +352,7 @@ def test_delivery_does_not_send_outside_target_window(now: datetime) -> None:
 
 
 def test_non_trading_day_and_invalid_clock_fail_closed_without_side_effects() -> None:
-    now = datetime(2026, 8, 3, 9, 35, tzinfo=_SHANGHAI)
+    now = datetime(2026, 8, 3, 9, 55, tzinfo=_SHANGHAI)
     products = _Products(_prepared())
     outbox = _Outbox()
 

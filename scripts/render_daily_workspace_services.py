@@ -65,7 +65,9 @@ def render_daily_workspace_service(
         if phase == "delivery"
         else ""
     )
-    timeout = "24min" if phase == "prepare" else "3min"
+    # Delivery may wait (poll) for a late prepare result; its timeout must
+    # exceed the prepare unit's 24min generation budget.
+    timeout = "24min" if phase == "prepare" else "30min"
     retry_policy = "Restart=no\n"
     return (
         "[Unit]\n"

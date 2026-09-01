@@ -21,6 +21,15 @@ def test_checkpoint_targets_are_fin_owned_and_fixed() -> None:
     assert policy.target_for(DailyWorkspaceCheckpoint.POSTMARKET) == time(15, 30)
 
 
+def test_prepare_leads_are_short_and_checkpoint_specific() -> None:
+    policy = DailyWorkspaceSchedulePolicy()
+
+    assert policy.prepare_for(DailyWorkspaceCheckpoint.PREMARKET) == time(9, 10)
+    assert policy.prepare_for(DailyWorkspaceCheckpoint.MORNING_1000) == time(9, 55)
+    assert policy.prepare_for(DailyWorkspaceCheckpoint.CLOSE_1420) == time(14, 10)
+    assert policy.prepare_for(DailyWorkspaceCheckpoint.POSTMARKET) == time(15, 25)
+
+
 def test_in_window_accepts_target_plus_minus_window() -> None:
     policy = DailyWorkspaceSchedulePolicy()
 

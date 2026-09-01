@@ -11,9 +11,6 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from fin_analyse.consultation.daily_workspace import DailyWorkspaceService
-from fin_analyse.operations.daily_workspace_generator import (
-    DailyWorkspaceGenerationUnavailableError,
-)
 from fin_analyse.consultation.daily_workspace_product_contracts import (
     DailyWorkspaceCheckpoint,
 )
@@ -21,6 +18,9 @@ from fin_analyse.consultation.daily_workspace_schedule import (
     DailyWorkspaceSchedulePolicy,
 )
 from fin_analyse.guo_teacher_research.semantic_state import ResearchStateRepository
+from fin_analyse.operations.daily_workspace_generator import (
+    DailyWorkspaceGenerationUnavailableError,
+)
 from fin_analyse.operations.daily_workspace_runner import (
     DailyWorkspaceCheckpointRunner,
     DailyWorkspaceCheckpointRunRequest,
@@ -37,7 +37,7 @@ from tests.fixtures.daily_workspace import consultation_product
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _DAY = "2026-08-03"
 _TARGET = datetime(2026, 8, 3, 10, 0, tzinfo=_SHANGHAI)
-_PREPARED = datetime(2026, 8, 3, 9, 35, tzinfo=_SHANGHAI)
+_PREPARED = datetime(2026, 8, 3, 9, 55, tzinfo=_SHANGHAI)
 _EVIDENCE_CUTOFF = datetime(2026, 8, 3, 1, 50, tzinfo=UTC)
 
 
@@ -334,7 +334,9 @@ def test_typed_generation_unavailable_does_not_freeze_a_degraded_product() -> No
     assert repository.read is None
 
 
-def test_product_finishing_at_or_after_target_does_not_freeze_a_product() -> None:
+def test_product_finishing_at_or_after_target_freezes_for_immediate_delivery() -> None:
+    """A late result is allowed and recorded honestly (delivery waits for it)."""
+
     repository = _Repository()
     service = _Service(repository)
     adapter = _adapter(
@@ -344,16 +346,18 @@ def test_product_finishing_at_or_after_target_does_not_freeze_a_product() -> Non
         generated_at=_TARGET,
     )
 
-    with pytest.raises(DailyWorkspaceGenerationUnavailableError) as failure:
-        adapter.prepare(
-            trading_day_id=_DAY,
-            checkpoint=DailyWorkspaceCheckpoint.MORNING_1000,
-            target_at=_TARGET,
-            prepared_at=_PREPARED,
-        )
+    product = adapter.prepare(
+        trading_day_id=_DAY,
+        checkpoint=DailyWorkspaceCheckpoint.MORNING_1000,
+        target_at=_TARGET,
+        prepared_at=_PREPARED,
+    )
 
-    assert failure.value.data_gaps == ("daily_workspace_preparation_deadline_missed",)
-    assert repository.read is None
+    assert product is not None
+    assert product.degraded is False
+    assert product.generated_at == _TARGET
+    stored = cast(Any, repository.read).product
+    assert stored["delivery_timing"]["generated_at"] == _TARGET.isoformat()
 
 
 def test_post_runtime_identity_rejection_preserves_invocation_fact(tmp_path: Path) -> None:

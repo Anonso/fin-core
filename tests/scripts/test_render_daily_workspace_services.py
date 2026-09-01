@@ -20,7 +20,7 @@ def test_delivery_service_leaves_the_single_safe_retry_to_its_entrypoint() -> No
     assert "Restart=no\n" in unit
     assert "RestartForceExitStatus" not in unit
     assert "RestartSec=" not in unit
-    assert "TimeoutStartSec=3min\n" in unit
+    assert "TimeoutStartSec=30min\n" in unit
     assert "OnCalendar=" not in unit
 
 

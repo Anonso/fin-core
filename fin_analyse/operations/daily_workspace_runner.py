@@ -15,9 +15,6 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Protocol
 
-from fin_analyse.operations.daily_workspace_generator import (
-    DailyWorkspaceGenerationUnavailableError,
-)
 from fin_analyse.consultation.daily_workspace_product_contracts import (
     DailyWorkspaceCheckpoint,
     is_public_daily_workspace_product,
@@ -25,6 +22,9 @@ from fin_analyse.consultation.daily_workspace_product_contracts import (
 from fin_analyse.consultation.daily_workspace_schedule import (
     SHANGHAI_TZ,
     DailyWorkspaceSchedulePolicy,
+)
+from fin_analyse.operations.daily_workspace_generator import (
+    DailyWorkspaceGenerationUnavailableError,
 )
 
 _ARTIFACT_HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -255,11 +255,9 @@ class _TimingBoundGenerator:
         )
         generated = self.generator.generate(snapshot=timed_snapshot, principal=principal)
         generated_at = _aware_shanghai(self.clock())
-        if generated_at >= self.target_at:
-            raise DailyWorkspaceGenerationUnavailableError(
-                ("daily_workspace_preparation_deadline_missed",),
-                agent_runtime_invoked=_generated_agent_runtime_invoked(generated),
-            )
+        # 2026-09-01（owner 拍板）：晚于推送点完成的结果不再拒绝落库；
+        # delivery 会等待 prepare 结束并在结果可用时立刻投递（generated_at
+        # 与 target_at 分开记录，晚到的事实不会被冒充成准点）。
         if not isinstance(generated, dict):
             raise DailyWorkspaceGenerationUnavailableError(("daily_workspace_generation_invalid",))
         if (
@@ -749,11 +747,13 @@ class DailyWorkspaceCheckpointRunner:
         products: DailyWorkspaceProductPort,
         outbox: DailyWorkspaceDeliveryOutboxPort,
         clock: Callable[[], datetime],
+        wait_for_result: Callable[[], None] | None = None,
     ) -> None:
         self._schedule = schedule
         self._products = products
         self._outbox = outbox
         self._clock = clock
+        self._wait_for_result = wait_for_result
 
     def run(
         self,
@@ -861,6 +861,15 @@ class DailyWorkspaceCheckpointRunner:
             trading_day_id=trading_day_id,
             checkpoint=request.checkpoint,
         )
+        if product is None and self._wait_for_result is not None:
+            # 到推送点时结果未就绪：等 prepare 结束（成功冻结或失败退出），
+            # 结果一出立刻投递；prepare 确实失败后才发失败通知。
+            self._wait_for_result()
+            now = _aware_shanghai(self._clock())
+            product = self._products.find_prepared(
+                trading_day_id=trading_day_id,
+                checkpoint=request.checkpoint,
+            )
         if product is None:
             product = self._products.prepare_degraded(
                 trading_day_id=trading_day_id,

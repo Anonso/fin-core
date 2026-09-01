@@ -40,7 +40,7 @@ from fin_analyse.operations.daily_workspace_runner import (
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _DAY = "2026-08-03"
 _TARGET = datetime(2026, 8, 3, 10, 0, tzinfo=_SHANGHAI)
-_PREPARED = datetime(2026, 8, 3, 9, 35, tzinfo=_SHANGHAI)
+_PREPARED = datetime(2026, 8, 3, 9, 55, tzinfo=_SHANGHAI)
 _GENERATED = datetime(2026, 8, 3, 9, 51, tzinfo=_SHANGHAI)
 _EVIDENCE_CUTOFF = datetime(2026, 8, 3, 9, 50, tzinfo=_SHANGHAI)
 _DELIVERED = datetime(2026, 8, 3, 10, 0, 1, tzinfo=_SHANGHAI)

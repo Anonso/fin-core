@@ -8,6 +8,8 @@ import json
 import os
 import re
 import stat
+import subprocess
+import time as _time_module
 from collections.abc import Callable, Sequence
 from datetime import date, datetime, time
 from pathlib import Path
@@ -34,6 +36,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _CALENDAR_PATH = _PROJECT_ROOT / "config" / "market" / "a_share_calendar_2026.json"
 _REASON_CODE = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,127}\Z")
 _EXPLICIT_NOT_SENT_EXIT_CODE = 75
+_PREPARE_WAIT_POLL_SECONDS = 5
+_PREPARE_STATE_TIMEOUT_SECONDS = 10.0
 
 
 class _Runner(Protocol):
@@ -183,6 +187,39 @@ class _ForbiddenOutbox:
         raise RuntimeError("daily_workspace_prepare_must_not_deliver")
 
 
+def _prepare_unit_active(unit: str) -> bool:
+    """True while the scheduled prepare oneshot is still activating/active.
+
+    ``systemctl is-active`` treats Type=oneshot's ``activating`` state as
+    non-active, so the ActiveState property is read instead.  Any failure to
+    determine the state fails closed (treated as not running) so delivery
+    falls back to the historical failure-notice behavior instead of hanging.
+    """
+
+    try:
+        completed = subprocess.run(
+            ("systemctl", "--user", "show", unit, "-p", "ActiveState", "--value"),
+            capture_output=True,
+            timeout=_PREPARE_STATE_TIMEOUT_SECONDS,
+            text=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return completed.stdout.strip() in {"activating", "active"}
+
+
+def _wait_for_prepare_result(checkpoint: DailyWorkspaceCheckpoint) -> Callable[[], None]:
+    """Block until the prepare unit is no longer running (result frozen or failed)."""
+
+    unit = f"fin-daily-workspace-prepare@{checkpoint.value}.service"
+
+    def wait_for_result() -> None:
+        while _prepare_unit_active(unit):
+            _time_module.sleep(_PREPARE_WAIT_POLL_SECONDS)
+
+    return wait_for_result
+
+
 def _read_owner_secret(path: Path) -> bytes:
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(path, flags)
@@ -234,13 +271,11 @@ def build_production_runner(
     phase: DailyWorkspaceRunPhase,
     delivery_target: str | None,
     clock: Callable[[], datetime],
+    checkpoint: DailyWorkspaceCheckpoint,
 ) -> DailyWorkspaceCheckpointRunner:
     """Compose through FIN-owned state/interfaces; delivery never builds an Agent."""
 
     from fin_analyse.consultation.daily_workspace import DailyWorkspaceService
-    from fin_analyse.operations.daily_workspace_generator import (
-        L1DirectWorkspaceGenerator,
-    )
     from fin_analyse.guo_teacher_research.principal_binding import (
         LocalInstallationPrincipalProvider,
     )
@@ -250,6 +285,9 @@ def build_production_runner(
         HermesCliMessageSender,
         PublicEntryLedgerDispatchAcceptancePort,
         SqliteDailyWorkspaceDeliveryOutbox,
+    )
+    from fin_analyse.operations.daily_workspace_generator import (
+        L1DirectWorkspaceGenerator,
     )
     from fin_analyse.operations.daily_workspace_runner import (
         DailyWorkspaceStateProductAdapter,
@@ -326,6 +364,11 @@ def build_production_runner(
         products=products,
         outbox=cast(Any, outbox),
         clock=clock,
+        wait_for_result=(
+            _wait_for_prepare_result(checkpoint)
+            if phase is DailyWorkspaceRunPhase.DELIVER
+            else None
+        ),
     )
 
 
@@ -369,6 +412,7 @@ def main(
             phase=phase,
             delivery_target=delivery_target,
             clock=active_clock,
+            checkpoint=checkpoint,
         )
         result = runner.run(
             DailyWorkspaceCheckpointRunRequest(

@@ -30,7 +30,16 @@ DEFAULT_CHECKPOINT_TARGETS: Final[Mapping[DailyWorkspaceCheckpoint, time]] = Map
     }
 )
 DEFAULT_WINDOW_MINUTES: Final = 15
-DEFAULT_PREPARE_LEAD_MINUTES: Final = 25
+# Agent 触发的提前量（owner 2026-09-01）：premarket/close 提前 10 分钟，
+# 其余班次提前 5 分钟。
+PREPARE_LEAD_MINUTES: Final[Mapping[DailyWorkspaceCheckpoint, int]] = MappingProxyType(
+    {
+        DailyWorkspaceCheckpoint.PREMARKET: 10,
+        DailyWorkspaceCheckpoint.MORNING_1000: 5,
+        DailyWorkspaceCheckpoint.CLOSE_1420: 10,
+        DailyWorkspaceCheckpoint.POSTMARKET: 5,
+    }
+)
 SHANGHAI_TZ: Final = ZoneInfo("Asia/Shanghai")
 
 
@@ -49,7 +58,7 @@ class DailyWorkspaceSchedulePolicy:
         """Return when expensive preparation should start for one checkpoint."""
 
         target = datetime.combine(date.min, self.target_for(checkpoint))
-        return (target - timedelta(minutes=DEFAULT_PREPARE_LEAD_MINUTES)).time()
+        return (target - timedelta(minutes=PREPARE_LEAD_MINUTES[checkpoint])).time()
 
     def target_at(self, trading_day: date, checkpoint: DailyWorkspaceCheckpoint) -> datetime:
         return datetime.combine(trading_day, self.target_for(checkpoint), tzinfo=SHANGHAI_TZ)

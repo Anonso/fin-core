@@ -119,7 +119,8 @@ def test_delivery_retries_the_only_explicit_not_sent_exit_code(
     frozen = datetime(2026, 8, 3, 10, 0, tzinfo=_SHANGHAI)
     calls = 0
     delays: list[int] = []
-    now_values = iter((frozen, frozen + timedelta(seconds=5)))
+    # 第一次交付尝试也读实时钟（等待晚到结果）；75 重试前再冻结一次。
+    now_values = iter((frozen, frozen, frozen + timedelta(seconds=5)))
     monkeypatch.setattr(scheduled_cli, "_verify_checkout_identity", lambda **_kwargs: None)
     monkeypatch.setattr(scheduled_cli, "_verify_systemd_timer_invocation", lambda **_kwargs: None)
     monkeypatch.setattr(scheduled_cli.time, "sleep", lambda seconds: delays.append(seconds))
