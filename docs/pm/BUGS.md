@@ -548,3 +548,17 @@
   是否已成功重生成未确认——不在 20 天活跃窗口，不影响当前 G 工作集）。
 - 修复：无（自愈）。
 - 状态：开放（观察；backlog 若重试成功即关闭）。
+
+## BUG-020 星大派新栏目落「普通」→ 系统性漏 G（2026-09-01）
+
+- 发现：owner 反馈最近多了星大派每日热点/星大派人脉；核对 index 显示 6 篇每日热点
+  （08-25 起每日一篇）+1 篇人脉全部 column=普通、teacher_original=true；08-28 撤普通
+  栏后全被挡在 G 库外；0825/0826/0828 历史 deep-read 实为空壳（rank=external_context、
+  units=0）。
+- 根因：四层缺列——`scraper/config.py` COLUMN_PATTERNS、`classify_g_source` 精确标签、
+  `g_working_set` 列闭集、`zsxq_apprentice._XINGDAPAI_COLUMNS`（→ rank=external_context
+  → 深化跳过）。
+- 修复：四层同步补列（每日热点=recent_change_risk/commentary 档；人脉=systematic_
+  framework/special 档）；存量 7 篇 column 纠正（备份 `~/fin-data/backups/
+  g-new-columns-20260901/`）；7 篇全部重做 deep-read（4-8 units/篇）。
+- 状态：已修复（代码+数据），待下一次 poller 发布验证 manifest 含新文章。

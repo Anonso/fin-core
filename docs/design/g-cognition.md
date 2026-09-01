@@ -30,8 +30,8 @@
 
 ## 关键不变量
 
-1. **活跃窗口**：锐评 7 日 / 其他严格 G 20 日（`g_working_set.py:39-40` `_COMMENTARY_WINDOW=7d`、`_GENERAL_WINDOW=20d`；按 column 选择 :418）；严格 G 列闭集 = 星大派锐评/特刊/好问题/凤仙郡小故事（:37-38）。
-2. **来源门**：`classify_g_source`（`source_contract.py:46`）只接受精确 星大派（特刊/锐评/老师原答的好问题）与凤仙郡小故事；泛化“星大派/好问题/合格好问题”→ typed gap；“重中之重”只是检索标签，不改变来源权威/时效。
+1. **活跃窗口**：锐评/每日热点 = commentary 交易日档，其余严格 G = special 档（`config/g_context_windows.json`，经 `window_config.py` 单源）；严格 G 列闭集 = 星大派锐评/特刊/好问题/每日热点/人脉/凤仙郡小故事（`g_working_set.py:42-43`；2026-09-01 owner 拍板新增每日热点、人脉）。
+2. **来源门**：`classify_g_source`（`source_contract.py:46`）只接受精确 星大派（特刊/锐评/每日热点/人脉/老师原答的好问题）与凤仙郡小故事；泛化“星大派/好问题/合格好问题”→ typed gap；“重中之重”只是检索标签，不改变来源权威/时效。
 3. **PIT 语义（read_g_context）**：`request.as_of` 非空时 `audit_by_ref = _g_audit_by_ref(resolved.audit_context)`（`production_capability_provider.py:235-244`，投影 :1504）；as_of 非空但审计不可得 → `g_context_point_in_time_unavailable`；评估只输出与审计时点一致的分层投影（`runtime_context.py:499` 注释：generation 语义与 `fin.read_g_context` 一致）。
 4. **PIT 语义（长认知 read-model）**：revision/节点两层 `available_at` 且 `processed_at ≥ available_at`（`cognition_mainline_readmodel.py:194-195,258-260`）；evolution `available_at` 单调非降（:272）；投影只消费 `G_ORIGINAL`，任何 `available_at/processed_at > as_of` → typed gap（`project_cognition_mainline` :992）。
 5. **READY 证据不可自洽伪造**：`canonical_sha256` 排除 `evaluated_at`（同内容稳定）；`evaluate` 按 manifest as-of 从同一 source snapshot 重新选择逐篇 index/event binding 后再查 deep-read——单凭自洽重哈希的 manifest 不能成为 READY evidence（`g_working_set.py:946` evaluate；目录条目）。

@@ -31,7 +31,7 @@
 | **排空（drain）** | 每轮 ingest tail 有界排空待深化积压（≤3 篇/轮，覆盖 LLM 失败残留与 hash 漂移）。 | [design/deepen](design/deepen.md)「backlog 有界排空」 |
 | **G 工作集（working set）** | 知识索引 + 优先事件 + 新鲜 deep-read 对绑成的运行证据清单；只作 operational evidence，不产认知。 | [g_working_set.py](../fin_analyse/guo_teacher_research/g_working_set.py) |
 | **manifest（PARTIAL）** | 工作集清单产物；PARTIAL = 来源覆盖不完整。 | [g_working_set.py](../fin_analyse/guo_teacher_research/g_working_set.py) |
-| **栏目（特刊 / 锐评 / 好问题 / 小故事 / 普通）** | G 来源账号的文章栏目；只是来源/检索线索，不是认知模式。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（Relationships 末段） |
+| **栏目（特刊 / 锐评 / 好问题 / 每日热点 / 人脉 / 小故事 / 普通）** | G 来源账号的文章栏目；只是来源/检索线索，不是认知模式。每日热点/人脉为 2026-09-01 owner 拍板新增严格 G 列。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（Relationships 末段） |
 | **Z** | 知识库中非 G 的知识；Z 不验证、覆盖或否定 G（Z_EVIDENCE_NOT_G 边界）。 | [catalog](architecture/internal-module-catalog.md) 使用规则 8 |
 | **主导 G / G 采用关系 / 认知模式** | Agent 对当前问题选定的主认知线索 / `adopted·not_applicable·not_used·no_g_available` / 单元的语义角色。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（认知底座节、时间与采用关系节，权威） |
 

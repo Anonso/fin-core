@@ -194,3 +194,15 @@
 - 状态：active · 证据：`$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/`
   （打分表2.md、verbatim_check2.json、eval2_results.json）；config/llm.yaml；
   本条目落盘即 commit。
+
+## D-029 · 2026-09-01 · 星大派每日热点/星大派人脉 纳入严格 G 闭集（owner 拍板）
+- 决策：两栏目进 `classify_g_source` 精确标签与 G 工作集严格闭集；每日热点=锐评同档
+  （recent_change_risk、commentary 2 交易日窗口），人脉=特刊同档（systematic_framework、
+  special 30 天，owner 类比特刊）；抓取层 COLUMN_PATTERNS 与深化层 T0 rank 集合同步补列；
+  存量 7 篇从「普通」纠正并重做深化（含 3 篇历史空壳）。
+- 为什么：两栏目均为 teacher_original 老师原创；08-28 撤普通栏后新栏目被系统性挡在
+  G 库外，每日热点连续 6 篇、人脉为方向判断——漏 G 即漏老师最新认知。
+- 否决了什么：「版本强势英雄」等未确认栏目纳入（无授权、无样本确认）；每日热点按特刊档
+  （每日内容时效强，commentary 档已够）；等新栏目出现再处理（漏网已发生，立即修复）。
+- 状态：active · 证据：source_contract.py / g_working_set.py / zsxq_apprentice.py /
+  scraper/config.py；7 篇 deep-read 产物；备份 `~/fin-data/backups/g-new-columns-20260901/`。
