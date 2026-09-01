@@ -672,6 +672,52 @@ def test_pre_open_placeholder_rows_degrade_sections_but_present_completed_indice
     )
 
 
+def test_pre_open_dropped_section_timestamps_do_not_gate_completed_session() -> None:
+    """BUG-002 09-01 实弹复现：被投影丢弃的分节带盘前当日时间戳。
+
+    设计语义（market-data.md）：降级源的行与时间戳同步退出全部下游门
+    （trade-date/session/age/provider_updated_at）。旧实现 gate 5 仍检查
+    被丢弃分节的时间戳日期，盘前占位行若带盘前当日时间戳 → 整链
+    SECTION_TRADE_DATE_MISMATCH 拒绝。修复后仅存活分节参与 trade-date 门。
+    """
+    pre_open = datetime(2026, 7, 27, 8, 55, tzinfo=_CN_TZ)
+    snapshot = _snapshot()
+    placeholder = replace(
+        snapshot,
+        captured_at=pre_open,
+        industries=tuple(
+            dict(row, f3="-", f6="-", f124=int(pre_open.timestamp()))
+            for row in snapshot.industries
+        ),
+        concepts=tuple(
+            dict(row, f3="-", f6="-", f124=int(pre_open.timestamp()))
+            for row in snapshot.concepts
+        ),
+        equities=tuple(
+            dict(row, f3="-", f6="-", f124=int(pre_open.timestamp()))
+            for row in snapshot.equities
+        ),
+        ranked_page_coverage=tuple(
+            replace(coverage, valid_projected_rows=0)
+            for coverage in snapshot.ranked_page_coverage
+        ),
+    )
+    service = AshareMarketOverviewService(
+        source=_RecordingSource(placeholder),
+        calendar=AShareTradingCalendar.from_file(_CALENDAR_PATH),
+        clock=lambda: pre_open,
+    )
+
+    result = service.read(AshareMarketOverviewRequest())
+
+    assert result.status == "PARTIAL"
+    assert result.observation_mode == "LATEST_COMPLETED_SESSION"
+    assert result.effective_trade_date == date(2026, 7, 24)
+    assert len(result.major_indices) == 4
+    assert "MARKET_OVERVIEW_SECTION_TRADE_DATE_MISMATCH" not in result.data_gaps
+    assert "MARKET_OVERVIEW_UNAVAILABLE" not in result.data_gaps
+
+
 def test_deadline_expiring_during_fetch_prevents_late_result_publication() -> None:
     current = [_SUNDAY_QUERY]
     deadline = _SUNDAY_QUERY + timedelta(seconds=1)

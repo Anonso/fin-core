@@ -136,6 +136,16 @@
   market 284 绿；盘中实弹 read 无回归（PARTIAL、12/12/15 榜单、诊断空）。
   盘前生产形态实弹确认 = 下一交易日 08:55 premarket 班 `l1_material_market_
   overview_unavailable` gap 消失。
+- **09-01 08:55 实弹未闭环 + 修复尝试 2（2026-09-01）**：盘前班正常投递但
+  gap 仍在；scheduled 入口吞 stderr 导致服务侧 data_gaps 无落盘，遂先加
+  失败诊断 JSONL（UNKNOWN 才写）。代码对账发现定修实现漏了自身承诺：
+  「降级源的行与时间戳同步退出全部下游门」——gate 5（section trade-date）
+  仍遍历 `coverage_by_section.values()` 全部分节（含被丢弃者）校验时间戳
+  日期；盘前占位行若带盘前当日时间戳即整链拒。修复：该门仅校验
+  `ranked_section_survives[section]` 为真的分节（raw_ranked_timestamps
+  本就只含存活行）。回归测试：被丢弃分节带盘前时间戳 → PARTIAL。
+  指数侧若仍有独立门（腾讯盘前 f124 日期/值形态），09-02 诊断 JSONL 会
+  给出门名，再按证据修。
 - **报价源整型假设 vs push2delay 浮点契约**（BUG-011，2026-08-31 诊断+修复）：
   08-27 起 trace 中凡真打到 push2delay 报价源的 `read_market_snapshot` 100%
   带 `EASTMONEY_RAW_SOURCE_PAYLOAD_PARSE_FAILED`（此前「ok」样本全是未触达

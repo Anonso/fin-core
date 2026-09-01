@@ -929,6 +929,7 @@ class AshareMarketOverviewService:
                 for timestamp in coverage.provider_timestamps
             )
             for coverage in coverage_by_section.values()
+            if ranked_section_survives[coverage.section]
         ) or any(
             timestamp is None or timestamp.astimezone(_CN_TZ).date() != effective_trade_date
             for timestamp in raw_ranked_timestamps

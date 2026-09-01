@@ -66,8 +66,15 @@
   （昨收值）但 f124 为当日盘前时刻 → LATEST_COMPLETED_SESSION 的
   trade-date/15:00 门拒链；或腾讯行盘前缺 f3/f6 → 回退东财盘前占位 → 指数
   投影失败。
-- 状态：修复落地未闭环（09-01 08:55 实弹 gap 仍在），诊断增强已部署，
-  待下一盘前班次定根因后修。
+- **修复尝试 2（09-01，按设计语义修，非按假设修）**：设计承诺「降级源的
+  行与时间戳同步退出全部下游门（trade-date/session/age/provider_updated_
+  at）」，但实现 gate 5（section trade-date）仍检查被投影丢弃分节的时间戳
+  日期——盘前占位行（f3/f6="-"，全部分节被丢弃）若带盘前当日时间戳即整链
+  `MARKET_OVERVIEW_SECTION_TRADE_DATE_MISMATCH` 拒绝。修复：仅存活分节
+  参与 trade-date 门；回归测试钉死「盘前被丢弃分节带盘前时间戳 → PARTIAL」。
+  同日另加失败诊断落盘，二者同批部署。
+- 状态：修复尝试 2 已部署（诊断 + gate 5），待 09-02 08:55 盘前实弹；
+  若仍失败，诊断 JSONL 直接给出剩余门名，按证据再修。
 
 ## BUG-003 ZSXQ 问询空返回（2026-08-28 二次诊断改写，原「停更」结论有误）
 
@@ -573,3 +580,21 @@
   framework/special 档）；存量 7 篇 column 纠正（备份 `~/fin-data/backups/
   g-new-columns-20260901/`）；7 篇全部重做 deep-read（4-8 units/篇）。
 - 状态：已修复（代码+数据），待下一次 poller 发布验证 manifest 含新文章。
+
+## BUG-021 跳转链接文章只抓到开头（Trump Zone 特刊「目 ...」截断，2026-09-01）
+
+- 发现：2026-09-01《Trump Zone 现象研究报告》入库正文只有标题+「目 ...」，
+  长认知/deep-read 只抽出标题级单元；G 工作集却标 READY，截断文冒充完整文。
+- 根因：Windows capture F-07 内联文章补抓把全文写进内存 `topic.content_text`，
+  但 `collectCursorCoverage` push 的仍是补抓前的原始 cursor output——回填全文
+  被静默丢弃（生产 artifact `bec2857f` 实证）；且群页 DOM 锚点取不到时无第二
+  退路；WSL 保存循环对已索引 topic_id 无条件 continue，截断文无法被更完整
+  capture 升级。
+- 修复（老仓 `3fd7f1d8` + 已部署 Windows `capture-zsxq.cjs`）：回填后
+  `output=JSON.stringify(parsed)` 再 push；链接提取三退路（群页 card 锚点→
+  topic 详情页展开+任意锚点→详情页正文兜底）；每页补抓上限 5；免责声明/
+  风险提示固定页脚裁掉。WSL（fin-core 工作树）：cursor 截断尾标 incomplete +
+  存稿文件尾截断判据 + `_should_recapture` 接线（严格更长才原位升级）；
+  deep-read 按 content hash 自然重生，G 工作集按 manifest 重算。
+- 状态：代码修复完成（两仓测试绿：老仓 17、fin-core scraper 621）；待下一
+  真实 poller 班次验证 Trump Zone 全文 + deep-read 重建 + working set READY。
