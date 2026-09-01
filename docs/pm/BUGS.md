@@ -536,3 +536,15 @@
   行为不变（同序同 2 个）。focused 8 项通过；真实配置解析 L1 chain =
   `[deepseek, qwen]`。
 - 状态：已修复，随 D-028 同批部署（HEAD `0bd3a81` 后置提交）。
+
+## BUG-019 ZSXQ deep-read retryable 使整 run 退出 1（2026-08-30）
+
+- 发现：2026-08-30 11:02 poller run failed（systemd exit 1，failure_reason=unknown、
+  cdp_adapter_failure_kind=unknown）；[DONE] retryable=2：095bcfba4a03、557595c49f26
+  （7 月旧锐评 backlog）。compact/full 产物文件已写入且 JSON 结构完整，但仍被判
+  retryable 未生效。changed_count=0，无新增丢失；13:03 起恢复 succeeded，G 工作集
+  全程 READY/FRESH。
+- 根因：待查（retryable 判据为何在产物已落盘时仍触发；是否应使整 run 失败；两篇旧文
+  是否已成功重生成未确认——不在 20 天活跃窗口，不影响当前 G 工作集）。
+- 修复：无（自愈）。
+- 状态：开放（观察；backlog 若重试成功即关闭）。
