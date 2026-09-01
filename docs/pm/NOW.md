@@ -76,7 +76,7 @@
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
 | read_market_snapshot | 标的行情 | 在用（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011 已闭 |
-| read_market_overview | 大盘结构 | 问询验收中（结构性半边定修落地 08-31：盘前占位降级不拒链；**09-01 08:55 盘前实弹 gap 仍在 → 未闭环**；09:35 盘中 gaps=[]；失败诊断已落盘，待下一盘前定根因） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 |
+| read_market_overview | 大盘结构 | 问询验收中（08-31 定修 + 09-01 修复尝试2〔gate 5 + 失败诊断〕已部署；**09-01 08:55 盘前实弹 gap 仍在 → 未闭环**；09:35 盘中 gaps=[]；待 09-02 08:55 盘前实弹） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
 | read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；08-31 残余二定修：标题 4 字门 + 有事实帖优先 + latest-focus 误判修正，公共 RPC 端到端仅返回目标帖，待实弹问询确认） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 |
 | read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（08-30 公告探针过：外搜带时点、持仓联动正确；现役面=外搜 MCP 辅助面） | 公告类问题，验工具被调 + gaps 空 | BUG-012 公告腿已闭 |
