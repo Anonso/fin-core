@@ -281,3 +281,18 @@
   read_article）；每天人工校准；接口内默认 auto 联网（额度/时延不可控）。
 - 状态：active（设计定稿；候选清单校准 → 打标器 → 接口依次施工）· 证据：
   docs/design/macro-brain-interface-a.md；NOW 主线 3.1-3.3。
+
+## D-035 · 2026-09-02 · 3.3b 装配预算：recent_reference 与 fresh_g 按问句相关性竞争（owner 拍板）
+- 决策：`_apply_budget` 的冻结巷道不变（pinned_source > latest_commentary），
+  灵活巷道改为按问句相关性竞争——question-matched fresh 特刊可压过弱
+  reference；等分时 reference 仍优先；fresh 条目透传 `_enriched_*` 与选择层
+  共用同一 compact 关键词面信号；泛问题 fresh 特刊 ≤2 上限语义不变。
+- 为什么：选择层已能把 8/13《科技半导体三大板块》特刊排进 fresh_g 候选，但
+  装配层丢掉 `_enriched_*` 后按 recency 重排、且 reference 巷道无条件占位，
+  最终 llm_context 仍不含问句命中特刊（“封测行业点评”“半导体先进封装与
+  封测怎么看”两探针实证）。
+- 否决了什么：B（budget 内为 fresh G 保留最少席位——不修信号丢失、还会无
+  条件饿死 genuinely-relevant reference）；C（验收停在 fresh_g 选择层——
+  产品缺陷留在最终上下文）；静态巷道“reference 无条件先于 fresh_g”的旧契约。
+- 状态：active · 证据：docs/design/g-selection-content-relevance.md
+  §装配预算裁决与闭环；commits 09b2acf / dc93ec6 / 77ae264 / eaea101。
