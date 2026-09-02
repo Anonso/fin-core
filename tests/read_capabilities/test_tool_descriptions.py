@@ -54,6 +54,7 @@ def test_all_tools_described() -> None:
         "read_market_snapshot",
         "read_market_overview",
         "read_margin_evidence",
+        "read_macro_brain",
         "read_instrument_scores",
         "read_ready_evidence",
         "read_user_watchlist",

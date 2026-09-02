@@ -92,6 +92,7 @@ _ALL_READ_TOOL_NAMES = (
     "read_instrument_scores",
     "read_article_search",
     "read_article",
+    "read_macro_brain",
 )
 
 

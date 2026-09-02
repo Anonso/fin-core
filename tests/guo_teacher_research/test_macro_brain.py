@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from fin_analyse.guo_teacher_research.macro_brain import (
+    MacroBrainQueryReader,
     load_shared_brain_cards,
     macro_search_signal,
     match_shared_brain_cards,
@@ -62,3 +63,49 @@ def test_match_and_search_signal(tmp_path: Path) -> None:
     assert macro_search_signal("当前宏观流动性和美联储怎么看")
     assert not macro_search_signal("通富微电研报评分")
     assert suggested_queries("宏观政策")
+
+
+def test_reader_aggregates_zsxq_and_cards(tmp_path: Path) -> None:
+    _cards(tmp_path)
+    (tmp_path / "index.json").write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "id": "zsxq-macro-1",
+                        "title": "当前市场流动性与大类资产复盘",
+                        "column": "普通",
+                        "date": "2026-09-01 09:00",
+                        "score": 8.0,
+                        "companies": [],
+                    },
+                    {
+                        "id": "zsxq-hot-1",
+                        "title": "星大派每日热点（0901）",
+                        "column": "星大派每日热点",
+                        "date": "2026-09-01 08:00",
+                        "companies": ["英伟达"],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    from datetime import UTC, datetime
+
+    from fin_analyse.read_capabilities.types import ProductionReadRequest
+
+    result = MacroBrainQueryReader(tmp_path).read(
+        ProductionReadRequest(
+            question="宏观流动性和大类资产怎么看",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+        )
+    )
+    value = result.value
+    assert value["status"] == "READY"
+    assert [item["article_id"] for item in value["zsxq_macro"]] == [
+        "zsxq-macro-1",
+        "zsxq-hot-1",
+    ]
+    assert [card["item_id"] for card in value["shared_brain_cards"]] == ["c1"]
+    assert value["search_needed"] is False

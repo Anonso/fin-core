@@ -129,6 +129,7 @@ class TestStdioRoundTrip:
             "read_article_search",
             "read_g_context",
             "read_instrument_scores",
+            "read_macro_brain",
             "read_margin_evidence",
             "read_market_overview",
             "read_market_snapshot",

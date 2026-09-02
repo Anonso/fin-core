@@ -93,6 +93,7 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_instrument_scores": 10.0,
     "read_article_search": 15.0,
     "read_article": 20.0,
+    "read_macro_brain": 20.0,
     "read_user_watchlist": 10.0,
     "update_user_watchlist": 10.0,
 }
@@ -103,7 +104,9 @@ _MAX_QUESTION_CHARS = 8_192  # mirrors ProductionReadRequest
 # Tools whose reader requires an explicit as_of (ready_evidence returns
 # unavailable without one); the server fills the current moment when the
 # client omits it.
-_TOOLS_REQUIRING_AS_OF = frozenset({"read_ready_evidence", "read_instrument_scores"})
+_TOOLS_REQUIRING_AS_OF = frozenset(
+    {"read_ready_evidence", "read_instrument_scores", "read_macro_brain"}
+)
 
 _READ_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=True,
@@ -193,6 +196,15 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "reference = 普通栏研报/问答). Preserve the article's column and "
         "date when citing; AI summaries inside are reference material, not "
         "the teacher's own G opinion."
+    ),
+    "read_macro_brain": (
+        "Unified macro query: aggregates ZSXQ macro references (普通栏 market/"
+        "policy reviews + 每日热点 AI summaries) and external-brain book cards "
+        "(methodology/framework, non-G). When local sources are insufficient it "
+        "returns search_needed + suggested_queries — run your search_web tool "
+        "for live macro facts and cite source+time. All macro material is "
+        "background reference, NOT teacher opinion; G mainline comes from "
+        "read_g_context."
     ),
     "read_user_watchlist": (
         "Read the user-maintained A-share watchlist (自选股/观察票): codes, "
