@@ -38,8 +38,12 @@ reference 窗口（新 zsxq_reference_windows.json）。
 
 ## 决策（owner 2026-09-02）
 
-- **G 车道窗口**（锐评/每日热点=交易日，其余自然日；数值待 owner 确认
-  是否同步改 G 体系——现 g_context_windows.json 为锐评 2 交易日/特刊 30）：
+- **G 车道窗口（owner 已确认同步改 G 体系；锐评/每日热点=交易日，其余
+  自然日）**——`config/g_context_windows.json` 扩 schema 为
+  `{column: {days, unit}}`：锐评/每日热点 {4, trading}、特刊/凤仙郡/人脉/
+  版本强势英雄 {45, natural}、好问题 {20, natural}、其他 {60, natural}；
+  旧三键（commentary 2 交易日/特刊 30/历史 60）迁移到新 schema，缺列回
+  “其他 60”：
   - 星大派锐评 / 星大派每日热点：4 交易日
   - 星大派特刊：45 天
   - 星大派好问题：20 天
@@ -59,8 +63,8 @@ reference 窗口（新 zsxq_reference_windows.json）。
 - 分级（归一化 1-10）：≥9 重点关注；≥8 及格；<8 一般。
 - 标的记录含文章能量评分（方向分），一并存储；**只并列展示，不合成新
   评分**（避免新抽象）。
-- 全量保留；查询默认返回全部记录按日期降序，窗口过滤做成可选参数
-  （注入才强制窗口，查询不强求）。
+- 全量保留；**查询默认=窗口内**（与注入共享同一窗口语义、时效一致），
+  `include_history=true` 翻全量——窗口只是默认视图，数据始终全量保留。
 - **存量回填（仅此一轮）**：只处理「能量评分 ≥7 且落在当前 60 天窗口
   （2026-07-04 起）」的普通栏文章——index 内实测 **137 篇**（其中 81 篇
   含评分表格会产出记录，其余无表无产出）；超过窗口的历史文件（含未索引
@@ -103,20 +107,24 @@ reference 窗口（新 zsxq_reference_windows.json）。
 ## 提取流程
 
 1. ingest/capture 侧对普通栏文章识别评分表格（含 利好度/共识度/
-   公司名（代码）列）。**数据源优先级：文章正文 markdown（最可靠，实测
-   已含完整列表）> image_descriptions > image_ocr（仅交叉校验）**；三源
-   数值一致才 `ok`，不一致/缺失 → `needs_review`。
+   公司名（代码）列）。**评分表格只在图片里**（39 篇实证：原始正文含
+   “利好度/共识度”的为 0/39）；.md 里的列表是 vision 识别结果被嵌入
+   「## 图片描述」节，不是原始正文。数据源优先级：**image_descriptions
+   （vision LLM 结构化，主）> image_ocr（兜底交叉校验）**；raw_origin
+   记录来源 + fallback_chain（vision 模型）；两源数值一致才 `ok`，
+   不一致/缺失 → `needs_review`。
 2. 解析器：markdown 表格行 → 列名别名映射；代码校验
    （6 位数字，沪深京代码段；公司名复用 zsxq_adapter 静态名单+后缀兜底）；
    评分归一化（>10 ÷10，去 “%”/“分” 后缀）；字段缺失/越界/代码非法 →
    `status=needs_review`，不丢行、不静默改。
-3. 落库幂等；存量 39 篇用同一解析器回填。
+3. 落库幂等；存量 137 篇用同一解析器回填。
 
 ## 查询与注入改造
 
 - 新只读能力 `read_instrument_scores`：
   - 入参：code/name、sector/关键词、分数下限（≥8/≥9）、是否含
-    needs_review、日期/窗口（可选，默认不限）；
+    needs_review、日期/窗口（**默认=窗口内**，`include_history=true`
+    翻全量）；
   - 返回：该标的最近 N 条 + 历史序列（日期降序）、文章方向分并列、
     status、来源文章（title/source_id/日期）；needs_review 默认排除但
     返回计数；
@@ -142,18 +150,22 @@ reference 窗口（新 zsxq_reference_windows.json）。
 
 ## 排期（owner 2026-09-02 定稿；当前未施工）
 
-1. **存量回填**：解析器（image_descriptions 主 + 文章 markdown 表格兜底，
+1. **存量回填**：解析器（image_descriptions 主 + image_ocr 兜底校验，
    列名别名含 预计介入时机/持有时间 等变体；>10 ÷10；缺字段→
    needs_review）→ 回填 137 篇 → `instrument_scores.jsonl` + 单测。
 2. **查询工具**：`read_instrument_scores`（按 code/name，窗口过滤 +
    日期降序 + status/来源）接入问询 CLI。
 3. **参考窗口分级**：`config/zsxq_reference_windows.json` + runtime_context
    当天门→类型窗口门 + 全窗口 recency 衰减排序。
-4. **增量排期优化**：定位 Windows 抓取脚本 → 普通栏/Q&A 评分 <7 跳过 +
+4. **G 窗口改值**：`config/g_context_windows.json` 迁移新 schema 并落
+   新值（锐评/热点 4 交易日、特刊与新类别 45、好问题 20、其他 60）。
+5. **增量排期优化**：定位 Windows 抓取脚本 → 普通栏/Q&A 评分 <7 跳过 +
    图片处理门槛 7.0 双侧同步（fin-core cdp_scraper + Windows 侧）。
-5. **收尾**：全量 pytest、部署成套、回填与增量结果对账。
+6. **行业点评全文检索**（owner 确认需要）：`read_article_search` 包一层
+   现有 knowledge.query（按关键词/板块/栏目检索历史文章，含来源与时点）。
+7. **收尾**：全量 pytest、部署成套、回填与增量结果对账。
 
-执行顺序：1→2→3→5 为一条链；4 与 1-3 无耦合，可并行或后置。
+执行顺序：1→2→3→4→7 一条链；5、6 与其余无耦合，可并行或后置。
 
 ## 风险 / 边界
 
@@ -164,6 +176,6 @@ reference 窗口（新 zsxq_reference_windows.json）。
 - 凤仙郡/人脉/版本强势英雄按“类特刊 45 天”处理（owner 口径近似）；
   “其他 60 天”= 普通栏研报 + 未归类问答。
 - 回填与增量解析须同 parser_version，后续改版用 version 字段区分。
-- **行业点评“全文检索”不在本设计内**：评分表解决标的级查询；封装/封测
-  等“行业点评文章”检索需另议（候选=把 knowledge.query 包成 CLI 工具
-  `read_article_search`，单列决策）。
+- 评分表格只在图片里，原始正文无表（0/39 实证）：解析正确性依赖
+  vision 质量，needs_review 与人工闭环是最后防线；行业点评全文检索由
+  排期 6 的 read_article_search 承担，与本表互补。
