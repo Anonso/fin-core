@@ -6,9 +6,9 @@ description: Switch the CC reviewer entry scripts/codex_open.sh (codex-open) bet
 # Codex-open provider 切换
 
 `scripts/codex_open.sh` 是 CC 外部审视的评审者入口（家规「外部审视」段）。
-换 provider/模型/key 只改该脚本一个文件；`~/.local/bin/codex-open` 是它的
-符号链接（单一事实源）。本 skill 记录两个已验证 profile 的可粘贴片段、
-踩过的坑、验证阶梯与回滚路径。
+换 provider/模型改该脚本一个文件，**换 key 改凭据文件、脚本不动**（见
+「只换 key」节）；`~/.local/bin/codex-open` 是它的符号链接（单一事实源）。
+本 skill 记录两个已验证 profile 的可粘贴片段、踩过的坑、验证阶梯与回滚路径。
 
 ## 第 0 步：先查包装入口（吃过的亏）
 
@@ -125,6 +125,25 @@ run_codex 段：
 4. **同步文档并提交**：AGENTS.md 与 docs/GLOSSARY.md 的
    「当前 codex-open · <model> · max」描述改掉；DECISIONS.md 历史记录
    不回改。commit 只含脚本与文档，**key 永不入仓**。
+
+## 只换 key（provider/模型不动）——2026-09-01 教训
+
+key 属于凭据文件，**永远不要把脚本/入口指到临时文件**。2026-09-01 曾误把
+`scripts/codex_open.sh` 与 `~/.bashrc` 的 finqac/finqai 的
+`OPENCODE_GO_API_KEY` 直接改为读 `/tmp/open.txt`（/tmp 重启即清空、且绕过
+auth.json 单一事实源，误提交 commit e0c7269），同日回退。正确流程：
+
+1. 新 key 从外部来源（如 `/tmp/open.txt`）**取出值**，写入对应 profile 的
+   auth.json 条目——Profile B = `~/.local/share/opencode/auth.json` 的
+   `opencode-go.key`；Profile A = `~/.local/share/codex-open/auth.json` 的
+   `relay-19851117.key`；保持 0600，先 `cp -a` 备份原文件。
+2. 一致性校验（不打印值）：新 key 值与 auth.json 条目值 sha256 一致。
+3. 入口零改动：scripts/codex_open.sh 仍读 auth.json；`~/.bashrc` 的
+   finqac/finqai、llm.yaml 的 `AUTHJSON:opencode-go` 降级链、
+   codex_routes.yaml 的 codex-open 路由同源生效——只改 auth.json 一处即
+   全覆盖。
+4. 重跑验证阶梯第 1 条（`bash -n`）+ 一次 `exec "Reply with exactly: ok"`。
+5. 用毕删除临时 key 文件（或保留 0600，/tmp 重启自动清）。
 
 ## 回滚
 
