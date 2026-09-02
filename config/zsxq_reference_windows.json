@@ -1,0 +1,10 @@
+{
+  "schema_version": "fin.zsxq-reference-windows/v1",
+  "default_days": 60,
+  "windows": {
+    "普通": {"days": 60, "unit": "natural"},
+    "星大派好问题": {"days": 20, "unit": "natural"},
+    "问题回答": {"days": 20, "unit": "natural"},
+    "回答问题": {"days": 20, "unit": "natural"}
+  }
+}

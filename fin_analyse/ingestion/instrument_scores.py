@@ -16,7 +16,7 @@ import json
 import os
 import re
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -467,3 +467,211 @@ def upsert_records(path: Path, records: list[InstrumentScoreRecord]) -> tuple[in
             os.close(descriptor)
     os.replace(temporary, target)
     return added, updated
+
+
+_HISTORY_HINT_TOKENS = frozenset(
+    {
+        "历史",
+        "演变",
+        "变化",
+        "走势",
+        "全部",
+        "之前",
+        "趋势",
+        "近期",
+        "近一年",
+        "近半年",
+        "近三月",
+    }
+)
+_STOP_TOKENS = frozenset(
+    {
+        "评分",
+        "评级",
+        "研报",
+        "zsxq",
+        "股票",
+        "标的",
+        "公司",
+        "怎么样",
+        "如何",
+        "哪些",
+        "什么",
+        "有没有",
+        "查询",
+        "看一下",
+        "看看",
+        "帮我",
+        "在",
+        "的",
+        "里",
+    }
+)
+
+
+class InstrumentScoreQueryReader:
+    """read_instrument_scores 只读查询：窗口默认、needs_review 不计入列表。"""
+
+    def __init__(
+        self,
+        knowledge_base_root: Path,
+        *,
+        window_config_path: Path | None = None,
+    ) -> None:
+        self._kb_root = Path(knowledge_base_root)
+        self._store_path = instrument_scores_path(self._kb_root)
+        self._window_config_path = Path(window_config_path) if window_config_path else None
+
+    def _window_days(self, column: str) -> int:
+        default_days = 60
+        if self._window_config_path is not None and self._window_config_path.exists():
+            try:
+                payload = json.loads(self._window_config_path.read_text(encoding="utf-8"))
+                windows = payload.get("windows") if isinstance(payload, dict) else None
+                if isinstance(windows, dict):
+                    entry = windows.get(column)
+                    if isinstance(entry, dict) and isinstance(entry.get("days"), int):
+                        return entry["days"]
+                if isinstance(payload, dict) and isinstance(payload.get("default_days"), int):
+                    return payload["default_days"]
+            except (OSError, ValueError):
+                pass
+        return default_days
+
+    @staticmethod
+    def _keyword_tokens(question: str) -> tuple[str, ...]:
+        tokens = tuple(
+            token
+            for token in re.findall(r"[\u4e00-\u9fa5A-Za-z0-9]+", question)
+            if len(token) >= 2
+            and token.casefold() not in _STOP_TOKENS
+            and not any(stop in token for stop in _STOP_TOKENS)
+        )
+        return tokens
+
+    def read(self, request: Any) -> Any:
+        """Return ProductionReadResult-compatible value (avoid hard import in tests)."""
+        from fin_analyse.read_capabilities.types import (
+            ProductionReadResult,
+            SourceKind,
+            SourceTrust,
+        )
+
+        if not self._store_path.exists():
+            return ProductionReadResult(
+                value={"status": "EMPTY", "counts": {}},
+                data_gaps=("instrument_scores_unavailable",),
+            )
+        records = [
+            json.loads(line)
+            for line in self._store_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        instruments = tuple(
+            item.strip().upper() for item in request.instruments if item.strip()
+        )
+        tokens = self._keyword_tokens(request.question)
+        include_history = any(
+            hint in request.question for hint in _HISTORY_HINT_TOKENS
+        )
+        query_tokens = tuple(
+            token
+            for token in tokens
+            if not any(hint in token for hint in _HISTORY_HINT_TOKENS)
+        )
+
+        def matches(record: Mapping[str, Any]) -> bool:
+            code = str(record.get("code") or "")
+            name = str(record.get("name") or "")
+            haystack = " ".join(
+                str(record.get(key) or "")
+                for key in ("name", "core_business", "sector", "title")
+            )
+            if instruments:
+                for instrument in instruments:
+                    if instrument.isdigit() and code == instrument:
+                        return True
+                    if not instrument.isdigit() and instrument in name:
+                        return True
+                return False
+            return (
+                any(token in haystack for token in query_tokens)
+                if query_tokens
+                else True
+            )
+
+        matched = [record for record in records if matches(record)]
+        if query_tokens:
+            matched.sort(
+                key=lambda record: (
+                    sum(
+                        1
+                        for token in query_tokens
+                        if token
+                        in " ".join(
+                            str(record.get(key) or "")
+                            for key in ("name", "core_business", "sector", "title")
+                        )
+                    ),
+                    str(record.get("article_date", "")),
+                ),
+                reverse=True,
+            )
+        as_of = request.as_of if request.as_of is not None else datetime.now(UTC)
+        window_days = max(
+            (self._window_days(str(record.get("column", ""))) for record in matched),
+            default=60,
+        )
+        cutoff = as_of - timedelta(days=window_days)
+
+        def in_window(record: Mapping[str, Any]) -> bool:
+            try:
+                article_date = datetime.fromisoformat(
+                    str(record.get("article_date", ""))
+                ).replace(tzinfo=None)
+            except ValueError:
+                return False
+            return article_date >= cutoff.replace(tzinfo=None)
+
+        ok_records = [record for record in matched if record.get("status") == "ok"]
+        scoped_ok = (
+            ok_records
+            if include_history
+            else [record for record in ok_records if in_window(record)]
+        )
+        scoped_needs_review = [
+            record
+            for record in matched
+            if record.get("status") == "needs_review"
+            and (include_history or in_window(record))
+        ]
+        scoped_ok.sort(
+            key=lambda record: str(record.get("article_date", "")), reverse=True
+        )
+        returned = scoped_ok[:20]
+        value: dict[str, object] = {
+            "schema_version": "fin.instrument-scores-query/v1",
+            "source_boundary": "zsxq_ordinary_research_scores",
+            "source_kind": "external_reference",
+            "source_trust": "non_g",
+            "status": "READY",
+            "as_of": as_of.isoformat(),
+            "window_days": window_days,
+            "windowed": not include_history,
+            "query": {"instruments": list(instruments), "keywords": list(query_tokens)},
+            "counts": {
+                "matched": len(matched),
+                "ok": len(scoped_ok),
+                "needs_review": len(scoped_needs_review),
+                "returned": len(returned),
+            },
+            "records": returned,
+        }
+        gaps: tuple[str, ...] = ()
+        if not returned:
+            gaps = ("instrument_scores_no_match",)
+        return ProductionReadResult(
+            value=value,
+            sources=(),
+            data_gaps=gaps,
+        )

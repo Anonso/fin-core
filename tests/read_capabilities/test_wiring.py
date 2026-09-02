@@ -87,13 +87,16 @@ def _provision_watchlist_state(tmp_path: Path) -> None:
     os.chmod(identity_path, 0o600)
 
 
+_ALL_READ_TOOL_NAMES = (*READ_TOOL_NAMES, "read_instrument_scores")
+
+
 class TestConstruction:
-    def test_builds_all_seven_tools(
+    def test_builds_all_eight_tools(
         self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
     ) -> None:
         _provision_watchlist_state(tmp_path)
         wiring = build_reader_wiring(kb_root, environ=isolated_env)
-        assert wiring.tool_names() == READ_TOOL_NAMES
+        assert wiring.tool_names() == _ALL_READ_TOOL_NAMES
         assert wiring.unavailable_tools == ()
 
     def test_watchlist_state_missing_degrades_only_watchlist_tool(
@@ -102,7 +105,7 @@ class TestConstruction:
         # 设计门 F2 回归：无安装身份时推导 fail-closed，但只降级本工具，
         # wiring 构造（= server 启动）绝不能崩。
         wiring = build_reader_wiring(kb_root, environ=isolated_env)
-        assert wiring.tool_names() == READ_TOOL_NAMES
+        assert wiring.tool_names() == _ALL_READ_TOOL_NAMES
         result = wiring.runners["read_user_watchlist"](
             ProductionReadRequest(question="看下当前自选股")
         )

@@ -37,6 +37,7 @@ from fin_analyse.runtime.knowledge_root import KnowledgeRootConfigurationError
 from fin_analyse.consultation.instrument_identity import (
     AShareConsultationInstrumentIdentityResolver,
 )
+from fin_analyse.ingestion.instrument_scores import InstrumentScoreQueryReader
 from fin_analyse.market.instrument_directory import RuntimeAshareInstrumentDirectory
 
 READ_TOOL_NAMES: tuple[str, ...] = (
@@ -184,6 +185,22 @@ def build_reader_wiring(
         unavailable.extend(
             (tool, "read_provider_unavailable") for tool in READ_TOOL_NAMES
         )
+
+    instrument_scores_reader: InstrumentScoreQueryReader | None = None
+    try:
+        window_config = (
+            Path(__file__).resolve().parents[2] / "config" / "zsxq_reference_windows.json"
+        )
+        instrument_scores_reader = InstrumentScoreQueryReader(
+            knowledge_base_root=knowledge_base_root,
+            window_config_path=window_config,
+        )
+    except (OSError, ValueError) as exc:
+        _stderr_note(f"instrument_scores reader construction failed: {type(exc).__name__}")
+    if instrument_scores_reader is not None:
+        runners["read_instrument_scores"] = instrument_scores_reader.read
+    else:
+        unavailable.append(("read_instrument_scores", "instrument_scores_reader_unavailable"))
 
     return ReaderWiring(
         runners=runners,

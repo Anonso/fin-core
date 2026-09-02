@@ -126,6 +126,7 @@ class TestStdioRoundTrip:
         assert tool_names == [
             "read_actual_portfolio",
             "read_g_context",
+            "read_instrument_scores",
             "read_margin_evidence",
             "read_market_overview",
             "read_market_snapshot",

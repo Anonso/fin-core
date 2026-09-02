@@ -90,6 +90,7 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_market_overview": 22.0,
     "read_margin_evidence": 30.0,
     "read_ready_evidence": 30.0,
+    "read_instrument_scores": 10.0,
     "read_user_watchlist": 10.0,
     "update_user_watchlist": 10.0,
 }
@@ -100,7 +101,7 @@ _MAX_QUESTION_CHARS = 8_192  # mirrors ProductionReadRequest
 # Tools whose reader requires an explicit as_of (ready_evidence returns
 # unavailable without one); the server fills the current moment when the
 # client omits it.
-_TOOLS_REQUIRING_AS_OF = frozenset({"read_ready_evidence"})
+_TOOLS_REQUIRING_AS_OF = frozenset({"read_ready_evidence", "read_instrument_scores"})
 
 _READ_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=True,
@@ -159,6 +160,17 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     "read_ready_evidence": (
         "Read recent reference-ready evidence (ZSXQ tiered articles) selected "
         "for the research question as of a moment in time."
+    ),
+    "read_instrument_scores": (
+        "Read structured instrument scores (利好度/共识度, normalized 1-10) "
+        "extracted from ZSXQ ordinary-column research/AI-analysis rating tables. "
+        "Query by six-digit code or company name via instruments, or by "
+        "sector/keyword in the question. Returns recent records by default "
+        "(window-limited); a question mentioning 历史/演变/全部 returns more "
+        "history. needs_review rows are excluded from the list but counted. "
+        "SOURCE: ordinary-column research reports (reference layer, "
+        "advisory_only, dated) — these are AI analysis of broker reports, NOT "
+        "the teacher's G opinions; pair with read_g_context for G direction."
     ),
     "read_user_watchlist": (
         "Read the user-maintained A-share watchlist (自选股/观察票): codes, "
