@@ -60,8 +60,21 @@ _IMAGE_VISION_RESERVE_SECONDS = 90.0
 _DEEP_READ_LLM_CONFIG_INVALID = "deep_read_llm_config_invalid"
 #: 每轮 ingest 排空的存量非新鲜 strict-G 深化上限（有界，防 LLM 突发）。
 _DEEP_READ_BACKLOG_DRAIN_LIMIT = 3
+#: 增量能量评分门槛（owner 2026-09-02 修订）：只有“有评分且 <7”的文章跳过；
+#: 无评分文章不拦——评分缺失不等于内容无价值（书单/宏观/问答等无表帖照常入库）。
+_SCORE_SKIP_MIN = 7.0
 
 GROUP_URL = "https://wx.zsxq.com/group/15522441811252"
+
+
+def _score_skip_enabled(score: Any) -> bool:
+    """评分门槛判定：score 缺失/非法 → 不跳过；有评分且 <7 → 跳过。"""
+    if score is None:
+        return False
+    try:
+        return float(score) < _SCORE_SKIP_MIN
+    except (TypeError, ValueError):
+        return False
 
 
 def _cache_bust_url(url: str) -> str:
@@ -2182,16 +2195,10 @@ class CdpBridgeScraper:
             ):
                 continue
 
-            # 评分过滤（owner 2026-09-02）：普通栏非 Q&A 无评分或 <7 跳过；
-            # 问答（Q&A）有评分且 <7 跳过、无评分不拦；
-            # 专栏（特刊/锐评/好问题等）不受影响。
+            # 评分过滤（owner 2026-09-02 修订口径）：普通栏/Q&A 有评分且 <7
+            # 跳过；无评分不拦（评分缺失 ≠ 内容无价值）；专栏不受影响。
             if not is_authenticated_teacher_cursor and not is_column_article:
-                skip_by_score = (
-                    post_score is not None and post_score < 7.0
-                    if post.get("is_qa")
-                    else post_score is None or post_score < 7.0
-                )
-                if skip_by_score:
+                if _score_skip_enabled(post_score):
                     logger.info(
                         "[FILTER] 评分 %.1f 不足 7.0，跳过: %s",
                         post_score or 0,
@@ -2330,13 +2337,9 @@ class CdpBridgeScraper:
                                 not post.get("column", "").startswith(
                                     ("特刊", "锐评", "好问题")
                                 )
+                                and _score_skip_enabled(post.get("score"))
                             ):
-                                raw_score = post.get("score")
-                                if post.get("is_qa"):
-                                    if raw_score is not None and float(raw_score) < 7.0:
-                                        continue
-                                elif raw_score is None or float(raw_score) < 7.0:
-                                    continue
+                                continue
                         self._save_article(post)
                         existing_ids.add(post_id)
                         saved_ids.append(post_id)
