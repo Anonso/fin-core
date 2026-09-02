@@ -164,8 +164,10 @@ reference 窗口（新 zsxq_reference_windows.json）。
    当天门→类型窗口门 + 全窗口 recency 衰减排序。
 4. **G 窗口改值**：`config/g_context_windows.json` 迁移新 schema 并落
    新值（锐评/热点 4 交易日、特刊与新类别 45、好问题 20、其他 60）。
-5. **增量排期优化**：定位 Windows 抓取脚本 → 普通栏/Q&A 评分 <7 跳过 +
-   图片处理门槛 7.0 双侧同步（fin-core cdp_scraper + Windows 侧）。
+5. **增量门槛（fin-core 侧已完成，Windows 侧待 owner 通知）**：
+   fin-core cdp_scraper 普通栏/Q&A 评分 <7 跳过（新语义已落地）；
+   Windows capture-zsxq.cjs 侧改动暂停——wrapper sha 钉死 + 需下一抓取
+   窗口验证，owner 通知后再做。
 6. **行业点评全文检索**（owner 确认需要）：`read_article_search` 包一层
    现有 knowledge.query（按关键词/板块/栏目检索历史文章，含来源与时点）。
 7. **收尾**：全量 pytest、部署成套、回填与增量结果对账。

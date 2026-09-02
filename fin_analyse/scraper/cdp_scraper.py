@@ -2182,20 +2182,22 @@ class CdpBridgeScraper:
             ):
                 continue
 
-            # 评分过滤：仅对普通栏目的非 Q&A 文章要求 >= 8.6
-            # Q&A（提问）和专栏（星大派特刊/锐评等）在 ZSXQ 中可能无评分
-            if (
-                not is_authenticated_teacher_cursor
-                and not post.get("is_qa")
-                and not is_column_article
-                and (post_score is None or post_score < 8.6)
-            ):
-                logger.info(
-                    "[FILTER] 评分 %.1f 不足 8.6，跳过: %s",
-                    post_score or 0,
-                    post.get("title", "")[:40],
+            # 评分过滤（owner 2026-09-02）：普通栏非 Q&A 无评分或 <7 跳过；
+            # 问答（Q&A）有评分且 <7 跳过、无评分不拦；
+            # 专栏（特刊/锐评/好问题等）不受影响。
+            if not is_authenticated_teacher_cursor and not is_column_article:
+                skip_by_score = (
+                    post_score is not None and post_score < 7.0
+                    if post.get("is_qa")
+                    else post_score is None or post_score < 7.0
                 )
-                continue
+                if skip_by_score:
+                    logger.info(
+                        "[FILTER] 评分 %.1f 不足 7.0，跳过: %s",
+                        post_score or 0,
+                        post.get("title", "")[:40],
+                    )
+                    continue
 
             post_date_str = post.get("date", "")
             matched_images = images_by_date.get(post_date_str, [])
@@ -2325,15 +2327,16 @@ class CdpBridgeScraper:
                             ):
                                 continue
                             if (
-                                not post.get("is_qa")
-                                and not post.get("column", "").startswith(
+                                not post.get("column", "").startswith(
                                     ("特刊", "锐评", "好问题")
                                 )
-                                and (
-                                    post.get("score") is None or float(post.get("score") or 0) < 8.6
-                                )
                             ):
-                                continue
+                                raw_score = post.get("score")
+                                if post.get("is_qa"):
+                                    if raw_score is not None and float(raw_score) < 7.0:
+                                        continue
+                                elif raw_score is None or float(raw_score) < 7.0:
+                                    continue
                         self._save_article(post)
                         existing_ids.add(post_id)
                         saved_ids.append(post_id)
