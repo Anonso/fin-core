@@ -87,7 +87,11 @@ def _provision_watchlist_state(tmp_path: Path) -> None:
     os.chmod(identity_path, 0o600)
 
 
-_ALL_READ_TOOL_NAMES = (*READ_TOOL_NAMES, "read_instrument_scores")
+_ALL_READ_TOOL_NAMES = (
+    *READ_TOOL_NAMES,
+    "read_instrument_scores",
+    "read_article_search",
+)
 
 
 class TestConstruction:

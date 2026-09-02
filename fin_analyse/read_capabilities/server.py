@@ -91,6 +91,7 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_margin_evidence": 30.0,
     "read_ready_evidence": 30.0,
     "read_instrument_scores": 10.0,
+    "read_article_search": 15.0,
     "read_user_watchlist": 10.0,
     "update_user_watchlist": 10.0,
 }
@@ -171,6 +172,14 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "SOURCE: ordinary-column research reports (reference layer, "
         "advisory_only, dated) — these are AI analysis of broker reports, NOT "
         "the teacher's G opinions; pair with read_g_context for G direction."
+    ),
+    "read_article_search": (
+        "Search local ZSXQ articles by keyword (industry commentary, 板块, "
+        "theme, company) across all columns and dates. Returns dated article "
+        "references with a short excerpt — use it to find articles to read, "
+        "not as facts. SOURCE: local ZSXQ article library (reference layer, "
+        "advisory_only); never present an article's AI summary as the "
+        "teacher's own G opinion."
     ),
     "read_user_watchlist": (
         "Read the user-maintained A-share watchlist (自选股/观察票): codes, "

@@ -38,6 +38,7 @@ from fin_analyse.consultation.instrument_identity import (
     AShareConsultationInstrumentIdentityResolver,
 )
 from fin_analyse.ingestion.instrument_scores import InstrumentScoreQueryReader
+from fin_analyse.knowledge.article_search import ArticleKeywordSearchReader
 from fin_analyse.market.instrument_directory import RuntimeAshareInstrumentDirectory
 
 READ_TOOL_NAMES: tuple[str, ...] = (
@@ -201,6 +202,18 @@ def build_reader_wiring(
         runners["read_instrument_scores"] = instrument_scores_reader.read
     else:
         unavailable.append(("read_instrument_scores", "instrument_scores_reader_unavailable"))
+
+    article_search_reader: ArticleKeywordSearchReader | None = None
+    try:
+        article_search_reader = ArticleKeywordSearchReader(
+            knowledge_base_root=knowledge_base_root
+        )
+    except (OSError, ValueError) as exc:
+        _stderr_note(f"article_search reader construction failed: {type(exc).__name__}")
+    if article_search_reader is not None:
+        runners["read_article_search"] = article_search_reader.read
+    else:
+        unavailable.append(("read_article_search", "article_search_reader_unavailable"))
 
     return ReaderWiring(
         runners=runners,

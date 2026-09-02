@@ -540,14 +540,23 @@ class InstrumentScoreQueryReader:
 
     @staticmethod
     def _keyword_tokens(question: str) -> tuple[str, ...]:
-        tokens = tuple(
-            token
-            for token in re.findall(r"[\u4e00-\u9fa5A-Za-z0-9]+", question)
-            if len(token) >= 2
-            and token.casefold() not in _STOP_TOKENS
-            and not any(stop in token for stop in _STOP_TOKENS)
-        )
-        return tokens
+        expanded: list[str] = []
+        for token in re.findall(r"[\u4e00-\u9fa5A-Za-z0-9]+", question):
+            if len(token) < 2 or token.casefold() in _STOP_TOKENS:
+                continue
+            if any(stop in token for stop in _STOP_TOKENS):
+                continue
+            if len(token) >= 4 and re.search(r"[\u4e00-\u9fa5]", token):
+                expanded.extend(
+                    dict.fromkeys(
+                        token[index : index + 2]
+                        for index in range(len(token) - 1)
+                        if token[index : index + 2] not in _STOP_TOKENS
+                    )
+                )
+            else:
+                expanded.append(token)
+        return tuple(expanded)
 
     def read(self, request: Any) -> Any:
         """Return ProductionReadResult-compatible value (avoid hard import in tests)."""
