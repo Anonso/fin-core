@@ -19,7 +19,7 @@
 > 7. 推进位五词：`先决 / 主线 / 旁路（时间·使用·owner·随手）/ 随部署 / 最后`；
 >    主线同一时刻只推一项，完成即出队。
 >
-> 最后核对：2026-09-01（Asia/Shanghai）。
+> 最后核对：2026-09-02（Asia/Shanghai）。
 
 ## 生产声明
 
@@ -110,8 +110,8 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 主线 | 1 | CLI 实弹三连验：BUG-005 G-first 口径（分析必调 G）、BUG-012 ready 残余二、BUG-002 盘前概览——owner 常问三类（持仓复盘/老师体系/大盘板块）手动 CLI 随问随验，对照 trace 三字段 | 即日起随真实问询；BUG-012 今晚 21:01/21:08 实弹仍 unavailable |
 | 主线 | 2 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
 | 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 407 条〔60 天+评分≥7〕、read_instrument_scores + read_article_search 两工具已接 thin server、G/reference 窗口分级落地）；**Windows 增量评分<7 跳过待 owner 通知** | owner 通知后做 Windows 侧；排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
-| 主线 | 3.1 | 宏观统一接口 A（read_macro_brain）：ZSXQ 宏观 + 外置大脑书卡 + search_web 补充（guided 默认）；先出宏观候选清单 owner 校准 → 打标器/宏观索引 → 接口 → external_brain 槽复用 | 前序=主线3；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
-| 主线 | 3.2 | G 工作集 manifest PARTIAL 修复：priority_events 契约不匹配（09-01 新栏目事件格式）→ sources_changed 与覆盖缺口根因 | 前序=主线3.1；顺带修 |
+| 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册（ZSXQ 宏观 + 书卡 + guided search）；宏观候选清单 v0 170 条待 owner 抽查校准 → 打标/config 落盘 + macro_index 增量 | owner 校准清单后；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
+| 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
 | 旁路·owner | 3.3 | 特刊选择层相关性：公司提取 7cfb16b 已修；3.3b 滑窗+关键词面已落（8/13 进 fresh_g 候选，guo 542 过）；最终上下文仍被 reference/budget 挤出 → 装配预算待裁决 | 设计 [g-selection-content-relevance](../design/g-selection-content-relevance.md) §进度 |
 | 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：列候选组件/方法，逐项举证使用日志具体抱怨或已发生故障；无举证项不施工 | owner 列候选范围 |
 | 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
