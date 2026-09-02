@@ -56,6 +56,15 @@ models:
         base_url: ${OPENCODE_GO_BASE_URL}
     enabled: true
 
+  # 小米 MiMo v2.5-pro（token-plan 端点）- 视觉专用，识图链第一优先
+  # （owner 2026-09-02 新增；key 存于 llm.env MIMO_TOKEN_PLAN_API_KEY，值不入 git）
+  mimo-token-plan:
+    provider: openai_compatible
+    model: mimo-v2.5-pro
+    api_key: ${MIMO_TOKEN_PLAN_API_KEY}
+    base_url: "https://token-plan-cn.xiaomimimo.com/v1"
+    enabled: true
+
   # 小米 MiMo n-v2.5 - 识图链末位兜底（owner 2026-08-28 重排；原生识图，OpenAI 兼容）
   # 用法参考 https://mimo.mi.com/docs/zh-CN/quick-start/usage-guide/multimodal-understanding/image-understanding
   mimo:
@@ -67,14 +76,14 @@ models:
 
   # 智谱 GLM-4.6V-Flash（免费额度）- 识图链第二优先（OpenAI 兼容）
   # 官方 key 2026-08-28 起存于 llm.env GLM_VISION_API_KEY（旧 key 已 401 失效）
-  # 暂时禁用（owner 2026-08-31：GLM 额度耗尽）
+  # 2026-08-31 曾禁用（GLM 额度耗尽）；owner 2026-09-02 重新启用
   glm-vision:
     provider: openai_compatible
     model: glm-4.6v-flash
     api_key: ${GLM_VISION_API_KEY}
     base_url: "https://open.bigmodel.cn/api/paas/v4"
     timeout: 90
-    enabled: false
+    enabled: true
 
   # 自定义 - 任意 OpenAI 兼容端点 (Ollama/vLLM/硅基流动等)
   custom:
@@ -103,12 +112,13 @@ priorities:
   t1: [glm53_flash, deepseek, qwen]
   cognition: [glm53, deepseek_flash, qwen]
 
-# 识图 fallback 链（owner 2026-08-28 拍板重排：glm5.3-flash → GLM-4.6V-Flash 免费 → 硅基流动 → mimo）
+# 识图 fallback 链（owner 2026-08-28 拍板重排：glm5.3-flash → GLM-4.6V-Flash 免费 → 硅基流动 → mimo；
+# 2026-09-02 owner 再改：mimo-token-plan（mimo-v2.5-pro）置首、GLM-4.6V 恢复启用）
 # 条目必须是 models 下的 key：缺失/禁用/未解析 ${}/熔断打开的条目跳过，保序去重；
 # 段或 chain 键缺失/非法时代码回退现状缺省序（mimo → glm-vision → vision，配置缺失=行为不变）。
 # glm53_flash 走 coding 端点已探针验证收图（2026-08-28）；全部失败落 OCR 终兜底。
 vision:
-  chain: [glm53_flash, glm-vision, vision, mimo]
+  chain: [mimo-token-plan, glm53_flash, glm-vision, vision, mimo]
 
 # 交叉验证设置
 cross_validation:

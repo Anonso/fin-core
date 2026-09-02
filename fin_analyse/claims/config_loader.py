@@ -340,8 +340,9 @@ def compile_backend_plan(config: Mapping[str, object]) -> tuple[BackendPlan, ...
     if not isinstance(models, Mapping) or not isinstance(vision, Mapping):
         raise LLMConfigError("LLM models and vision config must be mappings")
     # 视觉专用模型不进文本 plan 池（结构事实集；识图链顺序见 llm.yaml vision.chain，
-    # glm53_flash 等文本/识图共享条目不受排除影响）
-    vision_only = {"mimo", "glm-vision", "vision"}
+    # glm53_flash 等文本/识图共享条目不受排除影响；
+    # mimo-token-plan 2026-09-02 新增：仅识图，不入文本池）
+    vision_only = {"mimo", "glm-vision", "vision", "mimo-token-plan"}
     plans: list[BackendPlan] = []
     for name, raw_model in models.items():
         if not isinstance(name, str) or not name or not isinstance(raw_model, Mapping):
