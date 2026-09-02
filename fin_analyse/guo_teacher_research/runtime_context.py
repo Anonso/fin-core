@@ -1373,6 +1373,15 @@ class AgentRuntimeContextProvider:
                 "attention_policy": temporal_assessment.get("attention_policy", {}),
                 "publish_freshness": temporal_assessment.get("publish_freshness", ""),
                 "deep_read_material": deep_read_material,
+                # 3.3b：装配层预算排序与选择层共用同一相关性信号。选择层在
+                # raw candidate 上由 compact 抽取 `_enriched_*`，条目化后不携带
+                # 则 `_apply_budget` 只剩标题等浅字段，问句词（封测/先进封装）
+                # 的命中全部丢失，按 recency 重排（特刊被更新的无关特刊挤掉）。
+                "_enriched_tickers": list(candidate.get("_enriched_tickers") or []),
+                "_enriched_companies": list(candidate.get("_enriched_companies") or []),
+                "_enriched_topics": list(candidate.get("_enriched_topics") or []),
+                "_enriched_themes": list(candidate.get("_enriched_themes") or []),
+                "_enriched_keywords": list(candidate.get("_enriched_keywords") or []),
             }
             result["candidates"].append(candidate_entry)
 
@@ -4662,20 +4671,22 @@ def _apply_budget(
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Apply semantic budget: keep top N by priority and relevance.
 
-    Priority order: pinned_source > latest_commentary > recent_reference > fresh_g.
-    A same-day recent_reference is question-matched, so it ranks above generic
-    fresh_g background but never displaces the single latest commentary.
+    Frozen lanes keep their priority: pinned_source > latest_commentary.
+    The flexible lanes (recent_reference / fresh_g) then compete on question
+    relevance instead of a static lane order: a question-matched fresh 特刊
+    outranks a weaker same-day reference, while on equal relevance the
+    reference lane still wins (same-day question-matched background over
+    generic fresh_g).  The single latest commentary is never displaced.
     """
     if max_events <= 0:
         return [], []
 
     pinned = [c for c in candidates if c.get("source_bucket") == "pinned_source"]
     commentary = [c for c in candidates if c.get("source_bucket") == "latest_commentary"]
-    reference = [c for c in candidates if c.get("source_bucket") == "recent_reference"]
-    fresh = [
+    flexible = [
         c
         for c in candidates
-        if c.get("source_bucket") not in ("pinned_source", "latest_commentary", "recent_reference")
+        if c.get("source_bucket") not in ("pinned_source", "latest_commentary")
     ]
 
     selected: list[dict[str, Any]] = []
@@ -4695,21 +4706,16 @@ def _apply_budget(
         else:
             dropped.append(f"budget_exceeded:{c.get('article_id', c.get('title', ''))}")
 
-    # Same-day question-matched reference next (advisory, not-G)
-    for c in reference:
-        if len(selected) < max_events:
-            selected.append(c)
-        else:
-            dropped.append(f"budget_exceeded:{c.get('article_id', c.get('title', ''))}")
-
-    # Fresh G by relevance score
+    # Flexible lanes compete on question relevance.  Python's stable sort
+    # preserves each lane's internal order (fresh_g selection rank /
+    # reference fact-first order) when the relevance score ties.
     remaining = max_events - len(selected)
     if remaining > 0:
-        scored_fresh = sorted(
-            fresh,
+        scored = sorted(
+            flexible,
             key=lambda c: (
                 _candidate_relevance_score(c, intent_tokens),
-                _candidate_time(c),
+                1 if c.get("source_bucket") == "recent_reference" else 0,
             ),
             reverse=True,
         )
@@ -4717,10 +4723,20 @@ def _apply_budget(
         # 最多保留 score+time 前 2 条，主次分明；有绑定目标的问题不受此上限
         # 影响（相关性过滤已在选择层完成）。
         if not any(intent_tokens.get(key) for key in ("tickers", "companies", "topics")):
-            scored_fresh = scored_fresh[:_BROAD_OVERVIEW_SPECIAL_CAP]
-        for c in scored_fresh[:remaining]:
+            fresh_kept = 0
+            capped: list[dict[str, Any]] = []
+            for c in scored:
+                if c.get("source_bucket") == "recent_reference":
+                    capped.append(c)
+                    continue
+                if fresh_kept >= _BROAD_OVERVIEW_SPECIAL_CAP:
+                    continue
+                fresh_kept += 1
+                capped.append(c)
+            scored = capped
+        for c in scored[:remaining]:
             selected.append(c)
-        for c in scored_fresh[remaining:]:
+        for c in scored[remaining:]:
             dropped.append(f"budget_exceeded:{c.get('article_id', c.get('title', 'unknown'))}")
 
     return selected, dropped
