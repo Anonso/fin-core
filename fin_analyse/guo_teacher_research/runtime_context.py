@@ -2116,7 +2116,15 @@ def _extract_tickers_from_core_theses(
     kb_root: Path,
     dr: dict[str, Any],
 ) -> list[str]:
-    """Extract tickers from deep_read core_theses.related_companies."""
+    """Extract tickers from deep_read company names (units/core_theses)."""
+    return _map_companies_to_tickers(
+        kb_root, _deep_read_company_names(dr)
+    )
+
+
+def _deep_read_company_names(dr: dict[str, Any]) -> set[str]:
+    """Collect company names from units[].related_companies (current schema)
+    and legacy core_theses[].related_companies."""
     company_names: set[str] = set()
     for t in dr.get("core_theses", []) or []:
         if not isinstance(t, dict):
@@ -2124,19 +2132,18 @@ def _extract_tickers_from_core_theses(
         for co in t.get("related_companies") or []:
             if co and isinstance(co, str):
                 company_names.add(co.strip())
-    return _map_companies_to_tickers(kb_root, company_names)
+    for unit in dr.get("units", []) or []:
+        if not isinstance(unit, dict):
+            continue
+        for co in unit.get("related_companies") or []:
+            if co and isinstance(co, str):
+                company_names.add(co.strip())
+    return company_names
 
 
 def _extract_companies_from_core_theses(dr: dict[str, Any]) -> list[str]:
-    """Extract unique company names from deep_read core_theses."""
-    names: set[str] = set()
-    for t in dr.get("core_theses", []) or []:
-        if not isinstance(t, dict):
-            continue
-        for co in t.get("related_companies") or []:
-            if co and isinstance(co, str):
-                names.add(co.strip())
-    return sorted(names)
+    """Extract unique company names from deep_read units/core_theses."""
+    return sorted(_deep_read_company_names(dr))
 
 
 def _extract_theme_names(dr: dict[str, Any]) -> list[str]:
