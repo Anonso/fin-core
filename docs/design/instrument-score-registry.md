@@ -7,6 +7,12 @@
 2. ZSXQ 参考注入（read_ready_evidence 家族）按文章类型分窗口 + 窗口内
    时效衰减排序，替代现“当天一刀切”。
 
+**关键澄清（审查补）**：窗口分级的栏目分属两条车道，不能混成一张表——
+锐评/特刊/好问题/每日热点是 G 层（teacher_original，走 read_g_context /
+G 窗口体系），reference 车道（read_ready_evidence）按代码只收普通栏 +
+Q&A + observation。窗口表拆两条：G 窗口（改 g_context_windows.json）与
+reference 窗口（新 zsxq_reference_windows.json）。
+
 ## 非目标
 
 - 不动真实交易/资金逻辑；不新增外部数据源；不做人工确认 UI（先落
@@ -32,34 +38,46 @@
 
 ## 决策（owner 2026-09-02）
 
-- 窗口（锐评/每日热点=交易日，其余自然日）：
+- **G 车道窗口**（锐评/每日热点=交易日，其余自然日；数值待 owner 确认
+  是否同步改 G 体系——现 g_context_windows.json 为锐评 2 交易日/特刊 30）：
   - 星大派锐评 / 星大派每日热点：4 交易日
   - 星大派特刊：45 天
   - 星大派好问题：20 天
   - 凤仙郡小故事 / 星大派人脉 / 版本强势英雄：新类别，类特刊，45 天
   - 其他（普通栏研报 + 未归类问答等）：60 天
+- **reference 车道窗口**（read_ready_evidence 实际可收的集合）：
+  普通栏研报 60 天、Q&A（星大派好问题/问题回答/回答问题）20 天、
+  未归类 reference 60 天。
 - 窗口内时效衰减：按 published_at 降序，越接近现在时效越高、关注度越高，
-  排名/注入不得等权对待（**适用于全部窗口类型**）。
+  排名/注入不得等权对待（**适用于全部窗口类型**）。最小实现=线性倒序；
+  如后续要权重，用 1/(1+age_days)，不做更复杂模型。
 - 门槛：普通栏与 Q&A 有评分的文章，能量评分 <7 一律跳过（不爬取/不处理）；
   无评分按不满足 ≥7 跳过；其余栏目不受影响。图片处理 ≥7.0；
-  example 中 8.7 删除。
+  example 中 8.7 删除。**<7 跳过须记 skip 清单**（source_id、评分、原因），
+  漏爬可审计。
 - 评分表格提取范围：只收普通栏（研报 + 问答）的统一格式表格。
 - 分级（归一化 1-10）：≥9 重点关注；≥8 及格；<8 一般。
-- 标的记录含文章能量评分（方向分），一并存储。
-- 全量保留，查询按窗口过滤 + 日期降序。
+- 标的记录含文章能量评分（方向分），一并存储；**只并列展示，不合成新
+  评分**（避免新抽象）。
+- 全量保留；查询默认返回全部记录按日期降序，窗口过滤做成可选参数
+  （注入才强制窗口，查询不强求）。
 - **存量回填（仅此一轮）**：只处理「能量评分 ≥7 且落在当前 60 天窗口
   （2026-07-04 起）」的普通栏文章——index 内实测 **137 篇**（其中 81 篇
   含评分表格会产出记录，其余无表无产出）；超过窗口的历史文件（含未索引
   的 5 月文件）今天不回填，交给增量与窗口自然滚动。回填与增量同
-  parser 版本。
+  parser 版本。**回填候选判定直接读 index.json（score/date/column），
+  不重解析“能量评分”文本**；解析器只负责表格。
 
 ## Schema（草案）
 
 ```json
 {
   "schema_version": "fin.instrument-scores/v1",
-  "record_id": "<sha256(source_id + code)>",
+  "record_id": "<sha256(source_id + code + 行内序号)>",
   "source_id": "zsxq-...",
+  "topic_id": "4554...",
+  "column": "普通",
+  "title": "…",
   "article_date": "2026-08-13",
   "published_at": "2026-08-13T09:00:00+08:00",
   "instrument": {"code": "002156", "name": "通富微电"},
@@ -79,21 +97,33 @@
 
 存储：`shared/knowledge-base/runtime/cognition/instrument_scores.jsonl`
 （与 zsxq_sources 同域，0600；量小，内存加载即可，不建新库）。
-唯一键 = (source_id, code)；同篇重复处理按 record_id 幂等。
+唯一键 = (source_id, code, 行内序号)（同篇同 code 出现多行不互相覆盖）；
+同篇重复处理按 record_id 幂等；内容 hash 变化则覆盖（保留 parser_version）。
 
 ## 提取流程
 
-1. ingest/capture 侧对普通栏文章的 image_descriptions（主）+
-   image_ocr（兜底校验）识别评分表格（含 利好度/共识度/公司名（代码）列）。
+1. ingest/capture 侧对普通栏文章识别评分表格（含 利好度/共识度/
+   公司名（代码）列）。**数据源优先级：文章正文 markdown（最可靠，实测
+   已含完整列表）> image_descriptions > image_ocr（仅交叉校验）**；三源
+   数值一致才 `ok`，不一致/缺失 → `needs_review`。
 2. 解析器：markdown 表格行 → 列名别名映射；代码校验
-   （6 位数字，沪深京代码段）；评分归一化（>10 ÷10，去 “%”/“分” 后缀）；
-   字段缺失/越界/代码非法 → `status=needs_review`，不丢行、不静默改。
+   （6 位数字，沪深京代码段；公司名复用 zsxq_adapter 静态名单+后缀兜底）；
+   评分归一化（>10 ÷10，去 “%”/“分” 后缀）；字段缺失/越界/代码非法 →
+   `status=needs_review`，不丢行、不静默改。
 3. 落库幂等；存量 39 篇用同一解析器回填。
 
 ## 查询与注入改造
 
-- 新只读能力 `read_instrument_scores`：按 code/name 查，可带窗口类型过滤，
-  返回记录按日期降序 + status + 来源；供问询 CLI。
+- 新只读能力 `read_instrument_scores`：
+  - 入参：code/name、sector/关键词、分数下限（≥8/≥9）、是否含
+    needs_review、日期/窗口（可选，默认不限）；
+  - 返回：该标的最近 N 条 + 历史序列（日期降序）、文章方向分并列、
+    status、来源文章（title/source_id/日期）；needs_review 默认排除但
+    返回计数；
+  - 工具描述必须声明：来源=普通栏研报 AI 分析（reference 层、
+    advisory_only、带文章日期，非老师 G 观点）。
+- needs_review 闭环：`scripts/manage_instrument_scores.py`
+  （list / confirm / drop），owner 手工确认，防脏记录永久堆积。
 - `read_ready_evidence` / runtime_context `_resolve_recent_reference`：
   当天门 → 类型窗口门（新配置 `config/zsxq_reference_windows.json`，
   映射 column/类别 → {days, unit: trading|natural}，缺文件/非法回内建
@@ -102,8 +132,9 @@
 
 ## 验证
 
-- 解析器单测：39 篇回填全跑，样例值断言（如四方达 9.0、85→8.5、
-  缺字段→needs_review）。
+- 解析器单测（真实样例 fixtures）：39/137 篇回填全跑；断言 四方达 9.0、
+  85→8.5、共识度缺失→needs_review、列名变体（预计介入时机/持有时间）、
+  同 code 多行不覆盖。
 - 窗口单测：各类型边界（窗口第 N+1 天不注入、窗口内倒序、交易日语义）。
 - 端到端：read_instrument_scores 对 002156/601138/603993 返回记录；
   read_ready_evidence 对封装/封测问题在窗口内有候选时非空。
@@ -133,3 +164,6 @@
 - 凤仙郡/人脉/版本强势英雄按“类特刊 45 天”处理（owner 口径近似）；
   “其他 60 天”= 普通栏研报 + 未归类问答。
 - 回填与增量解析须同 parser_version，后续改版用 version 字段区分。
+- **行业点评“全文检索”不在本设计内**：评分表解决标的级查询；封装/封测
+  等“行业点评文章”检索需另议（候选=把 knowledge.query 包成 CLI 工具
+  `read_article_search`，单列决策）。
