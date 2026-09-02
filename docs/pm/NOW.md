@@ -107,8 +107,8 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 1 | CLI 实弹三连验：BUG-005 G-first 口径（分析必调 G）、BUG-012 ready 残余二、BUG-002 盘前概览——owner 常问三类（持仓复盘/老师体系/大盘板块）手动 CLI 随问随验，对照 trace 三字段 | 即日起随真实问询；BUG-012 今晚 21:01/21:08 实弹仍 unavailable |
-| 主线 | 2 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
+| 主线 | 1 | CLI 实弹：BUG-005 G-first ✅（09-02 21:22 持仓分析 read_g_context ok/gaps=[]，答案带 G 框架）；3.2 fresh pair ✅（21:24 长电封测 read_g_context ok，答案引 8/13 特刊+锐评）；BUG-012 未触发 read_ready_evidence（模型改走 article_search，当天无同天公司帖，诚实空）待真场景；BUG-002 盘后 gaps 仅五类常驻型，盘前 08:55-09:25 实弹待问 | BUG-012/002 随真实问询 |
+| 主线 | 2 | finq 使用日志：09-02 四探针已补记（satisfied 待 owner 回填 y/n），不满意项当日落 BUGS | 随用随记；D3 供数依赖 |
 | 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 407 条〔60 天+评分≥7〕、read_instrument_scores + read_article_search 两工具已接 thin server、G/reference 窗口分级落地）；增量评分门槛已按 owner 修订口径落地（有评分 <7 跳过、无评分不跳，D-036），端到端验证随下一抓取窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
 | 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册（ZSXQ 宏观 + 书卡 + guided search）；宏观候选清单 v0 170 条待 owner 抽查校准 → 打标/config 落盘 + macro_index 增量 | owner 校准清单后；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
 | 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
