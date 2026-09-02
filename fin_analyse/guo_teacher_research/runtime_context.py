@@ -52,6 +52,7 @@ from fin_analyse.guo_teacher_research.window_config import (
     calendar_artifact_available,
     load_g_window_config,
     load_position_topic_rules,
+    reference_window_days,
     trading_window_cutoff,
 )
 from fin_analyse.temporal import TemporalService
@@ -1419,14 +1420,19 @@ class AgentRuntimeContextProvider:
                 continue  # never promote external / research_reference
             if not _is_reference_eligible(c):
                 continue  # only reference-tier items (Q&A / 普通 / observation)
-            if not _is_same_day(c, now):
+            if not _is_recent_within(
+                c, now, days=reference_window_days(_candidate_column(c))
+            ):
                 continue
             if not _reference_is_relevant(c, request, intent_tokens):
                 continue
             selected.append(c)
         # 有公司/链事实的候选优先：空事实帖先占槽位、投影再被 mapping 门丢弃
         # 是 BUG-012 残余二的第二重损耗。排序只改变候选顺序，不改变准入。
-        selected.sort(key=_reference_rank_key, reverse=True)
+        selected.sort(
+            key=lambda c: (_reference_rank_key(c)[0], _candidate_time(c)),
+            reverse=True,
+        )
         for c in selected:
             result["candidates"].append(_recent_reference_to_candidate(self._kb_root, c))
 

@@ -35,6 +35,9 @@ _CN_TZ = ZoneInfo("Asia/Shanghai")
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WINDOW_CONFIG_PATH = _PROJECT_ROOT / "config" / "g_context_windows.json"
+ZSXQ_REFERENCE_WINDOW_CONFIG_PATH = (
+    _PROJECT_ROOT / "config" / "zsxq_reference_windows.json"
+)
 _TOPIC_RULES_PATH = _PROJECT_ROOT / "config" / "position_topic_rules.json"
 _CALENDAR_PATH = _PROJECT_ROOT / "config" / "market" / "a_share_calendar_2026.json"
 
@@ -84,6 +87,44 @@ def load_g_window_config(path: Path | None = None) -> GWindowConfig:
             return GWindowConfig()
         values[field_name] = raw
     return GWindowConfig(**values)
+
+
+def reference_window_days(
+    column: str,
+    *,
+    config_path: Path | None = None,
+    default_days: int = 60,
+) -> int:
+    """Reference-lane recency window (natural days) for one ZSXQ column.
+
+    Owner 2026-09-02: 普通研报 60 天、Q&A 栏目 20 天、缺省 60 天。
+    配置缺失/损坏 → default（损坏时响一声警告，规则 6 改配置须可观察）。
+    """
+
+    path = config_path or ZSXQ_REFERENCE_WINDOW_CONFIG_PATH
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return default_days
+    except (OSError, ValueError) as error:
+        logger.warning(
+            "zsxq reference window config unreadable (%s): %s",
+            path,
+            type(error).__name__,
+        )
+        return default_days
+    if not isinstance(payload, dict):
+        logger.warning("zsxq reference window config not a mapping: %s", path)
+        return default_days
+    windows = payload.get("windows")
+    if isinstance(windows, dict):
+        entry = windows.get(column)
+        if isinstance(entry, dict) and isinstance(entry.get("days"), int):
+            return entry["days"]
+    raw_default = payload.get("default_days")
+    if isinstance(raw_default, int):
+        return raw_default
+    return default_days
 
 
 @lru_cache(maxsize=1)

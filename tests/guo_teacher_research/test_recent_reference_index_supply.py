@@ -108,17 +108,41 @@ def test_same_day_general_column_row_is_injected_end_to_end(tmp_path: Path) -> N
     assert "ready_evidence_unavailable" not in result.data_gaps
 
 
-def test_g_tier_column_and_stale_rows_never_enter_lane(tmp_path: Path) -> None:
-    article = _write_article(
+def test_g_tier_excluded_and_ordinary_row_within_window_enters_lane(tmp_path: Path) -> None:
+    g_article = _write_article(
         tmp_path, "zsxq-22258828218828112", date="2026-08-30 09:30", title="星大派锐评：算电协同"
     )
+    ordinary_article = _write_article(
+        tmp_path,
+        "zsxq-22258828218828114",
+        date="2026-08-01 09:30",
+        title="提问：算电协同的绿电门槛怎么看",
+    )
     rows = [
-        _index_row("zsxq-22258828218828113", article, date="2026-08-30 09:30", column="星大派锐评"),
-        _index_row("zsxq-22258828218828114", article, date="2026-08-01 09:30"),
+        _index_row("zsxq-22258828218828113", g_article, date="2026-08-30 09:30", column="星大派锐评"),
+        # 2026-08-01 距 as_of(08-30) 29 天：owner 2026-09-02 普通栏窗口 60 天，
+        # 旧“当天才注入”语义废止，窗口内普通栏应注入。
+        _index_row("zsxq-22258828218828114", ordinary_article, date="2026-08-01 09:30"),
     ]
     _write_index(tmp_path, rows)
 
     result = _read(_reader(tmp_path), "帮我看下算电协同今天有什么新说法")
+
+    assert [item["article_id"] for item in result.value["items"]] == [
+        "zsxq-22258828218828114"
+    ]
+    assert "ready_evidence_unavailable" not in result.data_gaps
+
+
+def test_ordinary_row_outside_60d_window_never_enters_lane(tmp_path: Path) -> None:
+    article = _write_article(
+        tmp_path, "zsxq-22258828218828117", date="2026-06-20 09:30", title="提问：算电协同的绿电门槛怎么看"
+    )
+    _write_index(
+        tmp_path, [_index_row("zsxq-22258828218828117", article, date="2026-06-20 09:30")]
+    )
+
+    result = _read(_reader(tmp_path), "帮我看下算电协同有什么说法")
 
     assert result.value["items"] == []
     assert "ready_evidence_unavailable" in result.data_gaps
