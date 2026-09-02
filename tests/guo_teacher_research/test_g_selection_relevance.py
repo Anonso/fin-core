@@ -167,7 +167,14 @@ def test_budget_never_displaces_pinned_or_latest_commentary() -> None:
     assert [c.get("article_id") or c.get("pinned_id") for c in selected] == ["pin-1", "c-1"]
 
 
-def _write_compact_deep_read(kb_root, article_id: str, article_path, theses: list) -> None:
+def _write_compact_deep_read(
+    kb_root,
+    article_id: str,
+    article_path,
+    theses: list,
+    *,
+    title: str = "星大派特刊：科技半导体三大板块",
+) -> None:
     content_hash = hashlib.sha256(article_path.read_bytes()).hexdigest()
     common = {
         "artifact_version": "deep_read_artifact_v1",
@@ -182,10 +189,22 @@ def _write_compact_deep_read(kb_root, article_id: str, article_path, theses: lis
     compact_path = root / "compact" / f"{article_id}.json"
     full_path.parent.mkdir(parents=True, exist_ok=True)
     compact_path.parent.mkdir(parents=True, exist_ok=True)
+    root.chmod(0o700)
+    full_path.parent.chmod(0o700)
+    compact_path.parent.chmod(0o700)
+    normalized_theses = [
+        {
+            **thesis,
+            "related_companies": list(thesis.get("related_companies") or []),
+            "related_topics": list(thesis.get("related_topics") or []),
+        }
+        for thesis in theses
+    ]
     full_path.write_text(
         json.dumps({**common, "detail": "full", "payload": {"source": {}, "units": []}}),
         encoding="utf-8",
     )
+    full_path.chmod(0o600)
     compact_path.write_text(
         json.dumps(
             {
@@ -193,33 +212,40 @@ def _write_compact_deep_read(kb_root, article_id: str, article_path, theses: lis
                 "detail": "compact",
                 "payload": {
                     "article_id": article_id,
-                    "title": "星大派特刊：科技半导体三大板块",
-                    "core_theses": theses,
+                    "title": title,
+                    "core_theses": normalized_theses,
                     "injectable_summary": "封测是中游平台型环节。"
-                    + "。".join(t["thesis"] for t in theses),
+                    + "。".join(t["thesis"] for t in normalized_theses),
                     "theme_clusters": [],
                     "suggestions": [],
-                    "unit_count": len(theses),
+                    "unit_count": len(normalized_theses),
                 },
             }
         ),
         encoding="utf-8",
     )
+    compact_path.chmod(0o600)
 
 
-def test_resolve_injects_question_matched_special_over_newer_generic(tmp_path) -> None:
-    """端到端回归：条目化候选保留 `_enriched_*`，装配预算按问句相关性保留 8/13 类特刊。"""
+def test_resolve_budget_prefers_enriched_special_over_newer_generic(tmp_path) -> None:
+    """端到端回归：条目化候选保留 `_enriched_*`，装配预算按相关性选老而准的特刊。
+
+    判别形状：老特刊（人脉列，无列加分）靠 compact 命中“封测”相关分 3；三篇
+    更新的泛特刊列分更高、选择层排前。若 `_enriched_*` 未透传或预算不按相关
+    性竞争，三席位会留给泛特刊，老特刊被挤出。
+    """
     kb_root = tmp_path / "knowledge-base"
     (kb_root / "articles").mkdir(parents=True)
-    article_id = "special-813"
-    article_path = kb_root / "articles" / f"{article_id}.md"
+    matched_id = "special-old"
+    article_path = kb_root / "articles" / f"{matched_id}.md"
     article_path.write_text(
-        f"---\nid: {article_id}\ndate: 2026-08-13 10:00\ncolumn: 星大派特刊\n---\n\n# 半导体封测\n\n正文。",
+        f"---\nid: {matched_id}\ndate: 2026-08-13 10:00\ncolumn: 星大派人脉\n---\n\n# 封测\n\n正文。",
         encoding="utf-8",
     )
+    article_path.chmod(0o600)
     _write_compact_deep_read(
         kb_root,
-        article_id,
+        matched_id,
         article_path,
         [
             {
@@ -228,16 +254,27 @@ def test_resolve_injects_question_matched_special_over_newer_generic(tmp_path) -
                 "confidence": 0.8,
             }
         ],
+        title="星大派人脉：大金融扰动",
     )
     candidates = (
         {
-            "article_id": article_id,
-            "title": "星大派特刊：科技半导体三大板块",
-            "column": "星大派特刊",
+            "article_id": "c-ping",
+            "title": "星大派锐评：最新",
+            "column": "星大派锐评",
             "source_classification": "teacher_original",
-            "published_at": "2026-08-13T10:00:00+08:00",
+            "published_at": "2026-09-01T03:00:00+08:00",
             "persona_eligible": True,
-            "theme_clusters": ["半导体"],
+            "theme_clusters": ["大盘"],
+            "guidance_brief": "老师原文背景，只作认知参考。",
+        },
+        {
+            "article_id": "c-hot",
+            "title": "星大派每日热点（0902）",
+            "column": "星大派每日热点",
+            "source_classification": "teacher_original",
+            "published_at": "2026-09-02T00:00:00+08:00",
+            "persona_eligible": True,
+            "theme_clusters": ["大盘"],
             "guidance_brief": "老师原文背景，只作认知参考。",
         },
         {
@@ -248,6 +285,36 @@ def test_resolve_injects_question_matched_special_over_newer_generic(tmp_path) -
             "published_at": "2026-08-31T10:00:00+08:00",
             "persona_eligible": True,
             "theme_clusters": ["题材"],
+            "guidance_brief": "老师原文背景，只作认知参考。",
+        },
+        {
+            "article_id": "special-newest",
+            "title": "星大派特刊：Trump 变化",
+            "column": "星大派特刊",
+            "source_classification": "teacher_original",
+            "published_at": "2026-09-01T10:00:00+08:00",
+            "persona_eligible": True,
+            "theme_clusters": ["题材"],
+            "guidance_brief": "老师原文背景，只作认知参考。",
+        },
+        {
+            "article_id": "special-third",
+            "title": "星大派特刊：展望分析",
+            "column": "星大派特刊",
+            "source_classification": "teacher_original",
+            "published_at": "2026-08-20T10:00:00+08:00",
+            "persona_eligible": True,
+            "theme_clusters": ["题材"],
+            "guidance_brief": "老师原文背景，只作认知参考。",
+        },
+        {
+            "article_id": matched_id,
+            "title": "星大派人脉：大金融扰动",
+            "column": "星大派人脉",
+            "source_classification": "teacher_original",
+            "published_at": "2026-08-13T10:00:00+08:00",
+            "persona_eligible": True,
+            "theme_clusters": ["半导体"],
             "guidance_brief": "老师原文背景，只作认知参考。",
         },
     )
@@ -262,8 +329,16 @@ def test_resolve_injects_question_matched_special_over_newer_generic(tmp_path) -
             agent_id="guo_teacher",
             question="封测行业点评",
             now="2026-09-02T21:30",
+            max_g_events=6,
         )
     )
 
     source_refs = [entry.get("source_ref") for entry in result.llm_context["g_context"]]
-    assert "special-813" in source_refs
+    assert source_refs == [
+        "c-ping",
+        "c-hot",
+        matched_id,
+        "special-newest",
+        "special-new",
+    ]
+    assert "special-third" not in source_refs
