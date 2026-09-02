@@ -630,6 +630,74 @@ def test_reconcile_ignores_unbound_event_without_mutating_cognition(tmp_path: Pa
     assert not (kb_root / "runtime" / "cognition" / "persona.json").exists()
 
 
+def test_legacy_reference_classification_event_still_binds_g_article(tmp_path: Path) -> None:
+    """09-01 新 G 栏目迁移回归：事件历史分类非 teacher_original 仍可绑定。"""
+    kb_root = tmp_path / "knowledge-base"
+    article_id = "zsxq-legacy-g"
+    (kb_root / "articles").mkdir(parents=True)
+    (kb_root / "articles" / "20260722_legacy.md").write_text(
+        "---\n"
+        f"id: {article_id}\n"
+        "date: 2026-07-22 12:00\n"
+        "column: 版本强势英雄\n"
+        "---\n"
+        "\n"
+        "正文\n",
+        encoding="utf-8",
+    )
+    (kb_root / "index.json").write_text(
+        __import__("json").dumps(
+            {
+                "articles": [
+                    {
+                        "id": article_id,
+                        "date": "2026-07-22 12:00",
+                        "column": "版本强势英雄",
+                        "companies": [],
+                        "tags": [],
+                        "title": "版本强势英雄测试",
+                        "char_count": 10,
+                        "path": str(kb_root / "articles" / "20260722_legacy.md"),
+                    }
+                ],
+                "updated": "2026-07-22T12:10:00+08:00",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (kb_root / "runtime" / "cognition").mkdir(parents=True)
+    (kb_root / "runtime" / "cognition" / "priority_events.jsonl").write_text(
+        __import__("json").dumps(
+            {
+                "event_id": "ev-1",
+                "article_id": article_id,
+                "source_classification": "research_reference",
+                "requires_deep_read": True,
+                "created_at": "2026-07-22T12:05:00+08:00",
+                "metadata": {
+                    "column": "版本强势英雄",
+                    "source_family": "星大派",
+                    "content_type": "版本",
+                    "source_usage": None,
+                    "priority_label": None,
+                    "is_qa": False,
+                },
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    service = GWorkingSetService(
+        kb_root=kb_root,
+        deep_read_reader=_DeepReadReader(set()),
+    )
+    result = service.reconcile(now=NOW)
+
+    assert "g_working_set_priority_event_contract_mismatch" not in result.data_gaps
+
+
 def test_historical_articles_outside_active_window_do_not_hold_ready_open(
     tmp_path: Path,
 ) -> None:

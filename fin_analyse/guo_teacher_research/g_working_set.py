@@ -509,11 +509,8 @@ def select_active_g_working_set(
         if len(matching) == 1 and _event_matches_index_article(
             matching[0],
             article_id=article_id,
-            column=column,
             published=published,
             now=evaluated,
-            source=source,
-            is_qa=is_qa,
         ):
             selected_event = matching[0]
         elif matching:
@@ -1158,33 +1155,14 @@ def _event_matches_index_article(
     event: Mapping[str, object],
     *,
     article_id: str,
-    column: str,
     published: datetime,
     now: datetime,
-    source: GSourceClassification,
-    is_qa: bool,
 ) -> bool:
-    raw_metadata = event.get("metadata")
-    metadata: Mapping[str, object] = raw_metadata if isinstance(raw_metadata, Mapping) else {}
     created = _parse_datetime(_strict_text(event.get("created_at"), 80), default_tz=_CST)
-    expected_metadata: dict[str, object] = {
-        "column": column,
-        "source_family": source.source_family,
-        "content_type": source.content_type,
-        "source_usage": source.usage,
-        "priority_label": source.priority_label,
-        "is_qa": is_qa,
-    }
     return (
         _strict_text(event.get("event_id"), 200) != ""
         and event.get("article_id") == article_id
-        and event.get("source_classification") == "teacher_original"
         and event.get("requires_deep_read") is True
-        and all(
-            key not in metadata or metadata.get(key) == value
-            for key, value in expected_metadata.items()
-        )
-        and metadata.get("column") == column
         and created is not None
         and published <= created <= now.astimezone(UTC)
     )
