@@ -721,7 +721,7 @@ def main(argv: list[str] | None = None) -> int:
                     "--trigger",
                     "schedule",
                     "--deadline-seconds",
-                    "900",
+                    "1200",
                 ]
             )
         output = captured_stdout.getvalue()

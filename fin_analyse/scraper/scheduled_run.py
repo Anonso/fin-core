@@ -205,7 +205,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run one canonical ZSXQ reconciliation")
     parser.add_argument("--intent", choices=("sync", "watch"), default="sync")
     parser.add_argument("--trigger", choices=("schedule", "manual", "recovery"), default="schedule")
-    parser.add_argument("--deadline-seconds", type=float, default=900.0)
+    parser.add_argument("--deadline-seconds", type=float, default=1200.0)
     parser.add_argument("--runtime-db", type=Path, default=DEFAULT_RUNTIME_DB)
     parser.add_argument("--knowledge-base-root", type=Path, default=_default_knowledge_base_root())
     return parser

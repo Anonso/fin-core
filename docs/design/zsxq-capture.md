@@ -55,7 +55,7 @@
 - **capture_pending + artifact 瞬时窗口** → 判 exit 70、不持久化，下轮重试（目录条目）。
 - **interop 故障** → 不阻断采集/消费（wrapper 不调 wsl.exe/systemctl/importer）。
 - **NO_CHANGE 时间连续性** → producer/observer 以 crawl `started_at` 作为 prior evidence 闭区间上界；晚到 prior 不能形成 READY（目录条目）。
-- **排空期 exit 2 = 预期，勿当故障（2026-08-29 基础设施审计 F9 裁决）**：深读排空跨多窗口，单 run 撞协作 deadline（`--deadline-seconds 900`）属正常收口——链路为 `deadline_exceeded → ingest exit 2`（`capture_ingest.py:64`）→ consume result `status="failed"` 非 retryable（`consume_zsxq_capture_folder.py:460-468` 的 status 表，2 不在 {0,4,70,75}）→ unit failed。**这是已知噪音**：剩余 backlog 下次 timer 窗口自然续排（每 run 截 3 篇），unit failed 态本身不代表数据丢失；判真故障看 run payload 的 `status`/`changed_count`，不看 unit 态。不并入 75（75 已有 coalesced 语义，且 consumer 单元的 75=unavailable 真失败，语义不可复用）。
+- **排空期 exit 2 = 预期，勿当故障（2026-08-29 基础设施审计 F9 裁决；deadline 2026-09-02 900→1200s）**：深读排空跨多窗口，单 run 撞协作 deadline（`--deadline-seconds 1200`）属正常收口——链路为 `deadline_exceeded → ingest exit 2`（`capture_ingest.py:64`）→ consume result `status="failed"` 非 retryable（`consume_zsxq_capture_folder.py:460-468` 的 status 表，2 不在 {0,4,70,75}）→ unit failed。**这是已知噪音**：剩余 backlog 下次 timer 窗口自然续排（每 run 截 3 篇），unit failed 态本身不代表数据丢失；判真故障看 run payload 的 `status`/`changed_count`，不看 unit 态。不并入 75（75 已有 coalesced 语义，且 consumer 单元的 75=unavailable 真失败，语义不可复用）。
 
 ## 验证方式
 

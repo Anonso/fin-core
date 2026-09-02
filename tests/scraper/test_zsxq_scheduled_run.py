@@ -310,11 +310,11 @@ raise SystemExit(
     assert UUID(started["invocation_id"]).version == 4
     assert started["intent"] == "sync"
     assert started["trigger"] == "schedule"
-    assert started["deadline_seconds"] == 900.0
+    assert started["deadline_seconds"] == 1200.0
     started_at = datetime.fromisoformat(started["started_at"])
     deadline_at = datetime.fromisoformat(started["deadline_at"])
     assert started_at.tzinfo is not None
-    assert (deadline_at - started_at).total_seconds() == pytest.approx(900.0)
+    assert (deadline_at - started_at).total_seconds() == pytest.approx(1200.0)
     assert "runtime_db" not in started
     assert "knowledge_base_root" not in started
     assert "private-runtime-path" not in stderr

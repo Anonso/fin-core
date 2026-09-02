@@ -397,7 +397,7 @@ def _parser() -> argparse.ArgumentParser:
         choices=("manual", "recovery", "schedule"),
         default="manual",
     )
-    parser.add_argument("--deadline-seconds", type=float, default=900.0)
+    parser.add_argument("--deadline-seconds", type=float, default=1200.0)
     return parser
 
 
