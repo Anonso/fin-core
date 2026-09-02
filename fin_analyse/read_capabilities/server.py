@@ -130,7 +130,11 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "user opt-out ('不用 G 认知' / don't use the teacher's framework) skips "
         "it; when in doubt, call it. 星大派每日热点 (daily hot list) items are "
         "AI-summarized reference information, not teacher opinions — never "
-        "present them as 'the teacher thinks'."
+        "present them as 'the teacher thinks'. external_brain."
+        "macro_reference_items are non-G MACRO/外围 background references "
+        "(cap 3, macro-leaning: 大盘/政策/海外/商品/流动性): use only to "
+        "extend the macro read after the G mainline, never as G conclusions; "
+        "stock/industry-specific references belong to read_article_search."
     ),
     "read_actual_portfolio": (
         "Read the latest user-confirmed actual portfolio snapshot: holdings, "

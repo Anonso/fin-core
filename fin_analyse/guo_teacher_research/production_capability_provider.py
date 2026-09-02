@@ -91,6 +91,37 @@ _MAX_LIST_CANDIDATE_SCAN = 32
 _MAX_CACHE_SESSION_CHARS = 128
 _MAX_GAPS = 32
 _MARKET_OVERVIEW_BUDGET_SECONDS = 20
+_EXTERNAL_BRAIN_MACRO_KEYWORDS = (
+    "大盘",
+    "市场",
+    "宏观",
+    "政策",
+    "流动性",
+    "利率",
+    "美联储",
+    "美债",
+    "海外",
+    "美股",
+    "地缘",
+    "伊朗",
+    "关税",
+    "汇率",
+    "商品",
+    "原油",
+    "黄金",
+    "铜",
+    "大宗",
+    "经济",
+    "央行",
+    "降息",
+    "加息",
+    "指数",
+    "港股",
+    "科技股",
+)
+_EXTERNAL_BRAIN_MACRO_CLASSIFICATIONS = frozenset(
+    {"market_observation", "ai_summary_reference"}
+)
 
 _STRICT_G_BUCKETS = frozenset({"pinned_source", "fresh_g", "latest_commentary"})
 _MARKET_SCALAR_FIELDS = (
@@ -1158,6 +1189,35 @@ def _g_layered_context_value(
     # ── external_brain ──
     external_brain: dict[str, object] = {}
     external_gaps: list[str] = []
+    # 非 G 外部关联（owner 2026-09-02：补做，但侧重点=宏观/外围，不只低优先级）
+    # 只收宏观/市场/政策/海外/商品类 reference 条目；个股/行业点评不进这层，
+    # 由 read_article_search / read_article 承担。数量小、排 G 主线之后。
+    macro_reference_items: list[dict[str, object]] = []
+    for raw in raw_items:
+        if not isinstance(raw, Mapping):
+            continue
+        if str(raw.get("source_bucket", "")) != "recent_reference":
+            continue
+        classification = str(raw.get("source_classification", "")).strip()
+        title = str(raw.get("title") or "")
+        is_macro = classification in _EXTERNAL_BRAIN_MACRO_CLASSIFICATIONS or any(
+            keyword in title for keyword in _EXTERNAL_BRAIN_MACRO_KEYWORDS
+        )
+        if not is_macro:
+            continue
+        source_ref = _bounded_text(raw.get("source_ref"), _MAX_SHORT_TEXT_CHARS)
+        if not source_ref:
+            continue
+        macro_reference_items.append({
+            "source_ref": source_ref,
+            "title": _bounded_text(title, _MAX_SHORT_TEXT_CHARS),
+            "source_bucket": "macro_reference",
+            "published_at": str(raw.get("published_at") or raw.get("available_at") or ""),
+        })
+        if len(macro_reference_items) >= _MAX_EXTERNAL_BRAIN_ITEMS:
+            break
+    if macro_reference_items:
+        external_brain["macro_reference_items"] = macro_reference_items
     # cognition_mainline_projection items (if any remain after framework extraction)
     if cognition_proj is not None and isinstance(cognition_proj, Mapping):
         eb_items: list[dict[str, object]] = []
