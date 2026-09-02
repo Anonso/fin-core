@@ -109,6 +109,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | --- | --- | --- | --- |
 | 主线 | 1 | CLI 实弹三连验：BUG-005 G-first 口径（分析必调 G）、BUG-012 ready 残余二、BUG-002 盘前概览——owner 常问三类（持仓复盘/老师体系/大盘板块）手动 CLI 随问随验，对照 trace 三字段 | 即日起随真实问询；BUG-012 今晚 21:01/21:08 实弹仍 unavailable |
 | 主线 | 2 | finq 使用日志成习惯：每次 CLI 问询记一行（问题/满意/哪里不最优），不满意项当日落 BUGS | 前序=主线1；随用随记；D3 供数依赖 |
+| 主线 | 3 | 标的评分维护列表 + ZSXQ 参考窗口分级：设计已定稿（回填 137 篇〔60 天窗口+评分≥7〕、read_instrument_scores、窗口类型分级+全窗口时效衰减、增量评分<7 跳过） | 前序=主线2；排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
 | 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：列候选组件/方法，逐项举证使用日志具体抱怨或已发生故障；无举证项不施工 | owner 列候选范围 |
 | 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
