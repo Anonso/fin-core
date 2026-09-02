@@ -266,3 +266,18 @@
   通知）· 证据：config/g_context_windows.json + config/zsxq_reference_windows.json；
   fin_analyse/ingestion/instrument_scores.py、knowledge/article_search.py、
   read_capabilities；`instrument_scores.jsonl`；design/instrument-score-registry.md。
+
+## D-034 · 2026-09-02 · 宏观统一接口 A：ZSXQ 宏观 + 外置大脑 + search_web 补充（owner 拍板）
+- 决策：宏观查询走统一入口 `read_macro_brain`——聚合 SharedKnowledgeBrain
+  书卡（methodology_memory/external_reference/framework，排除 MARKET_DATA）、
+  ZSXQ 宏观参考（普通栏市场复盘/宏观问答 + 每日热点标注 ai_summary，G 层
+  栏目不进）、search_web 联网补充（默认 guided=模型执行并带来源，配置可切
+  auto=接口内走智谱 web 桥）。条目带 effective_window/impact_scope/priority，
+  按 priority 排序。宏观识别=离线增量打标 macro_index + 规则版本，人工校准
+  仅首次/规则变更/反馈回流三处；read_g_context.external_brain 槽复用同实现。
+- 为什么：external_brain 空槽与“外置大脑书本卡片没接入”合并为一个诉求；
+  宏观是语义判断，需要维度化 + 自动增量 + 校准闭环，不能靠在线每次全库猜。
+- 否决了什么：把 ZSXQ 普通栏全部当宏观（个股/行业点评走 read_article_search/
+  read_article）；每天人工校准；接口内默认 auto 联网（额度/时延不可控）。
+- 状态：active（设计定稿；候选清单校准 → 打标器 → 接口依次施工）· 证据：
+  docs/design/macro-brain-interface-a.md；NOW 主线 3.1-3.3。
