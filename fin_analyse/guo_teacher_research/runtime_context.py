@@ -28,6 +28,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import stat
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
@@ -178,6 +179,35 @@ _TOPIC_KEYWORDS = frozenset(
         "战略金属",
         "电解液",
         "服务器",
+    }
+)
+_INTENT_SHINGLE_STOP = frozenset(
+    {
+        "行业",
+        "点评",
+        "观点",
+        "怎么看",
+        "怎么样",
+        "如何",
+        "分析",
+        "问题",
+        "哪些",
+        "什么",
+        "方向",
+        "情况",
+        "走势",
+        "板块",
+        "主线",
+        "老师",
+        "觉得",
+        "认为",
+        "影响",
+        "机会",
+        "风险",
+        "聊聊",
+        "看看",
+        "讲",
+        "说",
     }
 )
 
@@ -1658,8 +1688,32 @@ def _build_intent_tokens(request: AgentRuntimeContextRequest) -> dict[str, set[s
     for keyword in _TOPIC_KEYWORDS:
         if keyword in question_lower or keyword in request.question:
             tokens["topics"].add(keyword)
+    # 3.3b：问句 2 字滑窗兜底（封测/先进封装等非词表词），只在结构化
+    # token 不足时补充，避免把已精确命中的问题再灌入噪音。
+    if (
+        not tokens["tickers"]
+        and not tokens["companies"]
+        and not tokens["topics"]
+        and not _has_latest_focus_lexis(request.question)
+    ):
+        for segment in re.findall(r"[\u4e00-\u9fa5A-Za-z0-9]+", request.question):
+            if len(segment) >= 4 and re.search(r"[\u4e00-\u9fa5]", segment):
+                tokens["topics"].update(
+                    segment[index : index + 2]
+                    for index in range(len(segment) - 1)
+                    if segment[index : index + 2] not in _INTENT_SHINGLE_STOP
+                )
+            elif len(segment) >= 2 and segment not in _INTENT_SHINGLE_STOP:
+                tokens["topics"].add(segment)
 
     return tokens
+
+
+def _has_latest_focus_lexis(question: str) -> bool:
+    """True when a question uses the broad "最近关注什么变化" phrasing."""
+    return any(tok in question for tok in _LATEST_FOCUS_TIME_TOKENS) and any(
+        tok in question for tok in _LATEST_FOCUS_FOCUS_TOKENS
+    )
 
 
 def _infer_position_topics(ticker: str, company: str) -> set[str]:
@@ -1694,9 +1748,7 @@ def _is_latest_focus_query(
     question = request.question or ""
     if not question:
         return False
-    has_time = any(tok in question for tok in _LATEST_FOCUS_TIME_TOKENS)
-    has_focus = any(tok in question for tok in _LATEST_FOCUS_FOCUS_TOKENS)
-    return has_time and has_focus
+    return _has_latest_focus_lexis(question)
 
 
 def _is_broad_g_overview_query(
@@ -2207,6 +2259,7 @@ def _enrich_candidates_with_deep_read(
             "_enriched_tickers",
             "_enriched_topics",
             "_enriched_themes",
+            "_enriched_keywords",
         ):
             c.pop(private_key, None)
         article_id = str(c.get("article_id", ""))
@@ -2252,6 +2305,20 @@ def _enrich_candidates_with_deep_read(
             name = tc.get("name", "")
             if name and name not in enriched_themes:
                 enriched_themes.append(name)
+        enriched_keywords: list[str] = []
+        for thesis in dr.get("core_theses") or []:
+            if not isinstance(thesis, dict):
+                continue
+            for field in ("title", "thesis"):
+                value = str(thesis.get(field) or "").strip()
+                if value and value not in enriched_keywords:
+                    enriched_keywords.append(value)
+        for tc in dr.get("theme_clusters") or []:
+            if not isinstance(tc, dict):
+                continue
+            name = str(tc.get("name") or "").strip()
+            if name and name not in enriched_keywords:
+                enriched_keywords.append(name)
 
         # Map companies to tickers
         enriched_tickers = _map_companies_to_tickers(kb_root, set(enriched_companies))
@@ -2260,6 +2327,7 @@ def _enrich_candidates_with_deep_read(
         c["_enriched_tickers"] = enriched_tickers
         c["_enriched_topics"] = enriched_topics
         c["_enriched_themes"] = enriched_themes
+        c["_enriched_keywords"] = enriched_keywords[:40]
 
     return candidates
 
@@ -3139,6 +3207,15 @@ def _candidate_relevance_score(
     for theme in enriched_themes:
         if theme in intent_tokens["topics"]:
             score += 6
+    # 3.3b：compact thesis/title/theme 关键词面，双向包含（封测 vs
+    # “封测是中游平台…”这类非词表问句）。
+    for keyword in (candidate.get("_enriched_keywords") or []):
+        for intent_topic in intent_tokens["topics"]:
+            if len(intent_topic) >= 2 and (
+                intent_topic in keyword or keyword in intent_topic
+            ):
+                score += 3
+                break
 
     return score
 
