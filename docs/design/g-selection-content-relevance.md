@@ -36,25 +36,26 @@ fresh_g——被更新的特刊（Trump Zone/9 月展望）挤掉。
 - 内容关键词面只读 compact artifact，不新增 durable store（manifest 已有
   compact_raw_sha 可溯源）。
 
-## 进度与交接（2026-09-02）
+## 装配预算裁决与闭环（2026-09-02，方案 A 落地）
 
-方案 B+C 已落地并提交（问句 2 字滑窗 + compact 关键词面双向包含；
-latest-focus 句式不触发滑窗）。回归：guo 大集 542 passed。
+现象分两层，已在装配层全部闭环：
+1. 条目化候选丢选择层相关性信号——`_resolve_fresh_g` 产出 entry 时不再携带
+   `_enriched_*`（compact 抽取的问句关键词面），`_apply_budget` 只剩标题等
+   浅字段、按 recency 重排 → 更新的无关特刊挤掉问句命中特刊。修复：entry
+   透传 `_enriched_*`（私有字段，不进 llm/audit 投影）。
+2. `_apply_budget` 静态巷道优先级 pinned > commentary > reference > fresh_g：
+   reference 无条件占位。裁决取方案 A——pinned/commentary 冻结语义不动，
+   reference 与 fresh_g 按问句相关性竞争（等分时 reference 仍优先，保留原
+   巷道意图）；稳定排序继承各巷内顺序（fresh=选择层 rank，reference=
+   fact-first）。B 第二刀（泛问题 fresh 特刊 ≤2）语义不变。
 
 真实 resolve 对照（`now=2026-09-02T21:30`）：
-- “封测行业点评”：8/13 特刊已排进 `_resolve_fresh_g` 的 fresh_g 候选
-  （rank 4/8）；
-- “半导体先进封装与封测怎么看”：同样排进 fresh_g 候选（rank 3/8）。
+- “封测行业点评”：llm_context = pinned + 锐评 + 每日热点 + 大金融人脉 +
+  8/13 特刊（原先两条 fresh 名额被 Trump Zone/人脉按 recency 吃掉）；
+- “半导体先进封装与封测怎么看”：llm_context 含 8/13 特刊（原先两条
+  recent_reference 占满名额，特刊被挤出）。
 
-仍未闭环：最终 `llm_context` 不含该特刊。根因是 `_apply_budget`
-（`runtime_context.py`）优先级 pinned > latest_commentary >
-recent_reference > fresh_g，且 semantic budget=5；“封测行业点评”时
-fresh_g 名额被同分更新的特刊按 recency 吃掉，“半导体先进封装…”
-时两条 recent_reference 直接把 fresh_g 名额占满。fresh_g 层已排序
-正确，但装配层未复用该顺序（纯 `_candidate_relevance_score` + recency）。
-
-下一步候选（触及装配预算契约，需 owner/设计裁决）：
-A. 装配层让 question-matched fresh 特刊与 recent_reference 竞争（参考
-   层不无条件占位）；
-B. budget 内在 pinned/commentary 之后为 fresh G 保留最少席位；
-C. 验收口径停在 fresh_g 选择层，装配层按现状不改。
+回归：guo 大集 546 passed（新增装配竞争/冻结/端到端 4 测）；全仓 3024
+passed。剩余观察：问句含公司名碎片（“长电科技 封测”）时 2 字滑窗把“科技”
+灌成主题，泛“科技主线”特刊仍压过 8/13 特刊——选择层排序质量问题，非装配
+契约，见 BUG-023（公司名不从问句解析是方案 C 既知边界）。
