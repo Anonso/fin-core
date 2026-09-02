@@ -32,6 +32,12 @@ from fin_analyse.external_evidence import ExternalEvidenceReader
 from fin_analyse.guo_teacher_research.ready_evidence import (
     RecentReferenceReadyEvidenceReader,
 )
+from fin_analyse.guo_teacher_research.macro_brain import (
+    load_shared_brain_cards,
+    macro_search_signal,
+    match_shared_brain_cards,
+    suggested_queries,
+)
 from fin_analyse.guo_teacher_research.runtime_context import (
     AgentRuntimeContextProvider,
     AgentRuntimeContextRequest,
@@ -221,6 +227,9 @@ class ProductionReadCapabilityProvider:
         elif knowledge_base_root is not None:
             raise ValueError("production_runtime_context_root_ambiguous")
         self._runtime_context = runtime_context
+        self._knowledge_base_root = (
+            Path(knowledge_base_root) if knowledge_base_root is not None else None
+        )
         self._cognition_memory = cognition_memory
         self._market_snapshot = market_snapshot
         self._on_demand_tactical_context = on_demand_tactical_context
@@ -283,6 +292,15 @@ class ProductionReadCapabilityProvider:
                 audit_by_ref=audit_by_ref,
                 as_of=request.as_of,
                 resolved=resolved,
+                question=request.question,
+                shared_brain_cards=(
+                    match_shared_brain_cards(
+                        load_shared_brain_cards(self._knowledge_base_root),
+                        request.question,
+                    )
+                    if self._knowledge_base_root is not None
+                    else []
+                ),
                 gaps=gaps,
             ),
             data_gaps=tuple(gaps),
@@ -1019,6 +1037,8 @@ def _g_layered_context_value(
     audit_by_ref: dict[str, Mapping[object, object]],
     as_of: datetime | None,
     resolved: AgentRuntimeContextResult,
+    question: str,
+    shared_brain_cards: list[dict[str, object]] = (),
     gaps: list[str],
 ) -> dict[str, object]:
     """Build the layered G context return for Slice 3b on-demand retrieval.
@@ -1218,6 +1238,11 @@ def _g_layered_context_value(
             break
     if macro_reference_items:
         external_brain["macro_reference_items"] = macro_reference_items
+    if shared_brain_cards:
+        external_brain["shared_brain_cards"] = list(shared_brain_cards)[:_MAX_EXTERNAL_BRAIN_ITEMS]
+    if not macro_reference_items and not shared_brain_cards and macro_search_signal(question):
+        external_brain["search_needed"] = True
+        external_brain["suggested_queries"] = suggested_queries(question)
     # cognition_mainline_projection items (if any remain after framework extraction)
     if cognition_proj is not None and isinstance(cognition_proj, Mapping):
         eb_items: list[dict[str, object]] = []
