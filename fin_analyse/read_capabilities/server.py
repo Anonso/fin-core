@@ -498,6 +498,7 @@ def _make_tool_handler(tool: str):
     def _handler(
         question: str,
         instruments: list[str] | None = None,
+        article_id: str | None = None,
         as_of: str | None = None,
         deadline_seconds: float | None = None,
         session_hint: str = "",
@@ -507,6 +508,8 @@ def _make_tool_handler(tool: str):
         payload: dict[str, object] = {"question": question, "session_hint": session_hint}
         if instruments is not None:
             payload["instruments"] = instruments
+        if article_id is not None:
+            payload["article_id"] = article_id
         if as_of is not None:
             payload["as_of"] = as_of
         if deadline_seconds is not None:
