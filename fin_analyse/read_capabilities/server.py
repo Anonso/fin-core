@@ -92,6 +92,7 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_ready_evidence": 30.0,
     "read_instrument_scores": 10.0,
     "read_article_search": 15.0,
+    "read_article": 20.0,
     "read_user_watchlist": 10.0,
     "update_user_watchlist": 10.0,
 }
@@ -180,6 +181,14 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "not as facts. SOURCE: local ZSXQ article library (reference layer, "
         "advisory_only); never present an article's AI summary as the "
         "teacher's own G opinion."
+    ),
+    "read_article": (
+        "Read one local ZSXQ article's bounded full text by article_id "
+        "(returned by read_article_search). Includes column/date/score and a "
+        "layer hint (g = 星大派特刊/锐评/好问题/每日热点/凤仙郡/人脉/版本强势英雄; "
+        "reference = 普通栏研报/问答). Preserve the article's column and "
+        "date when citing; AI summaries inside are reference material, not "
+        "the teacher's own G opinion."
     ),
     "read_user_watchlist": (
         "Read the user-maintained A-share watchlist (自选股/观察票): codes, "
@@ -310,7 +319,14 @@ def _invoke_tool(
     reader-level failures (only invalid input propagates as JSON-RPC error).
     """
 
-    unknown = set(payload) - {"question", "instruments", "as_of", "deadline_seconds", "session_hint"}
+    unknown = set(payload) - {
+        "question",
+        "instruments",
+        "article_id",
+        "as_of",
+        "deadline_seconds",
+        "session_hint",
+    }
     if unknown:
         raise InvalidParamsError(f"invalid_params: unknown fields: {sorted(unknown)}")
 
@@ -325,6 +341,12 @@ def _invoke_tool(
         raise InvalidParamsError("invalid_params: instruments must be a list")
     if len(instruments) > 64:
         raise InvalidParamsError("invalid_params: too many instruments")
+
+    article_id = payload.get("article_id")
+    if article_id is not None and (
+        not isinstance(article_id, str) or not article_id.strip() or len(article_id) > 160
+    ):
+        raise InvalidParamsError("invalid_params: article_id invalid")
 
     as_of: datetime | None = None
     raw_as_of = payload.get("as_of")
@@ -375,6 +397,7 @@ def _invoke_tool(
     request = ProductionReadRequest(
         question=question,
         instruments=tuple(str(item) for item in instruments),
+        article_id=article_id,
         as_of=as_of,
         deadline_at=deadline_at,
     )

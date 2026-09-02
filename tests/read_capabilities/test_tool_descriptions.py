@@ -50,6 +50,7 @@ def test_all_tools_described() -> None:
         "read_g_context",
         "read_actual_portfolio",
         "read_article_search",
+        "read_article",
         "read_market_snapshot",
         "read_market_overview",
         "read_margin_evidence",

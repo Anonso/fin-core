@@ -46,6 +46,7 @@ class ProductionReadRequest:
 
     question: str
     instruments: tuple[str, ...] = ()
+    article_id: str | None = None
     as_of: datetime | None = None
     deadline_at: datetime | None = field(default=None, repr=False, compare=False)
 
@@ -55,6 +56,12 @@ class ProductionReadRequest:
         if len(self.instruments) > 64:
             raise ValueError("production_read_request_invalid")
         if any(not item.strip() or len(item) > 128 for item in self.instruments):
+            raise ValueError("production_read_request_invalid")
+        if self.article_id is not None and (
+            not isinstance(self.article_id, str)
+            or not self.article_id.strip()
+            or len(self.article_id) > 160
+        ):
             raise ValueError("production_read_request_invalid")
         if self.as_of is not None and (
             not isinstance(self.as_of, datetime)

@@ -125,6 +125,7 @@ class TestStdioRoundTrip:
         )
         assert tool_names == [
             "read_actual_portfolio",
+            "read_article",
             "read_article_search",
             "read_g_context",
             "read_instrument_scores",
