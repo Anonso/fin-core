@@ -48,7 +48,7 @@ reference 窗口（新 zsxq_reference_windows.json）。
   - 星大派特刊：45 天
   - 星大派好问题：20 天
   - 凤仙郡小故事 / 星大派人脉 / 版本强势英雄：新类别，类特刊，45 天
-  - 其他（普通栏研报 + 未归类问答等）：60 天
+  - 其他（未映射 G 列：重中之重 / 大锅饭宏观思考等）：60 天
 - **reference 车道窗口**（read_ready_evidence 实际可收的集合）：
   普通栏研报 60 天、Q&A（星大派好问题/问题回答/回答问题）20 天、
   未归类 reference 60 天。
@@ -71,6 +71,11 @@ reference 窗口（新 zsxq_reference_windows.json）。
   的 5 月文件）今天不回填，交给增量与窗口自然滚动。回填与增量同
   parser 版本。**回填候选判定直接读 index.json（score/date/column），
   不重解析“能量评分”文本**；解析器只负责表格。
+  **回填载体三源（实测）**：137 篇中仅 40 篇在 zsxq_sources（36 篇有
+  image_descriptions 字段），97 篇只在 articles/.md；81 篇含表格文章 =
+  36 篇 jsonl 字段 + 35 篇 .md「## 图片描述」节 + 10 篇 .md 含表格文本但
+  无标准节名。**回填以 .md 为覆盖全集（81/81），jsonl 字段用于增量侧**；
+  解析器统一吃三种载体（字段 / .md 节 / 正文扫描），同一 parser 逻辑。
 
 ## Schema（草案）
 
@@ -179,3 +184,8 @@ reference 窗口（新 zsxq_reference_windows.json）。
 - 评分表格只在图片里，原始正文无表（0/39 实证）：解析正确性依赖
   vision 质量，needs_review 与人工闭环是最后防线；行业点评全文检索由
   排期 6 的 read_article_search 承担，与本表互补。
+- `g_context_windows.json` 迁移的消费方需同步：window_config.py +
+  runtime_context（G 工作集准入层与选择层）+ daily G 材料；实现双读兼容
+  （新 schema 优先、旧键回退），特刊 30→45 语义变化回归测试。
+- 排期 5 前置：Windows 抓取脚本位置与 8.6/8.7 门槛是否在生产侧执行尚未
+  定位（fin-core cdp_scraper 的 8.6 可能不是生产路径）——先定位再排期。
