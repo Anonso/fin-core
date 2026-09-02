@@ -153,26 +153,26 @@ reference 窗口（新 zsxq_reference_windows.json）。
   read_ready_evidence 对封装/封测问题在窗口内有候选时非空。
 - 全量 pytest + 部署成套（含 Windows 侧抓取脚本门槛同步，先定位）。
 
-## 排期（owner 2026-09-02 定稿；当前未施工）
+## 实施状态（2026-09-02 晚更新）
 
-1. **存量回填**：解析器（image_descriptions 主 + image_ocr 兜底校验，
-   列名别名含 预计介入时机/持有时间 等变体；>10 ÷10；缺字段→
-   needs_review）→ 回填 137 篇 → `instrument_scores.jsonl` + 单测。
-2. **查询工具**：`read_instrument_scores`（按 code/name，窗口过滤 +
-   日期降序 + status/来源）接入问询 CLI。
-3. **参考窗口分级**：`config/zsxq_reference_windows.json` + runtime_context
-   当天门→类型窗口门 + 全窗口 recency 衰减排序。
-4. **G 窗口改值**：`config/g_context_windows.json` 迁移新 schema 并落
-   新值（锐评/热点 4 交易日、特刊与新类别 45、好问题 20、其他 60）。
-5. **增量门槛（fin-core 侧已完成，Windows 侧待 owner 通知）**：
-   fin-core cdp_scraper 普通栏/Q&A 评分 <7 跳过（新语义已落地）；
-   Windows capture-zsxq.cjs 侧改动暂停——wrapper sha 钉死 + 需下一抓取
-   窗口验证，owner 通知后再做。
-6. **行业点评全文检索**（owner 确认需要）：`read_article_search` 包一层
-   现有 knowledge.query（按关键词/板块/栏目检索历史文章，含来源与时点）。
-7. **收尾**：全量 pytest、部署成套、回填与增量结果对账。
+1. **存量回填 ✅**：解析器 + 回填 137 篇 → 61 篇有评分表 →
+   `instrument_scores.jsonl` **407 条（ok 346 / needs_review 61，0600）**。
+   已知边界：QA 变体表头（利润率/财务评分/竞争评分/市场认可度）语义有歧义，
+   不猜映射，由 read_article_search 覆盖。
+2. **查询工具 ✅**：`read_instrument_scores` 已注册 thin server（默认窗口、
+   include_history 由“历史/演变”触发、needs_review 计数不入列表）。
+3. **参考窗口分级 ✅**：`config/zsxq_reference_windows.json` +
+   runtime_context 当天门→类型窗口门 + recency 排序（旧“当天”测试同步改）。
+4. **G 窗口改值 ✅**：g_context_windows.json 新值 + 分层 helper 落地
+   （锐评/热点 4 交易日、特刊与新类别 45、好问题 20、其他 60）。
+5. **增量门槛 ◐**：fin-core cdp_scraper 已按新语义改（普通栏无评分/<7 跳过、
+   Q&A 有评分 <7 跳过）；**Windows capture-zsxq.cjs 侧暂停**——wrapper sha
+   钉死 + 需下一抓取窗口验证，等 owner 通知再做。
+6. **行业点评全文检索 ✅**：`read_article_search`（KnowledgeQueryService，
+   180 天窗口，返回标题/栏目/日期/评分/摘要）。
+7. **收尾 ◐**：全量 3009 绿；剩余 Windows 侧完成后成套部署/对账。
 
-执行顺序：1→2→3→4→7 一条链；5、6 与其余无耦合，可并行或后置。
+执行顺序：1→6 已交付；5 的 Windows 半扇区待 owner 通知；7 尾随。
 
 ## 风险 / 边界
 

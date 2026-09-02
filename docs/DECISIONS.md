@@ -243,3 +243,26 @@
   NOW.md 板 A P5 行。
 - 追加（2026-09-01）：飞书传输直接复用 Hermes 既有 gateway（本体一直运行、未停），
   P5 不新建传输面；新工作只在问询脑侧同源化（profile 人格/MCP/记忆）。
+
+## D-033 · 2026-09-02 · ZSXQ 标的评分注册表 + 参考/G 窗口分级落地（owner 拍板）
+- 决策：①普通栏研报图片评分表（利好度/共识度等）在 ingest/回填时解析一次，
+  落 `instrument_scores.jsonl` 维护列表（带文章日期/source_id/方向分，
+  >10 归一化 ÷10；缺字段→needs_review 人工闭环）；回填范围=能量评分≥7 +
+  60 天窗口（137 篇，产出 407 条）。②新增 thin-server 工具
+  `read_instrument_scores`（默认窗口内，历史由“历史/演变”触发）与
+  `read_article_search`（KnowledgeQueryService 全文检索，补行业点评）。
+  ③G 车道窗口新值：锐评/每日热点 4 交易日、特刊与新类别（凤仙郡/人脉/
+  版本强势英雄）45 天、好问题 20 天、其他 60 天；reference 车道普通 60 天、
+  Q&A 20 天，取代“当天才注入”。④门槛：普通栏/Q&A 能量评分 <7 跳过
+  （无评分按不满足处理）；fin-core cdp_scraper 已改，**Windows 侧待 owner
+  通知后实施**。
+- 为什么：问询实弹暴露 read_ready_evidence 对三只标的/行业点评取不到料——
+  评分只在图片里（0/39 正文含分）且通道只收当天；结构化注册表 + 分层窗口 +
+  全文检索共同补上“评分/行业文章可查”。
+- 否决了什么：把 QA 变体表头（利润率/财务评分/竞争评分/市场认可度）猜映射
+  进利好度/共识度（语义有歧义，留 read_article_search）；回填全库 241 篇
+  （窗口外历史交给增量与自然滚动）；查询默认不限窗口（与注入时效口径分裂）。
+- 状态：active（fin-core 侧已交付，全量 3009 绿；Windows 增量门槛待 owner
+  通知）· 证据：config/g_context_windows.json + config/zsxq_reference_windows.json；
+  fin_analyse/ingestion/instrument_scores.py、knowledge/article_search.py、
+  read_capabilities；`instrument_scores.jsonl`；design/instrument-score-registry.md。
