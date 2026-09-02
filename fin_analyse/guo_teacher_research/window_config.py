@@ -46,16 +46,46 @@ _CALENDAR_PATH = _PROJECT_ROOT / "config" / "market" / "a_share_calendar_2026.js
 class GWindowConfig:
     """Immutable snapshot of one resolve/generation's window policy."""
 
-    commentary_trading_days: int = 2
-    special_report_days: int = 30
+    commentary_trading_days: int = 4
+    special_report_days: int = 45
+    good_question_days: int = 20
     historical_days: int = 60
 
 
 _CONFIG_INT_FIELDS = (
     "commentary_trading_days",
     "special_report_days",
+    "good_question_days",
     "historical_days",
 )
+
+_COMMENTARY_TIER_COLUMNS = frozenset({"星大派锐评", "星大派每日热点"})
+_SPECIAL_TIER_COLUMNS = frozenset(
+    {"星大派特刊", "凤仙郡小故事", "星大派人脉", "版本强势英雄"}
+)
+_QA_TIER_COLUMNS = frozenset({"星大派好问题"})
+
+
+def g_window_tier(column: str) -> str:
+    """G-lane window tier for one column (commentary/special/qa/other)."""
+    if column in _COMMENTARY_TIER_COLUMNS:
+        return "commentary"
+    if column in _SPECIAL_TIER_COLUMNS:
+        return "special"
+    if column in _QA_TIER_COLUMNS:
+        return "qa"
+    return "other"
+
+
+def g_window_natural_days(column: str, config: GWindowConfig | None = None) -> int:
+    """Natural-day window for non-commentary G columns (owner 2026-09-02)."""
+    cfg = config or load_g_window_config()
+    tier = g_window_tier(column)
+    if tier == "qa":
+        return cfg.good_question_days
+    if tier == "special":
+        return cfg.special_report_days
+    return cfg.historical_days
 
 
 def load_g_window_config(path: Path | None = None) -> GWindowConfig:

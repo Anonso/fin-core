@@ -50,6 +50,7 @@ from fin_analyse.guo_teacher_research.source_contract import (
 )
 from fin_analyse.guo_teacher_research.window_config import (
     calendar_artifact_available,
+    g_window_natural_days,
     load_g_window_config,
     load_position_topic_rules,
     reference_window_days,
@@ -99,7 +100,9 @@ _LATEST_FOCUS_FOCUS_TOKENS = (
 
 _G_SOURCE_CLASSIFICATIONS = frozenset({"teacher_original"})
 _COMMENTARY_COLUMNS = frozenset({"星大派锐评", "星大派每日热点"})
-_SPECIAL_REPORT_COLUMNS = frozenset({"星大派特刊", "凤仙郡小故事"})
+_SPECIAL_REPORT_COLUMNS = frozenset(
+    {"星大派特刊", "凤仙郡小故事", "星大派人脉", "版本强势英雄"}
+)
 # 星大派好问题 = 老师回答会员提问（teacher_original 原文观点）；
 # 与特刊并列按相关性排序进入 G 上下文。
 _GOOD_QUESTION_COLUMNS = frozenset({"星大派好问题"})
@@ -1005,6 +1008,8 @@ class AgentRuntimeContextProvider:
         if not calendar_artifact_available():
             result["data_gaps"].append("g_window_calendar_unavailable")
         cutoff_special = evaluation_time - timedelta(days=window_config.special_report_days)
+        cutoff_qa = evaluation_time - timedelta(days=window_config.good_question_days)
+        cutoff_other = evaluation_time - timedelta(days=window_config.historical_days)
         recent: list[dict[str, Any]] = []
         historical_query = any(marker in request.question for marker in _HISTORICAL_G_QUERY_MARKERS)
         for c in eligible:
@@ -1013,8 +1018,14 @@ class AgentRuntimeContextProvider:
                 # 历史 G lane：好问题/特刊的历史文章可检索（超出 active 窗口），
                 # 锐评保持交易日窗口（旧锐评无背景价值）。
                 cutoff = evaluation_time - timedelta(days=window_config.historical_days)
+            elif col in _GOOD_QUESTION_COLUMNS:
+                cutoff = cutoff_qa
+            elif col in _SPECIAL_REPORT_COLUMNS:
+                cutoff = cutoff_special
+            elif col in _COMMENTARY_COLUMNS:
+                cutoff = cutoff_commentary
             else:
-                cutoff = cutoff_commentary if col in _COMMENTARY_COLUMNS else cutoff_special
+                cutoff = cutoff_other
             ts = _candidate_time(c)
             dt = _coerce_datetime(ts)
             if dt is None or dt.astimezone(UTC) > evaluation_time:
@@ -2659,7 +2670,9 @@ def _manifest_article_slid_out(manifest_article: Mapping, now: datetime) -> bool
         # BUG-006③：锐评滑出判定与选择层同用交易日语义，避免准入/滑出口径分裂。
         cutoff, _ = trading_window_cutoff(now, load_g_window_config().commentary_trading_days)
         return published < cutoff
-    return now - published > timedelta(days=load_g_window_config().special_report_days)
+    config = load_g_window_config()
+    days = g_window_natural_days(column, config)
+    return now - published > timedelta(days=days)
 
 
 def _canonical_mapping_sha256(value: object) -> str:
@@ -3760,18 +3773,6 @@ def _is_reference_eligible(candidate: dict[str, Any]) -> bool:
         obs_type = str(meta.get("type") or meta.get("record_type") or "")
     obs_type = obs_type or str(candidate.get("type") or candidate.get("record_type") or "")
     return obs_type in ("market_observation", "observation")
-
-
-def _is_same_day(candidate: dict[str, Any], now: str) -> bool:
-    """Return True when the candidate was published on the same CST day as now."""
-    ts = _candidate_time(candidate)
-    if not ts:
-        return False
-    cand_dt = _coerce_datetime(ts)
-    now_dt = _coerce_datetime(now) if now else datetime.now(tz=CST)
-    if cand_dt is None or now_dt is None:
-        return False
-    return cand_dt.astimezone(CST).date() == now_dt.astimezone(CST).date()
 
 
 def _coerce_datetime(ts: str) -> datetime | None:

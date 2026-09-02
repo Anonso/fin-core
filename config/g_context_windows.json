@@ -1,5 +1,6 @@
 {
-  "commentary_trading_days": 2,
-  "special_report_days": 30,
+  "commentary_trading_days": 4,
+  "special_report_days": 45,
+  "good_question_days": 20,
   "historical_days": 60
 }

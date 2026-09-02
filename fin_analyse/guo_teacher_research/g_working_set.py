@@ -29,6 +29,7 @@ from fin_analyse.guo_teacher_research.source_contract import (
 )
 from fin_analyse.guo_teacher_research.window_config import (
     calendar_artifact_available,
+    g_window_natural_days,
     load_g_window_config,
     trading_window_cutoff,
 )
@@ -446,7 +447,7 @@ def select_active_g_working_set(
             if published is not None and published <= evaluated and published < cutoff:
                 continue
         else:
-            window = timedelta(days=window_config.special_report_days)
+            window = timedelta(days=g_window_natural_days(column, window_config))
             if published is not None and published <= evaluated and evaluated - published > window:
                 continue
         source_decision = classify_g_source(
