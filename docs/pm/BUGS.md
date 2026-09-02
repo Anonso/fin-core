@@ -481,6 +481,12 @@
   items 空，根因=残余二（选材层，非供料层），残余二已定修待实弹问询确认；
   09-01 21:01/21:08 真实问询 read_ready_evidence 仍 ready_evidence_unavailable
   （未闭环，待 NOW 主线1 判定是否相关题必中）。
+- 09-02 21:20 核验（生产 KB 直接调 provider，不耗 LLM）：当天普通栏仅两帖
+  （书单帖/杭州房市帖），均无 tickers/companies/chain_facts；对三问
+  （书单/房市/仓位框架）reference 门未选中或选中后 mapping 门拒——
+  `ready_evidence_unavailable` 与契约一致（该工具=公司/链映射证据，
+  非公司帖本来就不该出）。结论：残余二代码已修，未闭环是内容/问句依赖，
+  有效探针=存在同日带公司/链事实普通帖的日子 + 对应真实问询（随主线1）。
 
 ## BUG-013 cognition 提取空坍塌：推理预算耗尽 + 失败哨兵误判（2026-08-30 立案并定修）
 
