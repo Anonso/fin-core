@@ -55,8 +55,9 @@ reference 窗口（新 zsxq_reference_windows.json）。
 - 窗口内时效衰减：按 published_at 降序，越接近现在时效越高、关注度越高，
   排名/注入不得等权对待（**适用于全部窗口类型**）。最小实现=线性倒序；
   如后续要权重，用 1/(1+age_days)，不做更复杂模型。
-- 门槛：普通栏与 Q&A 有评分的文章，能量评分 <7 一律跳过（不爬取/不处理）；
-  无评分按不满足 ≥7 跳过；其余栏目不受影响。图片处理 ≥7.0；
+- 门槛（owner 2026-09-02 晚修订）：普通栏与 Q&A 有评分且能量评分 <7 的
+  文章一律跳过（不爬取/不处理）；**无评分不跳过**——评分缺失 ≠ 内容无价值
+  （书单/宏观/问答等无表帖照常入库）；其余栏目不受影响。图片处理 ≥7.0；
   example 中 8.7 删除。**<7 跳过须记 skip 清单**（source_id、评分、原因），
   漏爬可审计。
 - 评分表格提取范围：只收普通栏（研报 + 问答）的统一格式表格。
@@ -165,9 +166,10 @@ reference 窗口（新 zsxq_reference_windows.json）。
    runtime_context 当天门→类型窗口门 + recency 排序（旧“当天”测试同步改）。
 4. **G 窗口改值 ✅**：g_context_windows.json 新值 + 分层 helper 落地
    （锐评/热点 4 交易日、特刊与新类别 45、好问题 20、其他 60）。
-5. **增量门槛 ◐**：fin-core cdp_scraper 已按新语义改（普通栏无评分/<7 跳过、
-   Q&A 有评分 <7 跳过）；**Windows capture-zsxq.cjs 侧暂停**——wrapper sha
-   钉死 + 需下一抓取窗口验证，等 owner 通知再做。
+5. **增量门槛 ◐**：fin-core cdp_scraper 已按 owner 修订口径改（有评分 <7
+   跳过、无评分不跳，QA/普通栏同规则，`_score_skip_enabled` 单点判定）；
+   Windows capture-zsxq.cjs 是纯传输（无评分过滤），wrapper sha 无需变；
+   端到端验证随下一抓取窗口。
 6. **行业点评全文检索 ✅**：`read_article_search`（KnowledgeQueryService，
    180 天窗口，返回标题/栏目/日期/评分/摘要）。
 7. **收尾 ◐**：全量 3009 绿；剩余 Windows 侧完成后成套部署/对账。

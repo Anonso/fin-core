@@ -266,6 +266,19 @@
   通知）· 证据：config/g_context_windows.json + config/zsxq_reference_windows.json；
   fin_analyse/ingestion/instrument_scores.py、knowledge/article_search.py、
   read_capabilities；`instrument_scores.jsonl`；design/instrument-score-registry.md。
+→ 增量评分门槛语义被 D-036 修订（无评分不再按不满足跳过）。
+
+## D-036 · 2026-09-02 · 增量评分门槛修订：无评分文章不跳过（owner 拍板）
+- 决策：增量门槛只跳过“有能量评分且 <7”的普通栏/Q&A 文章；评分缺失/非法
+  不跳过，照常入库（QA/普通栏同规则，`_score_skip_enabled` 单点判定）。
+- 为什么：评分缺失不等于内容无价值——书单/宏观/问答等无表帖仍是有内容价值
+  的参考材料（09-02 实弹：书单帖/杭州房市帖均无评分但当天唯一 reference
+  材料）；此前 D-033 “无评分按不满足跳过”会把这些帖系统性丢掉。
+- 否决了什么：把“无评分按不满足 ≥7 跳过”继续用于增量门（漏收无表参考帖）；
+  双侧不对称语义（Windows 抓取放行无评分、fin-core 再拦掉=自相矛盾）。
+- 状态：active · 证据：fin_analyse/scraper/cdp_scraper.py `_score_skip_enabled`
+  + tests/scraper/test_cdp_score_skip.py；design/instrument-score-registry.md
+  §决策门槛；D-033 门槛行被本条取代。
 
 ## D-034 · 2026-09-02 · 宏观统一接口 A：ZSXQ 宏观 + 外置大脑 + search_web 补充（owner 拍板）
 - 决策：宏观查询走统一入口 `read_macro_brain`——聚合 SharedKnowledgeBrain
