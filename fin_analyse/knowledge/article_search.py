@@ -91,6 +91,10 @@ class ArticleKeywordSearchReader:
             if doc is None:
                 continue
             metadata = doc.metadata
+            tags = metadata.get("tags")
+            if isinstance(tags, str):
+                tags = [tags]
+            tags = [str(tag) for tag in (tags or []) if str(tag).strip()][:8]
             hits.append(
                 {
                     "article_id": str(metadata.get("id") or doc.document_id),
@@ -98,6 +102,11 @@ class ArticleKeywordSearchReader:
                     "column": str(metadata.get("column", "")),
                     "date": str(metadata.get("date", ""))[:10],
                     "score": metadata.get("score"),
+                    "tags": tags,
+                    "source_classification": str(
+                        metadata.get("source_classification", "")
+                    ),
+                    "char_count": len(doc.content),
                     "excerpt": self._content_excerpt(doc.content, request.question),
                 }
             )
