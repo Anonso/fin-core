@@ -47,6 +47,14 @@ def test_latest_focus_phrasing_does_not_fall_back_to_shingles() -> None:
     assert tokens["topics"] == set()
 
 
+def test_company_name_fragment_does_not_leak_generic_shingle() -> None:
+    """BUG-023：公司名 2 字碎片（长电科技→“科技”）不进主题，泛特刊无法借词灌分。"""
+    tokens = _build_intent_tokens(_Req("长电科技 封测"))
+    assert "封测" in tokens["topics"]
+    assert "长电" in tokens["topics"]
+    assert "科技" not in tokens["topics"]
+
+
 def _entry(
     bucket: str,
     *,
