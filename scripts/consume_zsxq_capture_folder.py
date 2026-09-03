@@ -21,6 +21,7 @@ from io import StringIO
 from pathlib import Path
 
 from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import rebuild_if_stale
+from fin_analyse.guo_teacher_research.mainline_candidates import scan_mainline_candidates
 from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
 from fin_analyse.scraper.capture_ingest import main as import_capture
 
@@ -29,6 +30,8 @@ _RESULT_SCHEMA_VERSION = "fin.zsxq-capture-folder-consumer-result/v1"
 _INGEST_SCHEMA_VERSION = "fin.zsxq-capture-ingest/v1"
 _CAPTURE_SCHEMA_VERSION = "fin.zsxq-windows-capture/v4"
 _REBUILD_SCHEMA_VERSION = "fin.cognition-mainline-rebuild/v1"
+_CANDIDATES_SCHEMA_VERSION = "fin.mainline-candidates/v1"
+_CANDIDATES_AUDIT_NAME = "mainline-candidates.v1.jsonl"
 _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _RUN_ID = re.compile(r"^[0-9]{8}T[0-9]{9}-[1-9][0-9]*$")
@@ -514,16 +517,42 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
     # the audit sink must never block ingest
     with suppress(Exception):
         _append_rebuild_audit(result_dict, state_root / "fin-analyse")
+
+    # 设计门 g-mainline-growth-v1 部件1：候选扫描与 rebuild 同位触发；纯读
+    # index/KB，唯一写出是 state 下的候选草稿（0600 幂等重写）；typed、
+    # 永不阻断 ingest、不改 rebuild 结果。
+    try:
+        scan = scan_mainline_candidates(
+            annotation_path=annotation,
+            readmodel_root=readmodel_root,
+            index_path=default_knowledge_base_root() / "index.json",
+        )
+    except Exception as exc:  # noqa: BLE001 - typed, never blocks ingest
+        scan_dict: dict[str, object] = {
+            "schema_version": _CANDIDATES_SCHEMA_VERSION,
+            "disposition": "FAILED",
+            "reason": f"scan_invocation_failed:{type(exc).__name__}",
+        }
+    else:
+        scan_dict = scan.to_dict()
+    with suppress(Exception):
+        _append_rebuild_audit(
+            scan_dict,
+            state_root / "fin-analyse",
+            filename=_CANDIDATES_AUDIT_NAME,
+        )
     return result_dict
 
 
 def _append_rebuild_audit(
     payload: dict[str, object],
     state_root: Path,
+    *,
+    filename: str = "cognition-mainline-rebuild.v1.jsonl",
 ) -> None:
-    """Append one content-free rebuild audit line (owner-only, mode 0600)."""
+    """Append one content-free typed audit line (owner-only, mode 0600)."""
 
-    log_path = state_root / "cognition-mainline-rebuild.v1.jsonl"
+    log_path = state_root / filename
     try:
         log_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         descriptor = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)

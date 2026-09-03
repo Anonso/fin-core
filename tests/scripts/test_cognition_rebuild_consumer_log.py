@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 
@@ -83,3 +84,39 @@ def test_rebuild_wrapper_survives_audit_sink_failure(tmp_path: Path, monkeypatch
 
     assert result["disposition"] == "FAILED"
     assert result["reason"] == "annotation_invalid:ValueError"
+
+
+def test_candidate_scan_audit_line_written_alongside_rebuild(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """部件1：候选扫描与 rebuild 同位触发，typed 审计行独立落盘，stdout 不变。"""
+
+    from scripts.consume_zsxq_capture_folder import _rebuild_cognition_mainline
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    monkeypatch.setattr(
+        "scripts.consume_zsxq_capture_folder.default_knowledge_base_root",
+        lambda: tmp_path / "kb",
+    )
+
+    class _Result:
+        def to_dict(self) -> dict[str, object]:
+            return {"schema_version": "fin.cognition-mainline-rebuild/v1", "disposition": "ALREADY_CURRENT"}
+
+    monkeypatch.setattr(
+        "scripts.consume_zsxq_capture_folder.rebuild_if_stale",
+        lambda **kwargs: _Result(),
+    )
+
+    result = _rebuild_cognition_mainline()
+
+    assert result["disposition"] == "ALREADY_CURRENT"
+    scan_log = tmp_path / "state" / "fin-analyse" / "mainline-candidates.v1.jsonl"
+    assert scan_log.exists()
+    line = json.loads(scan_log.read_text(encoding="utf-8").splitlines()[-1])
+    assert line["schema_version"] == "fin.mainline-candidates/v1"
+    # 隔离环境无标注文档 → typed SKIPPED，绝不抛出、绝不写 stdout。
+    assert line["disposition"] == "SKIPPED"
+    assert line["reason"] == "annotation_as_of_missing"
+    assert capsys.readouterr().out == ""
