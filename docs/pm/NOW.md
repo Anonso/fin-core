@@ -31,6 +31,10 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 老仓 `~/fin-analyse` 已归档（2026-08-29 步7）；release 退役后保留 `current`
 （→`319faf62`）+ `ff7441e2`（BUG-002 回滚候选）+ `13c791ca`（Daily 脱钩回滚候选）
 至 P5，其余 10 个已删；保留三个仅为回滚资产，无运行时读方。
+2026-09-03 老仓可删审计：活跃引用清零（bashrc finlog 别名与 claude-mem
+分支、`~/.local/bin/claude` 注入分支、codex-proxy 死常量、consult README
+开发域指向全部改指新仓/删除），旧仓进入可退役状态；真删除仍按家规 4
+先备份 + manifest。
 
 ## 板 A · 重构阶段（对齐 rebaseline §6）
 
@@ -124,4 +128,4 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 1. release/gateway 运维判读：碰 release 树一律 `-B`（pyc 三来源污染）；gateway journal 近零日志是常态，判卡死先查 state.db 与官方历史。
 2. codex CLI 0.149.0 静默忽略带引号的 `-c` 值 → 401；手动入口 `-c` 必须写 TOML 裸值。
-3. fin-core 的 `fin_analyse` 是无 `__init__.py` 的 namespace 包：从旧仓 cwd 以 stdin 跑一次性诊断会整包 import 旧仓代码（旧逻辑+旧仓 `.env` 解键，结果看似正常实则错源）→ 诊断脚本一律文件模式跑 + 显式注入 `FIN_LLM_ENV_FILE`（指针在旧仓 `.env` 第 6 行，目标 `~/.config/fin-analyse/llm.env`）。
+3. fin-core 的 `fin_analyse` 是无 `__init__.py` 的 namespace 包：从**任何别的含同名包的 cwd**（旧例=旧仓）以 stdin 跑一次性诊断会整包 import 异源代码（旧逻辑+异源 `.env` 解键，结果看似正常实则错源）→ 诊断脚本一律文件模式跑 + 显式注入 `FIN_LLM_ENV_FILE=~/.config/fin-analyse/llm.env`（直指目标，**不经旧仓 `.env` 转引**；2026-09-03 老仓可删审计后旧仓随时可退役）。
