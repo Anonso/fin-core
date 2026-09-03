@@ -267,7 +267,9 @@
 - 问询探针：09-03 12:49 CST 实弹“长电科技最新评分”，trace 出现
   read_instrument_scores ok → read_article_search ok → read_article；
   回答含 8/29 锚、7/7 参照、8/08 口径例外、本地覆盖边界与“近但弱”。
-- 部署：post-commit 钩子已将 zsxq poller/consumer 单元重渲染并绑定
-  af79ac2（LLM_CONFIG_PATH 指向 runtime-configs/af79ac2…）；
-  下一抓取窗口（≥13:50）核对 6.0 增量门槛与 macro_index 自动生成。
+- 部署：post-commit 钩子已将 zsxq poller/consumer 单元重渲染并绑定最终
+  HEAD 6273ab8（LLM_CONFIG_PATH 指向 runtime-configs/6273ab8…）；
+  09-03 12:54 手动触发 FIN-ZSXQ-Incremental 完成实弹闭环：12:58 poller
+  sync 成功（新增 4 篇、unit 绑定 6273ab8），macro_index 自动生成 22 条
+  （12 kept + 8 每日热点 + 2 新规则命中）；首篇 [6,7)/<6 边界样本待自然窗口。
 - Windows 侧单侧确认（无代码改动）：capture wrapper 纯传输，无评分过滤。

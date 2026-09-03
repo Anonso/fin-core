@@ -109,10 +109,10 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | --- | --- | --- | --- |
 | 主线 | 1 | CLI 实弹：BUG-005 G-first ✅（09-02 21:22 持仓分析 read_g_context ok/gaps=[]，答案带 G 框架）；3.2 fresh pair ✅（21:24 长电封测 read_g_context ok，答案引 8/13 特刊+锐评）；BUG-012 未触发 read_ready_evidence（模型改走 article_search，当天无同天公司帖，诚实空）待真场景；BUG-002 盘后 gaps 仅五类常驻型，盘前 08:55-09:25 实弹待问 | BUG-012/002 随真实问询 |
 | 主线 | 2 | finq 使用日志：09-02 四探针已补记（satisfied 待 owner 回填 y/n），不满意项当日落 BUGS | 随用随记；D3 供数依赖 |
-| 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 445 条〔60 天+能量≥6〕、read_instrument_scores 时间线 + read_article_search 双查已接 thin server、G/reference 窗口分级落地；增量门槛 6.0 走 config/zsxq_capture.json〔D-036/037〕）；09-03 实弹过（8/29 长电 8.6/8.8 锚 + 7/7 参照）；增量 6.0 门槛实弹随下一抓取窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
-| 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 7 每日热点）已落 config/macro_brain_rules.json；macro_index 侧车 + sync/watch 增量钩子 + reader 索引优先已落地；剩首次采集生成索引后实弹验证 | 随部署与真实宏观问询；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
+| 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 445 条〔60 天+能量≥6〕、read_instrument_scores 时间线 + read_article_search 双查已接 thin server、G/reference 窗口分级落地；增量门槛 6.0 走 config/zsxq_capture.json〔D-036/037〕）；09-03 12:58 实弹 sync 过（8/29 长电 8.6/8.8 锚 + 7/7 参照）；首篇 [6,7) 或 <6 新帖边界样本待自然窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
+| 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 每日热点）已落 config/macro_brain_rules.json；macro_index 09-03 12:58 已生成（22 条：12 kept + 8 每日热点 + 2 新规则命中），reader 索引优先已生效；宏观问询实弹待真实问题 | 随真实宏观问询；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
 | 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
-| 主线 | 3.3 | ZSXQ 评分时间线 v2（D-037）：门槛 ≥6（config/zsxq_capture.json）+ parser v2 + 回填 445 行 + published_at 排序 + CLAUDE 纪律已交付（af79ac2，探针过）；剩余增量门槛实弹随下一抓取窗口（≥13:50），Windows 单侧无同步项 | 时间窗口触发；交接稿 [../design/instrument-score-timeline.md](../design/instrument-score-timeline.md) |
+| 主线 | 3.3 | ZSXQ 评分时间线 v2（D-037）：门槛 ≥6（config/zsxq_capture.json）+ parser v2 + 回填 445 行 + published_at 排序 + CLAUDE 纪律已交付（6273ab8，09-03 12:58 实弹 sync 过，Windows 单侧无同步项）；首篇 [6,7) 边界样本待自然窗口 | 随自然窗口（预计数日内）；交接稿 [../design/instrument-score-timeline.md](../design/instrument-score-timeline.md) |
 | 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：列候选组件/方法，逐项举证使用日志具体抱怨或已发生故障；无举证项不施工 | owner 列候选范围 |
 | 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
