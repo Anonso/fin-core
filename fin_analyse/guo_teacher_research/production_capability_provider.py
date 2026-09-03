@@ -1302,6 +1302,11 @@ def _g_layered_context_value(
             "pinned_data_gaps": list(pinned_gaps),
         },
     }
+    # 消费探针（设计门 g-mainline-growth-v1 部件5）：有值才加键，attestation
+    # 其余消费方不受影响；server 层 _trace_summary 据此并入 trace 行。
+    consumption_audit = quality_flags.get("cognition_mainline_consumption")
+    if isinstance(consumption_audit, dict):
+        attestation["quality"]["cognition_mainline_consumption"] = consumption_audit
 
     # ── assemble ──
     result: dict[str, object] = {

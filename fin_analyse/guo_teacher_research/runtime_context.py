@@ -746,6 +746,11 @@ class AgentRuntimeContextProvider:
             "latest_commentary_injected": fresh_g_resolution.get("commentary_injected", False),
             "advisory_only": True,
             "confidence_boost_allowed": False,
+            # 消费探针（设计门 g-mainline-growth-v1 部件5）：随 resolve 出带，
+            # server 层并入既有 trace 行；投影附件本身不变。
+            "cognition_mainline_consumption": cognition_mainline_projection[
+                "consumption_audit"
+            ],
         }
 
         return AgentRuntimeContextResult(
@@ -5554,6 +5559,31 @@ def _build_methodology_projection(
     }
 
 
+_COGNITION_UNIT_TITLE_RE = re.compile(r"^G 认知单元 (CU-\d{4}-[A-Z]?\d{2})$")
+
+
+def _cognition_consumption_audit(
+    *,
+    items: list[dict[str, Any]],
+    generation: int | None,
+    gap_codes: list[str],
+) -> dict[str, Any]:
+    """Consumption probe payload (design gate g-mainline-growth-v1 部件5).
+
+    Answers 「接线之外有没有真被消费」: which units actually surfaced, from
+    which artifact generation, and what the PIT/as_of check concluded.  Rides
+    out-of-band with the resolve result (server layer merges it into the
+    trace row); it never changes the projection attachments themselves.
+    """
+
+    unit_ids: list[str] = []
+    for item in items:
+        match = _COGNITION_UNIT_TITLE_RE.match(str(item.get("title", "")))
+        if match is not None:
+            unit_ids.append(match.group(1))
+    return {"unit_ids": unit_ids, "generation": generation, "gap_codes": gap_codes}
+
+
 def _build_cognition_mainline_projection(
     *,
     reader: Any | None,
@@ -5573,24 +5603,54 @@ def _build_cognition_mainline_projection(
     )
 
     if reader is None:
-        return {"items": [], "data_gaps": ["g_cognition_readmodel_unavailable"]}
-    readout = reader.read()
-    if readout.failure_code is not None:
         return {
             "items": [],
-            "data_gaps": [f"g_cognition_readmodel_{readout.failure_code}"],
+            "data_gaps": ["g_cognition_readmodel_unavailable"],
+            "consumption_audit": _cognition_consumption_audit(
+                items=[],
+                generation=None,
+                gap_codes=["g_cognition_readmodel_unavailable"],
+            ),
+        }
+    readout = reader.read()
+    if readout.failure_code is not None:
+        gap_codes = [f"g_cognition_readmodel_{readout.failure_code}"]
+        return {
+            "items": [],
+            "data_gaps": list(gap_codes),
+            "consumption_audit": _cognition_consumption_audit(
+                items=[],
+                generation=None,
+                gap_codes=gap_codes,
+            ),
         }
     try:
         as_of = datetime.fromisoformat(now)
     except ValueError:
-        return {"items": [], "data_gaps": ["g_cognition_pit_as_of_invalid"]}
+        gap_codes = ["g_cognition_pit_as_of_invalid"]
+        return {
+            "items": [],
+            "data_gaps": list(gap_codes),
+            "consumption_audit": _cognition_consumption_audit(
+                items=[],
+                generation=readout.generation,
+                gap_codes=gap_codes,
+            ),
+        }
     projection = project_cognition_mainline(
         readout.payload,
         as_of=as_of,
         working_set_identity=working_set_identity,
         question=question,
     )
+    items = list(projection.items)
+    gap_codes = list(projection.data_gaps)
     return {
-        "items": list(projection.items),
-        "data_gaps": list(projection.data_gaps),
+        "items": items,
+        "data_gaps": gap_codes,
+        "consumption_audit": _cognition_consumption_audit(
+            items=items,
+            generation=readout.generation,
+            gap_codes=gap_codes,
+        ),
     }

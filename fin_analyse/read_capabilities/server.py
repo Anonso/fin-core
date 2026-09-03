@@ -472,7 +472,7 @@ def _invoke_tool(
 
 
 def _trace_summary(tool: str, value: object) -> dict[str, object] | None:
-    """Optional per-tool trace enrichment (currently only G pinned summary)."""
+    """Optional per-tool trace enrichment (G pinned summary + cognition probe)."""
     if tool != "read_g_context" or not isinstance(value, dict):
         return None
     attestation = value.get("attestation")
@@ -488,7 +488,15 @@ def _trace_summary(tool: str, value: object) -> dict[str, object] | None:
     pinned_gaps = quality.get("pinned_data_gaps")
     if isinstance(pinned_gaps, list):
         picked["pinned_data_gaps"] = pinned_gaps
-    return {"g_pinned": picked} if picked else None
+    summary: dict[str, object] = {}
+    if picked:
+        summary["g_pinned"] = picked
+    # 消费探针（设计门 g-mainline-growth-v1 部件5）：每请求恰好一行，并入
+    # 本条 trace 行；投影附件与返回 value 的 agent 可见面不变。
+    consumption = quality.get("cognition_mainline_consumption")
+    if isinstance(consumption, dict):
+        summary["cognition_mainline_consumption"] = consumption
+    return summary or None
 
 
 # ── Server assembly ─────────────────────────────────────────────────────────

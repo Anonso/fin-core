@@ -214,11 +214,14 @@ class TestHappyPaths:
         assert isinstance(result.value, dict)
         assert "pinned" in result.value
         quality = result.value["attestation"]["quality"]
+        # cognition_mainline_consumption = 消费探针（设计门 部件5），有 readmodel
+        # 时随 attestation 出带；形状由探针测试文件专护。
         assert set(quality) == {
             "pinned_injected",
             "pinned_candidate_seen",
             "pinned_layer_count",
             "pinned_data_gaps",
+            "cognition_mainline_consumption",
         }
 
     def test_read_ready_evidence_requires_as_of_filled_by_server(
