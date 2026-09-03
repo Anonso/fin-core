@@ -302,8 +302,10 @@ def _project_item(
     assert chain_facts is not None
     if any(not _valid_ticker(ticker) for ticker in tickers):
         return None, "ready_evidence_mapping_identity_invalid"
-    if not tickers and not companies and not chain_facts:
-        return None, "ready_evidence_mapping_facts_missing"
+    # 三空（无 tickers/companies/chain_facts）不再硬拒（BUG-012 残余三，外审
+    # 裁决 A）：宏观/叙事类参考天然无 instrument 映射，内容兜底门在下方
+    # （summary/key_points 双空仍拒 ready_evidence_local_content_unavailable），
+    # 审计面（raw/audit 比对、点时、material 校验）全部保留。
 
     summary = _strict_text(raw.get("reference_summary"), _MAX_SUMMARY_CHARS)
     if (

@@ -1475,8 +1475,9 @@ class AgentRuntimeContextProvider:
             if not _reference_is_relevant(c, request, intent_tokens):
                 continue
             selected.append(c)
-        # 有公司/链事实的候选优先：空事实帖先占槽位、投影再被 mapping 门丢弃
-        # 是 BUG-012 残余二的第二重损耗。排序只改变候选顺序，不改变准入。
+        # 有公司/链事实的候选优先：事实帖信息密度高，让空事实帖排在后面。
+        # （BUG-012 残余二引入时是"空帖会被投影丢弃"的生存排序；残余三放宽
+        # 投影门后改为纯优先级——排序只改变候选顺序，不改变准入。）
         selected.sort(
             key=lambda c: (_reference_rank_key(c)[0], _candidate_time(c)),
             reverse=True,
@@ -1808,9 +1809,10 @@ def _latest_focus_rank_key(candidate: dict[str, Any]) -> tuple[float, int, str]:
 def _reference_rank_key(candidate: dict[str, Any]) -> tuple[int, str]:
     """Rank reference candidates so fact-bearing rows precede empty shells.
 
-    The ready projection later rejects rows with no tickers/companies/chain
-    facts; ranking them last prevents them from consuming the lane budget first
-    (BUG-012 残余二).  A stable secondary key keeps the original index order
+    Fact-bearing rows carry more structured signal, so they rank first; the
+    ready projection admits content-rich rows either way since BUG-012 残余三
+    relaxed the mapping gate (this is now a pure priority order, not a
+    survival filter).  A stable secondary key keeps the original index order
     for equal-fact candidates.
     """
     tickers = [str(t).strip() for t in (candidate.get("tickers") or []) if str(t).strip()]

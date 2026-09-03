@@ -383,3 +383,97 @@ def test_domain_specific_question_is_not_latest_focus() -> None:
 
     broad = AgentRuntimeContextRequest(question="最近关注什么变化？")
     assert _is_latest_focus_query(broad, _build_intent_tokens(broad))
+
+
+def test_macro_reference_without_mapping_facts_still_projects(tmp_path: Path) -> None:
+    """BUG-012 残余三（2026-09-03 实弹）：宏观叙事帖 tickers/companies/
+    chain_facts 三空但 summary 内容充分时，应可注入 ready evidence，而非被
+    mapping 门拒至恒 unavailable（9/3 实弹：两条当天候选全被拒，12 调 0 ok 面貌
+    的结构性根因）。"""
+    article = _write_article_custom(
+        tmp_path,
+        "zsxq-45548825441882218",
+        date="2026-08-30 09:30",
+        title="美联储九月议息口径怎么看",
+        companies=[],
+        tags=["美联储"],
+    )
+    _write_index(
+        tmp_path,
+        [
+            {
+                "id": "zsxq-45548825441882218",
+                "topic_id": "zsxq-45548825441882218".removeprefix("zsxq-"),
+                "date": "2026-08-30 09:30",
+                "score": 6.0,
+                "column": "普通",
+                "companies": [],
+                "tags": ["美联储"],
+                "title": "美联储九月议息口径怎么看",
+                "char_count": 400,
+                "path": str(article),
+                "type": "q&a",
+            }
+        ],
+    )
+
+    result = _read(_reader(tmp_path), "美联储九月议息口径对市场有什么影响")
+
+    assert result.value["items"], result.data_gaps
+    item = result.value["items"][0]
+    assert item["article_id"] == "zsxq-45548825441882218"
+    assert item["tickers"] == []
+    assert item["companies"] == []
+    assert item["industry_chain_facts"] == []
+    assert item["content_summary"]
+    assert "ready_evidence_unavailable" not in result.data_gaps
+
+
+def test_project_item_still_rejects_contentless_empty_fact_rows() -> None:
+    """残余三外审 P2：三空硬拒删除后，无映射且无内容（summary/key_points
+    双空）的行仍被内容兜底门拒绝（ready_evidence_local_content_unavailable）。"""
+
+    from fin_analyse.guo_teacher_research.ready_evidence import _project_item
+
+    available_at = "2026-08-30T09:35:00+08:00"
+    raw: dict[str, object] = {
+        "source_ref": "zsxq-45548825441882218",
+        "source_bucket": "recent_reference",
+        "article_id": "zsxq-45548825441882218",
+        "source_scope": "reference",
+        "usage_boundary": "reference_not_g_source_advisory_only",
+        "instruction_authority": "none",
+        "source_classification": "observation",
+        "column": "普通",
+        "title": "美联储九月议息口径怎么看",
+        "published_at": "2026-08-30T09:30:00+08:00",
+        "available_at": available_at,
+        "why_available": ["same_day_reference", "reference_not_g_source"],
+        "tickers": [],
+        "companies": [],
+        "theme_clusters": [],
+        "industry_chain_facts": [],
+        "reference_key_points": [],
+        "reference_summary": "",
+        "selected_material": {
+            "kind": "knowledge_markdown",
+            "ref": "zsxq-45548825441882218",
+            "available_at": available_at,
+            "raw_sha256": "a" * 64,
+        },
+        "local_ready_evidence": {
+            "ready": True,
+            "summary_available": False,
+            "key_points_available": False,
+            "deep_read_complete": False,
+            "local_only": True,
+        },
+    }
+    item, gap = _project_item(
+        raw=raw,
+        audit=dict(raw),
+        as_of=datetime(2026, 8, 30, 23, 0, 0, tzinfo=_CST),
+        selection_policy="recent_reference",
+    )
+    assert item is None
+    assert gap == "ready_evidence_local_content_unavailable"
