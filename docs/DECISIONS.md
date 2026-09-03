@@ -353,4 +353,8 @@
   （新增状态机，家规 11 待扫批版真实使用证据）。
 - 状态：active（施工包 A=主线生长管线 v1、B=guo:v0 退役 入 NOW 待办
   旁路·owner，BUG-002 盘前实弹收口后开工；盲评随 A/B；A 动 durable state，
-  开工前短设计稿）
+  开工前短设计稿）→ 2026-09-03 B 收口（4aa8d0a：删三测试引用闭包 874 行；
+  guo:v0 代码字面清零，活读链 list_personas→agent_runtime 不动、数据留存
+  原地+家规4 备份 `~/fin-data/backups/guo-v0-retirement-20260903`；生产
+  rebuild/analyze 线留仓为无测试 owner 手动线【残留已报备】；「断供
+  fallback 画像」入 NOW 旁路·使用触发）· 证据：本条目+备份 manifest。

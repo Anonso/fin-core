@@ -124,8 +124,8 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·owner | 14 | 黑话译注下批消费方 ✅（09-03 晚：Daily `_render_g_context` 显式加译注段〔96 绿〕+ mainline 投影侧确定性附加〔不动 PIT 工件 schema，57 绿〕；推送侧实际生效仍待 D-031 恢复）；一期三落点已在用（a06db30） | 已交付；D-031 骨架稿 docs/design/d031-daily-consult-env.md 备好待 owner 恢复指示 |
 | 旁路·随手 | 15 | consult-agent README/人格工具计数过时：写「7 只读+1 写」，thin server 实为 12 工具；README 该行带「冻结契约」标注，改数需 owner 会签 | owner 会签后改 |
 | 旁路·owner | 16 | G 主线生长管线 v1（D-038）：候选扫描（来源门+article_ref 去重，纯读不写 KB）→ CC 起草（摘录 span 机验+混合材料逐段归属）→ owner 扫批入档；含缺口 B 修复（标注 hash 独立触发 rebuild，不再等下次 ingest）+ 文件名去日期化 + 消费探针（投影附件带 unit_id 审计行）；动 durable state，开工前短设计稿（规则5） | BUG-002 盘前实弹收口后开工 |
-| 旁路·owner | 17 | guo:v0 退役（D-038）：引用闭包核对（含动态 import）→ owner-only 备份+manifest（家规4）→ 删三测试引用（test_persona_moa/test_service/test_models）→ teacher_personas.jsonl 等数据留存；「断供 fallback 画像」挂观察名单（触发=真实断供或 owner 主动想用，届时从全库语料重编） | 随 16 同期或独立随手 |
-| 旁路·owner | 18 | 主线效果盲评（D-038）：同一问题集 有/无主线投影 对照盲评，回答「主线对答案有没有可测差异」（接线已实弹，效果层无证据）；复用 deepen 盲评 harness 模式 | 16/17 完成后立项 |
+| 旁路·owner | 18 | 主线效果盲评（D-038）：同一问题集 有/无主线投影 对照盲评，回答「主线对答案有没有可测差异」（接线已实弹，效果层无证据）；复用 deepen 盲评 harness 模式 | 16 完成后立项（17 已收口 4aa8d0a） |
+| 旁路·使用触发 | 19 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
 
