@@ -86,7 +86,7 @@ multi-agent 编排、角色 agent 分层、研报模板、15×token 并行研究
 
 1. ~~「金融投研 skill 项目」是哪个~~ → **ai-berkshire 确认**，定向调研闭环（§8）；
 2. **候选 1/2/4/5 挂观察名单**：等盲评分维结果举证（三道闸②），谁分低谁先过闸；
-3. **候选 3 问询侧盲评立项**：6–10 真实题起步，双腿=finqai（主用）/finqa（辅），
+3. **候选 3 问询侧盲评立项**：6–10 真实题起步，双腿=finqa-x/finqa-c（对等无主次），
    同跑产出问询基线 + harness 风格半边。
 
 ## 8. 第二轮定向调研：ai-berkshire（2026-09-03）
@@ -142,12 +142,14 @@ owner 转来一篇外部 AI 建议（Claude Code 编码偏向 → 换 Goose / �
   codex 腿——初测只翻了全局 `~/.codex`，漏了 consult 工作区自己的
   `CODEX_HOME`，"codex 侧无存档"结论错误，以下为两腿合并口径）**：
   CC 腿 36 会话——MCP 102 次调用，内置工具 20 次（13 记忆缝 + 4 配置读 +
-  3 环境自检），0 次进入答案内容；codex 腿（finqai 主用腿）38 会话——
+  3 环境自检），0 次进入答案内容；codex 腿（入口 `finqa-x`，2026-09-03
+  命名规范前旧名 finqai）38 会话——
   34 个纯问询会话 exec=0 全 MCP（含 09-03 真实使用），4 个 exec 重载会话
   逐条定性为工作区作业（知识脑播种/自选股功能/G 锚同步/人格修订）非问询，
   问询内污染 **0 例**。边界：仅覆盖「行为」，风格半边未测，即候选 3 第一刀。
-  盲评双腿按真实入口：`finqai`（codex harness·deepseek-v4-pro，
-  opencode_go）为主、`finqa`（CC harness·glm-5.3）为辅；纯 harness 隔离
+  盲评双腿按真实入口、对等无主次（owner 09-03 更正：近期 codex 腿多用仅因
+  GLM 额度断供，恢复后两腿并用）：`finqa-x`（codex harness·deepseek-v4-pro，
+  opencode_go）与 `finqa-c`（CC harness·glm-5.3）；纯 harness 隔离
   切面须另钉同模。
 - **Hermes 定位澄清（owner 问「后期代替 CC/codex 是否更好」；owner 更正：
   Hermes 是有团队维护的开源 harness，"solo 自养四件套"说法作废）**：接入=是，

@@ -129,7 +129,8 @@ run_codex 段：
 ## 只换 key（provider/模型不动）——2026-09-01 教训
 
 key 属于凭据文件，**永远不要把脚本/入口指到临时文件**。2026-09-01 曾误把
-`scripts/codex_open.sh` 与 `~/.bashrc` 的 finqac/finqai 的
+`scripts/codex_open.sh` 与 `~/.bashrc` 的 finqa-codex/finqa-x（旧名
+finqac/finqai）的
 `OPENCODE_GO_API_KEY` 直接改为读 `/tmp/open.txt`（/tmp 重启即清空、且绕过
 auth.json 单一事实源，误提交 commit e0c7269），同日回退。正确流程：
 
@@ -139,7 +140,7 @@ auth.json 单一事实源，误提交 commit e0c7269），同日回退。正确�
    `relay-19851117.key`；保持 0600，先 `cp -a` 备份原文件。
 2. 一致性校验（不打印值）：新 key 值与 auth.json 条目值 sha256 一致。
 3. 入口零改动：scripts/codex_open.sh 仍读 auth.json；`~/.bashrc` 的
-   finqac/finqai、llm.yaml 的 `AUTHJSON:opencode-go` 降级链、
+   finqa-codex/finqa-x、llm.yaml 的 `AUTHJSON:opencode-go` 降级链、
    codex_routes.yaml 的 codex-open 路由同源生效——只改 auth.json 一处即
    全覆盖。
 4. 重跑验证阶梯第 1 条（`bash -n`）+ 一次 `exec "Reply with exactly: ok"`。

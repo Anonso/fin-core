@@ -19,7 +19,7 @@ daily_workspace_generator.py` + prepare/delivery 单元）与问询环境（薄 
   thin server 拉八工具材料（替代 generator 内部各自 resolve），渲染与
   推送链保留。改动面小；人格纪律仍靠 prompt 复刻。
 - **方案 B · consult-agent 会话当生成器**（对齐 D-032 方案 A 的同源化方向）：
-  每班以 `finqa-x`（headless CC）+ 检查点问题生成正文，交付链只做信封与
+  每班以 `finqa-claude`（headless CC；2026-09-03 前旧名 finqa-x）+ 检查点问题生成正文，交付链只做信封与
   投递。同源化最彻底；成本/时延/bash 权限边界需设计门裁决。
 
 ## 不变量

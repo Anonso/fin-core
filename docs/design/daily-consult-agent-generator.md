@@ -9,7 +9,7 @@
 
 **非目标**：
 - 不做飞书请求面/旧 Hermes 网关恢复（仍属 agent 调用待办，本期只做生成器后端）。
-- 不动手动 CLI（finqa/finqai/finqac 保持直连，不参与自动兜底）。
+- 不动手动 CLI（finqa-c/finqa-x/finqa-claude/finqa-codex 保持直连，不参与自动兜底；2026-09-03 前旧名 finqa/finqai/finqac/finqa-x）。
 - 不重设计 durable 状态机。
 
 ## 兜底链（只生效于推送）
@@ -20,7 +20,7 @@
 
 - 前两档是问询环境（consult-ask 契约，CC 默认、codex 备选）。
 - L1 直调仅作为推送兜底：问询环境全挂时保推送不断，产物 `generated_via=l1-direct-v1`。
-- 手动 CLI 不经过此链：finqa/finqai/finqac 各自直连单旋钮模型。
+- 手动 CLI 不经过此链：finqa-c/finqa-x/finqa-claude/finqa-codex 各自直连单旋钮模型。
 - 兜底顺序/超时进配置：`config/daily-workspace.yaml`
   （`consult_agents: [cc, codex]`、`fallback_l1: true`、`per_agent_timeout_seconds`）。
 
