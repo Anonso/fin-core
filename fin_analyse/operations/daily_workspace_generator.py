@@ -646,6 +646,9 @@ def _render_g_context(resolved: Any) -> str | None:
     published_at/usage_boundary/why_available）；4000 字上限按整条丢弃，不半条
     切断（弃条数记日志）。resolve 层 typed gaps 不进产品 data_gaps（与既有材料
     键同规，一码一因）。空（无条目或全被过滤）→ None → typed gap。
+    黑话译注段（2026-09-03 显式增补，NOW #14 下批）：条目带 jargon_notes 时
+    在括注尾部附「黑话：term=meaning；…」（最多 4 条），无命中不附加，
+    六字段映射本体不变。
     """
 
     context = getattr(resolved, "llm_context", None)
@@ -668,7 +671,19 @@ def _render_g_context(resolved: Any) -> str | None:
         usage = str(item.get("usage_boundary") or "").strip()
         source_ref = str(item.get("source_ref") or "").strip()
         headline = f"{title}：{brief}" if title and brief else (title or brief)
-        suffixes = [part for part in (usage, source_ref) if part]
+        jargon_notes = item.get("jargon_notes")
+        jargon_segment = ""
+        if isinstance(jargon_notes, list) and jargon_notes:
+            pairs = [
+                f"{str(note.get('term') or '').strip()}={str(note.get('meaning') or '').strip()}"
+                for note in jargon_notes[:4]
+                if isinstance(note, Mapping)
+                and str(note.get("term") or "").strip()
+                and str(note.get("meaning") or "").strip()
+            ]
+            if pairs:
+                jargon_segment = f"黑话：{'；'.join(pairs)}"
+        suffixes = [part for part in (usage, source_ref, jargon_segment) if part]
         line = " | ".join(
             (published_at, headline, f"（{'；'.join(suffixes)}）" if suffixes else "")
         ).strip()

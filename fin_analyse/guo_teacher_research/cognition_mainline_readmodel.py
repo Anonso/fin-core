@@ -24,6 +24,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
+from fin_analyse.common.zsxq_jargon import jargon_notes as scan_jargon_notes
+
 # 标注文档时间为中国时区语境（A 股/雪球文章发表时间）。
 _ANNOTATION_TZ = timezone(timedelta(hours=8))
 
@@ -31,12 +33,12 @@ SCHEMA_VERSION = "fin.cognition-mainline-readmodel/v1"
 
 COGNITION_MODES = frozenset(
     {
-        "current_observation",       # 当前观察
-        "historical_analysis",       # 历史分析
-        "structural_analysis",       # 结构分析
-        "forecast",                  # 预测
-        "scenario",                  # 情景
-        "object_mapping",            # 对象映射
+        "current_observation",  # 当前观察
+        "historical_analysis",  # 历史分析
+        "structural_analysis",  # 结构分析
+        "forecast",  # 预测
+        "scenario",  # 情景
+        "object_mapping",  # 对象映射
         "action_layer_not_cognition",  # 行动层（六类模式不适用）
     }
 )
@@ -49,9 +51,7 @@ SOURCE_NATURES = frozenset(
 )
 CHANGE_TYPES = frozenset({"baseline", "no_change", "increment", "reframe"})
 AUTHORSHIPS = frozenset({"G_ORIGINAL", "AGENT_REASONING_LABELED"})
-RELATIONS = frozenset(
-    {"supports", "partially_supports", "diverges", "unknown", "no_evidence"}
-)
+RELATIONS = frozenset({"supports", "partially_supports", "diverges", "unknown", "no_evidence"})
 
 UNIT_ID_RE = re.compile(r"^CU-\d{4}-[A-Z]?\d{2}$")
 _ABS_PATH_RE = re.compile(r"^(?:/|[A-Za-z]:[\\/])")
@@ -256,9 +256,7 @@ def _check_reference_integrity(model: _ReadModel) -> None:
 
 def _check_time_ordering(model: _ReadModel) -> None:
     if model.processed_at < model.available_at:
-        raise CognitionMainlineReadModelError(
-            "processed_at must not be earlier than available_at"
-        )
+        raise CognitionMainlineReadModelError("processed_at must not be earlier than available_at")
     node_times = [node.available_at for node in model.evolution]
     if any(
         later < earlier
@@ -285,13 +283,11 @@ def _check_mode_exclusivity(model: _ReadModel) -> None:
             continue
         if primary in unit.secondary_modes:
             raise CognitionMainlineReadModelError(
-                f"unit {unit.unit_id}: cognition_mode must be exclusive with "
-                "secondary_modes"
+                f"unit {unit.unit_id}: cognition_mode must be exclusive with secondary_modes"
             )
         if "action_layer_not_cognition" in unit.secondary_modes:
             raise CognitionMainlineReadModelError(
-                f"unit {unit.unit_id}: secondary_modes must not contain "
-                "action_layer_not_cognition"
+                f"unit {unit.unit_id}: secondary_modes must not contain action_layer_not_cognition"
             )
 
 
@@ -376,9 +372,7 @@ def _require_canonical_article_ref(ref: str) -> None:
     """Fail closed unless ref is a canonical repo-relative knowledge-base ref."""
     issue = _article_ref_canonicality_issue(ref)
     if issue is not None:
-        raise CognitionMainlineReadModelError(
-            f"unsafe article_ref ({issue}): {ref!r}"
-        )
+        raise CognitionMainlineReadModelError(f"unsafe article_ref ({issue}): {ref!r}")
 
 
 def _normalize_article_ref(raw: str) -> str:
@@ -469,10 +463,7 @@ def _parse_cognition_modes(field: str) -> tuple[str, list[str]]:
     if primary_match is None:
         raise CognitionMainlineReadModelError(f"cannot parse cognition modes: {field!r}")
     primary = _MODE_ZH_TO_EN[primary_match.group(1)]
-    secondary = [
-        _MODE_ZH_TO_EN[name.strip()]
-        for name in re.findall(r"次\s*`([^`]+)`", field)
-    ]
+    secondary = [_MODE_ZH_TO_EN[name.strip()] for name in re.findall(r"次\s*`([^`]+)`", field)]
     return primary, secondary
 
 
@@ -542,9 +533,7 @@ def _parse_unit_sections(
         unit_id = unit["unit_id"]
         time_row = time_index.get(unit_id)
         if time_row is None:
-            raise CognitionMainlineReadModelError(
-                f"unit {unit_id} missing from 时间语义索引 table"
-            )
+            raise CognitionMainlineReadModelError(f"unit {unit_id} missing from 时间语义索引 table")
         source_ref = unit.get("source_ref")
         if source_ref not in source_ids:
             raise CognitionMainlineReadModelError(
@@ -601,11 +590,7 @@ def _parse_evolution(
         change = "baseline" if "baseline" in change else change
         # unit_refs 按节点日期前缀匹配单元的 published_at（月份/日）。
         prefix = node.split()[0]  # "2026-06" / "2026-07-30"
-        unit_refs = [
-            unit["unit_id"]
-            for unit in units
-            if unit["published_at"].startswith(prefix)
-        ]
+        unit_refs = [unit["unit_id"] for unit in units if unit["published_at"].startswith(prefix)]
         available_at: datetime
         if prefix == "2026-06":
             available_at = _parse_datetime("2026-06-01")
@@ -712,7 +697,13 @@ def _open_root_directory(root: pathlib.Path, *, create: bool) -> int:
         if create:
             root.mkdir(mode=0o700, parents=False)
             os.chmod(root, 0o700)
-            return os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0))
+            return os.open(
+                root,
+                os.O_RDONLY
+                | getattr(os, "O_DIRECTORY", 0)
+                | getattr(os, "O_CLOEXEC", 0)
+                | getattr(os, "O_NOFOLLOW", 0),
+            )
         raise
 
 
@@ -828,9 +819,7 @@ class CognitionMainlinePublisher:
             if current is not None:
                 current_raw, current_sha = current
                 if current_raw == candidate_raw:
-                    return CognitionMainlinePublicationResult(
-                        disposition="ALREADY_PUBLISHED"
-                    )
+                    return CognitionMainlinePublicationResult(disposition="ALREADY_PUBLISHED")
                 current_payload = json.loads(current_raw.decode("utf-8"))
                 current_generation = int(current_payload["generation"])
                 if current_generation >= candidate_generation:
@@ -928,6 +917,7 @@ class CognitionMainlineReadModelReader:
 # Projector (pure read-only; PIT selector + whole-unit budget eviction)
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class CognitionMainlineProjection:
     """Bounded G_ORIGINAL projection items plus typed data gaps."""
@@ -1020,13 +1010,9 @@ def project_cognition_mainline(
     available_at = _parse_rfc3339(payload["available_at"])
     processed_at = _parse_rfc3339(payload["processed_at"])
     if available_at > as_of or processed_at > as_of:
-        return CognitionMainlineProjection(
-            data_gaps=("g_cognition_pit_artifact_not_available",)
-        )
+        return CognitionMainlineProjection(data_gaps=("g_cognition_pit_artifact_not_available",))
     if payload["pit_working_set_identity"] != working_set_identity:
-        return CognitionMainlineProjection(
-            data_gaps=("g_cognition_pit_identity_mismatch",)
-        )
+        return CognitionMainlineProjection(data_gaps=("g_cognition_pit_identity_mismatch",))
 
     usable_unit_ids: set[str] = set()
     for node in payload["evolution"]:
@@ -1067,19 +1053,24 @@ def project_cognition_mainline(
             gaps.append("g_cognition_unit_budget_evicted")
             continue
         ref = source["article_ref"]
-        items.append(
-            {
-                "source_bucket": "cognition_mainline_projection",
-                "source_ref": ref,
-                "source_refs": [ref],
-                "title": f"G 认知单元 {unit['unit_id']}",
-                "guidance_brief": rendered,
-                "published_at": unit["published_at"],
-                "available_at": unit["published_at"],
-                "usage_boundary": "background_guidance_only_no_confidence_boost",
-                "why_available": ["cognition_mainline_projection", "g_source_background"],
-            }
-        )
+        # 黑话译注（NOW #14 下批，设计稿「新消费者=调一次旁注函数」）：渲染文本
+        # 含 G 逐字引句，黑话可经引句露出；投影侧确定性附加，不改 PIT 密封工件
+        # schema、不计入 budget_bytes（附加开销 ≤4 条窄契约）。
+        jargon_notes = scan_jargon_notes(rendered, limit=4)
+        item: dict[str, object] = {
+            "source_bucket": "cognition_mainline_projection",
+            "source_ref": ref,
+            "source_refs": [ref],
+            "title": f"G 认知单元 {unit['unit_id']}",
+            "guidance_brief": rendered,
+            "published_at": unit["published_at"],
+            "available_at": unit["published_at"],
+            "usage_boundary": "background_guidance_only_no_confidence_boost",
+            "why_available": ["cognition_mainline_projection", "g_source_background"],
+        }
+        if jargon_notes:
+            item["jargon_notes"] = jargon_notes
+        items.append(item)
         used_bytes += size
     if len(items) > max_refs:
         items = items[:max_refs]

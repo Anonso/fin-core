@@ -1131,6 +1131,10 @@ def _g_layered_context_value(
                         "published_at": str(item.get("published_at") or ""),
                     }
                 )
+                # 黑话译注（NOW #14 下批）：readmodel 投影附加字段有界透传。
+                _jargon = _bounded_jargon_notes(item.get("jargon_notes"))
+                if _jargon:
+                    cognition_items[-1]["jargon_notes"] = _jargon
                 if len(cognition_items) >= _MAX_FRAMEWORK_ITEMS:
                     break
     if cognition_items:

@@ -195,3 +195,23 @@ def test_overview_material_uses_live_clock_not_frozen_checkpoint_clock(
 
     assert captured["clock"] is None
     assert materials["market_overview"] is not None
+
+
+def test_jargon_notes_render_as_bounded_segment() -> None:
+    """NOW #14 下批：条目带 jargon_notes 时括注尾附黑话段；无命中不附加。"""
+    item = _item("fresh_g", "星大派锐评：科技触底")
+    item["jargon_notes"] = [
+        {"term": "科学家50", "meaning": "科创50", "confidence": "owner_confirmed"},
+        {"term": "大光", "meaning": "光模块", "confidence": "owner_confirmed"},
+        {"term": "残条", "meaning": ""},  # 缺 meaning 的条目跳过
+        "not-a-mapping",
+    ]
+    text = _render_g_context(_Resolved({"g_context": [item]}))
+    assert text is not None
+    assert "黑话：科学家50=科创50；大光=光模块" in text
+    assert "残条" not in text
+
+    # 无 jargon_notes → 行与六字段映射完全一致（不附加空段）
+    plain = _render_g_context(_Resolved({"g_context": [_item("fresh_g", "锐评")]}))
+    assert plain is not None
+    assert "黑话" not in plain

@@ -1047,3 +1047,72 @@ class TestQuestionRelevance:
         )
         assert [str(item["title"]) for item in relevant.items] == ["G 认知单元 CU-A"]
         assert "g_cognition_unit_budget_evicted" in relevant.data_gaps
+
+
+def _projection_payload_with_quote(quote: str) -> dict:
+    return {
+        "available_at": "2026-08-19T12:47:00+00:00",
+        "processed_at": "2026-08-19T12:47:00+00:00",
+        "pit_working_set_identity": "w" * 64,
+        "evolution": [
+            {"available_at": "2026-08-19T12:47:00+00:00", "unit_refs": ["CU-1"]}
+        ],
+        "sources": [
+            {
+                "source_id": "S-1",
+                "article_ref": "knowledge-base/articles/20260801_test.md",
+                "source_nature": "G_ORIGINAL",
+            }
+        ],
+        "units": [
+            {
+                "unit_id": "CU-1",
+                "source_ref": "S-1",
+                "published_at": "2026-08-01T10:00:00+00:00",
+                "g_original_quote": quote,
+                "deepening_expression": "",
+                "observed_at": "2026-08-01",
+                "effective_period": "当日",
+                "forecast_window": "none_stated",
+                "topics": [],
+                "limitations": [],
+            }
+        ],
+    }
+
+
+def test_projection_attaches_jargon_notes_for_quote_terms() -> None:
+    """NOW #14 下批：单元 G 逐字引句含黑话时，投影条目确定性附译注。"""
+    from datetime import datetime, timedelta, timezone
+
+    from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
+        project_cognition_mainline,
+    )
+
+    payload = _projection_payload_with_quote("科技仓看科学家50和大光的量能。")
+    out = project_cognition_mainline(
+        payload,
+        as_of=datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8))),
+        working_set_identity=payload["pit_working_set_identity"],
+    )
+    assert len(out.items) == 1
+    notes = {n["term"]: n["meaning"] for n in out.items[0].get("jargon_notes", [])}
+    assert notes["科学家50"] == "科创50"
+    assert notes["大光"] == "光模块"
+
+
+def test_projection_without_jargon_has_no_notes_key() -> None:
+    from datetime import datetime, timedelta, timezone
+
+    from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
+        project_cognition_mainline,
+    )
+
+    payload = _projection_payload_with_quote("今天量能平淡，指数磨平。")
+    out = project_cognition_mainline(
+        payload,
+        as_of=datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8))),
+        working_set_identity=payload["pit_working_set_identity"],
+    )
+    assert len(out.items) == 1
+    assert "jargon_notes" not in out.items[0]
