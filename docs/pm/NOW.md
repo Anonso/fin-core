@@ -42,7 +42,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 路由重排 D-018/019/021 | ✅ 完成（文件层 + 运行态） | [../DECISIONS.md](../DECISIONS.md) |
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 范围盘点已入队（旁路·owner，D-016 三道闸），施工待举证 | D-020 |
-| W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点因额度耗尽暂关（D-028） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
+| W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点已恢复（D-028 解除，9a0320f） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | D3 三天真实使用门 | ⏳ 建设完成后一次性执行；供数 = finq usage.jsonl | D-020 |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步）；P5 路线已定候选方案 A：Hermes 直接当问询 agent（D-032） | rebaseline §6；D-032 |
 
@@ -116,7 +116,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：候选范围初稿已落盘（[research/2026-09-03](research/2026-09-03-external-analysis-absorption-scope.md)：五候选〔双边论证/查询分档/问询盲评/信息丰富度评级/数字双源〕+ ai-berkshire 定向调研补记 + 不吸清单），无举证项不施工 | owner 确认 ai-berkshire 是否即其所记 + 圈定候选 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |
-| 旁路·P5 前 | 10 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
 | 旁路·owner | 14 | 黑话译注下批消费方：cognition mainline 投影（读自身 readmodel，需显式加）+ Daily 生成器（`_render_g_context` 冻结六字段映射需显式加 jargon_notes）；一期三落点已在用（a06db30） | owner 决定下批时点 |

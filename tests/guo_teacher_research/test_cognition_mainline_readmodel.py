@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -19,7 +20,7 @@ def _minimal_payload() -> dict:
         "as_of": "2026-08-20T00:00:00+00:00",
         "generation": 1,
         "content_hash": "0" * 64,
-        "annotation_ref": "knowledge-base/manual-annotations/g-cognition-mainline-2026-06-to-2026-08-19.md",
+        "annotation_ref": "manual-annotations/g-cognition-mainline-2026-06-to-2026-08-19.md",
         "available_at": "2026-08-19T12:47:00+00:00",
         "processed_at": "2026-08-20T00:00:00+00:00",
         "pit_working_set_identity": "a" * 64,
@@ -193,13 +194,21 @@ class TestValidatorAcceptance:
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-# 仓相对锚点（bugfix 2026-08-29）：原文档硬编码老仓绝对路径，W2' 步6 绝根删除
-# fin-analyse/knowledge-base/ 副本后 24 例全红；文档现随本仓走。
+# canonical KB 根锚点（2026-09-03 归位迁移）：批注文档是 owner durable 数据，
+# 不随仓走（knowledge-base/ 被 .gitignore，fresh checkout 会丢），读
+# knowledge_root 缝解析的 canonical 根。缺文档时依赖它的用例整例跳过
+# （生产 checkout 上恒存在）；_REPO_ROOT 不再是该文档的住址。
 ANNOTATION_DOC = str(
-    _REPO_ROOT
-    / "knowledge-base"
+    Path(
+        os.environ.get("FIN_KNOWLEDGE_BASE_ROOT")
+        or (Path.home() / ".local" / "share" / "fin-analyse" / "shared" / "knowledge-base")
+    )
     / "manual-annotations"
     / "g-cognition-mainline-2026-06-to-2026-08-19.md"
+)
+needs_annotation_doc = pytest.mark.skipif(
+    not Path(ANNOTATION_DOC).is_file(),
+    reason="canonical annotation doc not present (knowledge root seam)",
 )
 
 
@@ -243,6 +252,7 @@ def _write_valid_annotation(doc_path, article_ref_cell: str) -> None:
 class TestGenerator:
     """Generator: deterministic build from the manual-annotation markdown."""
 
+    @needs_annotation_doc
     def test_builds_valid_readmodel_from_annotation_doc(self) -> None:
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
             generate_cognition_mainline_readmodel,
@@ -258,6 +268,7 @@ class TestGenerator:
         validated = validate_cognition_mainline_readmodel(model)
         assert validated["content_hash"] == model["content_hash"]
 
+    @needs_annotation_doc
     def test_generation_is_deterministic(self) -> None:
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
             generate_cognition_mainline_readmodel,
@@ -267,6 +278,7 @@ class TestGenerator:
         second = generate_cognition_mainline_readmodel(ANNOTATION_DOC)
         assert first == second
 
+    @needs_annotation_doc
     def test_no_absolute_host_path_in_article_refs(self) -> None:
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
             generate_cognition_mainline_readmodel,
@@ -277,6 +289,7 @@ class TestGenerator:
             ref = source["article_ref"]
             assert not ref.startswith("/"), f"absolute article_ref leaked: {ref}"
 
+    @needs_annotation_doc
     def test_unit_ids_are_unique_and_complete(self) -> None:
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
             generate_cognition_mainline_readmodel,
@@ -306,6 +319,7 @@ class TestGenerator:
         with pytest.raises(CognitionMainlineReadModelError):
             generate_cognition_mainline_readmodel(str(doc))
 
+    @needs_annotation_doc
     def test_article_refs_clean_no_wrappers_no_host_paths(self) -> None:
         """生产形状回归：19/19 曾带反引号、其中 6 个保留 /home/...，必须全部消除。"""
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
@@ -321,6 +335,7 @@ class TestGenerator:
             assert ref.startswith("knowledge-base/"), f"not repo-relative: {ref!r}"
             assert not any(part in {".", ".."} for part in ref.split("/")), ref
 
+    @needs_annotation_doc
     def test_host_absolute_refs_mapped_to_repo_relative(self) -> None:
         """6 个来源原形为宿主绝对路径（含行号范围），必须映射为 canonical repo-relative ref。"""
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
@@ -397,6 +412,8 @@ class TestPublisher:
             generate_cognition_mainline_readmodel,
         )
 
+        if not Path(ANNOTATION_DOC).is_file():
+            pytest.skip("canonical annotation doc not present (knowledge root seam)")
         # 经公开 generator 构建：content_hash 与 canonical 内容一致（形状合法但内容
         # 不符的 payload 现在是发布门禁下的非法候选，见 CONTENT_HASH_MISMATCH）。
         return generate_cognition_mainline_readmodel(ANNOTATION_DOC, generation=generation)
@@ -437,9 +454,9 @@ class TestPublisher:
         root = tmp_path / "readmodel"
         root.mkdir(mode=0o700)
         publisher = CognitionMainlinePublisher(root)
-        assert publisher.publish(self._payload(2), expected_prior_identity="MISSING").disposition == (
-            "PUBLISHED"
-        )
+        assert publisher.publish(
+            self._payload(2), expected_prior_identity="MISSING"
+        ).disposition == ("PUBLISHED")
         result = publisher.publish(self._payload(1), expected_prior_identity=None)
         assert result.disposition == "REJECTED"
         assert result.reason == "GENERATION_REGRESSION"
@@ -452,13 +469,14 @@ class TestPublisher:
         root = tmp_path / "readmodel"
         root.mkdir(mode=0o700)
         publisher = CognitionMainlinePublisher(root)
-        assert publisher.publish(self._payload(1), expected_prior_identity="MISSING").disposition == (
-            "PUBLISHED"
-        )
+        assert publisher.publish(
+            self._payload(1), expected_prior_identity="MISSING"
+        ).disposition == ("PUBLISHED")
         result = publisher.publish(self._payload(2), expected_prior_identity="wrong-prior-sha")
         assert result.disposition == "REJECTED"
         assert result.reason == "PRIOR_DRIFT"
 
+    @needs_annotation_doc
     def test_wrong_content_hash_candidate_rejected_healthy_kept(self, tmp_path) -> None:
         """错误 content_hash 的更高 generation 不得替换健康 artifact（fail closed）。"""
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
@@ -489,6 +507,7 @@ class TestPublisher:
         assert out.content_hash == healthy["content_hash"]
         assert sorted(p.name for p in root.iterdir()) == ["readmodel.v1.json"]
 
+    @needs_annotation_doc
     def test_unsafe_article_ref_candidate_does_not_replace_healthy(self, tmp_path) -> None:
         """validator 整份拒绝不安全 ref 候选：不替换健康 artifact、不落盘。"""
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
@@ -521,6 +540,7 @@ class TestPublisher:
             assert out.generation == 1, ref
         assert sorted(p.name for p in root.iterdir()) == ["readmodel.v1.json"]
 
+    @needs_annotation_doc
     def test_unsafe_article_ref_candidate_creates_nothing(self, tmp_path) -> None:
         """空 store 上发布不安全 ref 候选：不创建新 artifact、不创建目录。"""
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
@@ -537,6 +557,7 @@ class TestPublisher:
             CognitionMainlinePublisher(root).publish(corrupt, expected_prior_identity="MISSING")
         assert not root.exists()
 
+    @needs_annotation_doc
     def test_raw_identical_retry_of_legacy_wrong_hash_artifact(self, tmp_path) -> None:
         """raw-identical 精确重试先于 hash 核对：遗留错误 hash artifact 重试仍 ALREADY_PUBLISHED。"""
         import json
@@ -583,6 +604,7 @@ class TestPublisher:
 class TestReader:
     """Owner-only reader: canonical root, typed failure, no implicit creation."""
 
+    @needs_annotation_doc
     def test_reads_published_payload(self, tmp_path) -> None:
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
             CognitionMainlinePublisher,
@@ -668,6 +690,8 @@ def _generated() -> dict:
         generate_cognition_mainline_readmodel,
     )
 
+    if not Path(ANNOTATION_DOC).is_file():
+        pytest.skip("canonical annotation doc not present (knowledge root seam)")
     return generate_cognition_mainline_readmodel(ANNOTATION_DOC)
 
 
@@ -866,9 +890,7 @@ class TestProjector:
             budget_bytes=4096,
             max_refs=32,
         )
-        total_bytes = sum(
-            len(item["guidance_brief"].encode("utf-8")) for item in out.items
-        )
+        total_bytes = sum(len(item["guidance_brief"].encode("utf-8")) for item in out.items)
         assert total_bytes <= 4096
         assert len(out.items) <= 32
         # G 原话与深化分列可区分
@@ -906,7 +928,7 @@ def _topic_payload() -> dict:
         "as_of": "2026-08-20T00:00:00+00:00",
         "generation": 1,
         "content_hash": "0" * 64,
-        "annotation_ref": "knowledge-base/manual-annotations/test.md",
+        "annotation_ref": "manual-annotations/test.md",
         "available_at": "2026-08-19T12:47:00+00:00",
         "processed_at": "2026-08-20T00:00:00+00:00",
         "pit_working_set_identity": "a" * 64,
@@ -980,12 +1002,8 @@ class TestQuestionRelevance:
 
         relevant_titles = [str(item["title"]) for item in relevant.items]
         baseline_titles = [str(item["title"]) for item in baseline.items]
-        assert relevant_titles.index("G 认知单元 CU-A") < relevant_titles.index(
-            "G 认知单元 CU-B"
-        )
-        assert baseline_titles.index("G 认知单元 CU-B") < baseline_titles.index(
-            "G 认知单元 CU-A"
-        )
+        assert relevant_titles.index("G 认知单元 CU-A") < relevant_titles.index("G 认知单元 CU-B")
+        assert baseline_titles.index("G 认知单元 CU-B") < baseline_titles.index("G 认知单元 CU-A")
 
     def test_empty_question_keeps_latest_first_regression(self) -> None:
         from datetime import datetime, timedelta, timezone

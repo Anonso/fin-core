@@ -673,7 +673,7 @@ def generate_cognition_mainline_readmodel(
         "as_of": as_of.isoformat(),
         "generation": generation,
         "content_hash": "0" * 64,  # 合法形状占位，下方按最终 canonical 计算
-        "annotation_ref": f"knowledge-base/manual-annotations/{path.name}",
+        "annotation_ref": f"manual-annotations/{path.name}",
         "available_at": latest_published,
         # processed_at = 文档声明的复核时点（确定性；构建期时钟不进 artifact）。
         "processed_at": as_of.isoformat(),

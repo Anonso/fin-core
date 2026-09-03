@@ -21,6 +21,7 @@ from io import StringIO
 from pathlib import Path
 
 from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import rebuild_if_stale
+from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
 from fin_analyse.scraper.capture_ingest import main as import_capture
 
 _SCHEMA_VERSION = "fin.zsxq-capture-folder-consumer/v1"
@@ -104,17 +105,10 @@ def _record_skipped_failed_artifact(
 
     home = Path.home()
     state_root = Path(os.environ.get("XDG_STATE_HOME", home / ".local" / "state"))
-    audit_path = (
-        state_root
-        / "fin-analyse"
-        / "zsxq-scraper"
-        / "poller-skip-audit.v1.jsonl"
-    )
+    audit_path = state_root / "fin-analyse" / "zsxq-scraper" / "poller-skip-audit.v1.jsonl"
     try:
         audit_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        descriptor = os.open(
-            audit_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600
-        )
+        descriptor = os.open(audit_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
         try:
             os.write(
                 descriptor,
@@ -213,10 +207,7 @@ def _completed_artifact(
         and type(summary.get("capture_exit_code")) is int
         and isinstance(summary.get("source_commit"), str)
         and _FULL_SHA.fullmatch(summary["source_commit"]) is not None
-        and (
-            expected_source_commit is None
-            or summary["source_commit"] == expected_source_commit
-        )
+        and (expected_source_commit is None or summary["source_commit"] == expected_source_commit)
     )
     if not summary_identity_valid:
         if artifact.exists() and not _is_verifiable_failed_artifact(artifact):
@@ -333,8 +324,7 @@ def _pending_artifacts(
             except _ReadyCaptureCorruptError:
                 return _Selection((), corrupt=True)
             if inspected is not None and (
-                inspected.result is None
-                or inspected.result.payload["status"] == "retryable"
+                inspected.result is None or inspected.result.payload["status"] == "retryable"
             ):
                 return _Selection((inspected.candidate,))
         return _Selection(())
@@ -348,10 +338,7 @@ def _pending_artifacts(
         return _Selection((), corrupt=True)
     if requested is None:
         return _Selection(())
-    if (
-        requested.result is not None
-        and requested.result.payload["status"] != "retryable"
-    ):
+    if requested.result is not None and requested.result.payload["status"] != "retryable":
         return _Selection(
             (),
             requested=requested.candidate,
@@ -372,8 +359,7 @@ def _pending_artifacts(
         except _ReadyCaptureCorruptError:
             return _Selection((), requested=requested.candidate, corrupt=True)
         if inspected is not None and (
-            inspected.result is None
-            or inspected.result.payload["status"] == "retryable"
+            inspected.result is None or inspected.result.payload["status"] == "retryable"
         ):
             artifacts.append(inspected.candidate)
     artifacts.append(requested.candidate)
@@ -395,20 +381,11 @@ def _read_result(candidate: _CaptureCandidate) -> _BoundResult | None:
         raise _ReadyCaptureCorruptError
     status = payload.get("status")
     exit_code = payload.get("exit_code")
-    valid_status = (
-        type(exit_code) is int
-        and (
-            (status == "ready" and exit_code == 0)
-            or (status == "partial" and exit_code == 4)
-            or (
-                status == "retryable"
-                and exit_code in {_INTERNAL_ERROR_EXIT, _TEMPFAIL_EXIT}
-            )
-            or (
-                status == "failed"
-                and exit_code not in {0, 4, _INTERNAL_ERROR_EXIT, _TEMPFAIL_EXIT}
-            )
-        )
+    valid_status = type(exit_code) is int and (
+        (status == "ready" and exit_code == 0)
+        or (status == "partial" and exit_code == 4)
+        or (status == "retryable" and exit_code in {_INTERNAL_ERROR_EXIT, _TEMPFAIL_EXIT})
+        or (status == "failed" and exit_code not in {0, 4, _INTERNAL_ERROR_EXIT, _TEMPFAIL_EXIT})
     )
     if (
         payload.get("schema_version") != _RESULT_SCHEMA_VERSION
@@ -427,8 +404,7 @@ def _read_result(candidate: _CaptureCandidate) -> _BoundResult | None:
 
 def _atomic_write_result(path: Path, payload: dict[str, object]) -> None:
     raw = (
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        + "\n"
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
     ).encode()
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.tmp-",
@@ -501,13 +477,6 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
     home = Path.home()
     state_root = Path(os.environ.get("XDG_STATE_HOME", home / ".local" / "state"))
     data_root = Path(os.environ.get("XDG_DATA_HOME", home / ".local" / "share"))
-    release_root = Path(__file__).resolve().parents[1]
-    annotation = (
-        release_root
-        / "knowledge-base"
-        / "manual-annotations"
-        / "g-cognition-mainline-2026-06-to-2026-08-19.md"
-    )
     readmodel_root = state_root / "fin-analyse" / "cognition-mainline-readmodel-v1"
     manifest = (
         data_root
@@ -520,6 +489,15 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
         / "manifest.v1.json"
     )
     try:
+        # 批注文档 = owner durable 数据，读 canonical KB 根（knowledge_root 缝），
+        # 不再依赖仓布局（knowledge-base/ 被 .gitignore，fresh checkout 会丢）。
+        # 解析留在 try 内：缝 fail-closed（KnowledgeRootConfigurationError）时
+        # 仍走下方 typed 审计行，不在 wrapper 层丢可观测性。
+        annotation = (
+            default_knowledge_base_root()
+            / "manual-annotations"
+            / "g-cognition-mainline-2026-06-to-2026-08-19.md"
+        )
         result = rebuild_if_stale(
             annotation_path=annotation,
             readmodel_root=readmodel_root,
@@ -552,9 +530,7 @@ def _append_rebuild_audit(
         try:
             os.write(
                 descriptor,
-                (json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n").encode(
-                    "utf-8"
-                ),
+                (json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8"),
             )
         finally:
             os.close(descriptor)
@@ -631,13 +607,11 @@ def _effective_ingest_exit(
     original_status = payload.get("original_status")
     original_completion = payload.get("original_completion_status")
     if original_exit == 0 and not (
-        original_status in {"succeeded", "no_change"}
-        and original_completion == "ready"
+        original_status in {"succeeded", "no_change"} and original_completion == "ready"
     ):
         return _INTERNAL_ERROR_EXIT
     if original_exit == 4 and not (
-        original_status in {"succeeded", "no_change"}
-        and original_completion == "partial"
+        original_status in {"succeeded", "no_change"} and original_completion == "partial"
     ):
         return _INTERNAL_ERROR_EXIT
     if original_exit == _DUPLICATE_EXIT:
