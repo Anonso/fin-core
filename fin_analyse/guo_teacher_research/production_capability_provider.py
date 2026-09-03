@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from math import isfinite
 from pathlib import Path
-from typing import Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from fin_analyse.cognition.memory_store import (
     CognitionMemoryRequest,
@@ -205,6 +205,7 @@ class ProductionReadCapabilityProvider:
         *,
         knowledge_base_root: str | Path | None = None,
         runtime_context: _RuntimeContextReader | None = None,
+        cognition_mainline_reader: Any | None = None,
         cognition_memory: _CognitionMemoryReader | None = None,
         market_snapshot: _MarketSnapshotReader | None = None,
         on_demand_tactical_context: OnDemandTacticalContextReader | None = None,
@@ -221,7 +222,10 @@ class ProductionReadCapabilityProvider:
         if runtime_context is None:
             if knowledge_base_root is None:
                 raise ValueError("production_knowledge_base_root_required")
-            runtime_context = AgentRuntimeContextProvider(kb_root=knowledge_base_root)
+            runtime_context = AgentRuntimeContextProvider(
+                kb_root=knowledge_base_root,
+                cognition_mainline_reader=cognition_mainline_reader,
+            )
         elif knowledge_base_root is not None:
             raise ValueError("production_runtime_context_root_ambiguous")
         self._runtime_context = runtime_context

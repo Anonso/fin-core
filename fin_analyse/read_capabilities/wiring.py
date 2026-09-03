@@ -10,12 +10,16 @@ while a single reader that cannot construct degrades to a permanently
 
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
+from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
+    CognitionMainlineReadModelReader,
+)
 from fin_analyse.guo_teacher_research.principal_binding import PrincipalBindingError
 from fin_analyse.guo_teacher_research.production_capability_provider import (
     ProductionReadCapabilityProvider,
@@ -166,8 +170,21 @@ def build_reader_wiring(
 
     provider: ProductionReadCapabilityProvider | None = None
     try:
+        # G 认知主线 reader（设计门 g-mainline-growth-v1 部件5 实弹发现：
+        # 此前无装配点，cognition 投影在真实入口恒为 unavailable gap）。
+        # state 根按 environ 派生——隔离测试传 isolated environ 即天然隔离；
+        # reader 构造容忍缺失目录（read() 时 typed fail，零阻断）。
+        state_root = Path(
+            (environ if environ is not None else os.environ).get(
+                "XDG_STATE_HOME", str(Path.home() / ".local" / "state")
+            )
+        )
+        cognition_mainline_reader = CognitionMainlineReadModelReader(
+            state_root / "fin-analyse" / "cognition-mainline-readmodel-v1"
+        )
         provider = ProductionReadCapabilityProvider(
             knowledge_base_root=knowledge_base_root,
+            cognition_mainline_reader=cognition_mainline_reader,
             market_overview=market_overview,
             on_demand_tactical_context=on_demand,
             margin_evidence=margin,

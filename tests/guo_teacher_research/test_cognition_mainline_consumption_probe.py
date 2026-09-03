@@ -78,6 +78,12 @@ def _build_readmodel(tmp_path: Path, identity: str) -> Path:
     return root
 
 
+def _annotation_for(tmp_path: Path) -> Path:
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(annotation)
+    return annotation
+
+
 def test_projection_carries_consumption_audit(tmp_path: Path) -> None:
     identity = "a" * 64
     root = _build_readmodel(tmp_path, identity)
@@ -192,3 +198,51 @@ def test_trace_summary_none_without_enrichment() -> None:
         _trace_summary("read_g_context", {"attestation": {"quality": {}}}) is None
     )
     assert _trace_summary("read_market_snapshot", {"attestation": {}}) is None
+
+
+def test_wiring_injects_cognition_reader_from_environ_state(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Composition 根按 environ 派生 state 根注入 reader（部件5 实弹发现的修复）。"""
+
+    from fin_analyse.read_capabilities.wiring import build_reader_wiring
+
+    identity = "a" * 64
+    kb_root = tmp_path / "knowledge-base"
+    kb_root.mkdir(parents=True, exist_ok=True)
+    state = tmp_path / "isolated-state"
+    root = state / "fin-analyse" / "cognition-mainline-readmodel-v1"
+    root.mkdir(parents=True, exist_ok=True)
+    payload = generate_cognition_mainline_readmodel(
+        _annotation_for(tmp_path),
+        generation=1,
+        working_set_identity=identity,
+    )
+    assert (
+        CognitionMainlinePublisher(root).publish(
+            payload, expected_prior_identity=None
+        ).disposition
+        == "PUBLISHED"
+    )
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(state))
+    wiring = build_reader_wiring(
+        kb_root,
+        environ={"XDG_STATE_HOME": str(state)},
+    )
+
+    runner = wiring.runners.get("read_g_context")
+    assert runner is not None, wiring.unavailable_tools
+    from fin_analyse.read_capabilities.types import ProductionReadRequest
+
+    result = runner(
+        ProductionReadRequest(
+            question="测试", as_of=__import__("datetime").datetime(2026, 1, 2, tzinfo=__import__("datetime").UTC)
+        )
+    )
+    audit = result.value["attestation"]["quality"]["cognition_mainline_consumption"]
+    # 裸 KB 无 G 工作集 → resolve 侧 working_set_identity 为空 → PIT 门按
+    # 设计拒投影（identity mismatch）；本用例只断言 composition 注入了
+    # reader：工件可读（generation）且不再是 unavailable。
+    assert audit["generation"] == 1
+    assert "g_cognition_readmodel_unavailable" not in audit["gap_codes"]
