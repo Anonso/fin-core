@@ -101,7 +101,8 @@ def _alias_field(key: str) -> str | None:
 
 _INLINE_ITEM_RE = re.compile(
     r"(?m)^\s*(?:[-*•]\s*)?(?:\d+[.、]\s*)?\*{0,2}\s*"
-    r"(?P<code>(?:[0-9]{6}|[0-9]{4}\.[A-Z]{2}|[A-Z]{1,6}\.[A-Z]{2}))\s+"
+    r"(?P<code>(?:(?P<a6>[0-9]{6})(?:\.(?:SH|SZ|BJ))?|"
+    r"[0-9]{4}\.[A-Z]{2}|[A-Z]{1,6}\.[A-Z]{2}))\s+"
     r"(?P<name>[\u4e00-\u9fa5A-Za-z][\u4e00-\u9fa5A-Za-z0-9·&（）()\-]{0,31}?)"
     r"\*{0,2}\s*[:：]\s*(?P<body>.+?)\s*$"
 )
@@ -144,7 +145,7 @@ def _parse_inline_rows(text: str) -> list[dict[str, Any]]:
         if fields.get("lihao") is None and fields.get("consensus") is None:
             continue
         draft: dict[str, Any] = {
-            "code": match.group("code").upper(),
+            "code": (match.group("a6") or match.group("code")).upper(),
             "name": _clean_cell(match.group("name")),
             "lihao": None,
             "consensus": None,

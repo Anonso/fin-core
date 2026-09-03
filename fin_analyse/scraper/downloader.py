@@ -169,8 +169,13 @@ class ImageProvenance:
         )
 
 
-def describe_image_with_provenance(image_path: str) -> ImageProvenance:
+def describe_image_with_provenance(
+    image_path: str, *, prompt: str | None = None
+) -> ImageProvenance:
     """Analyze image with full fallback provenance tracking.
+
+    ``prompt`` 缺省时沿用通用描述提示；调用方（定向识图/回填）可传入专用
+    提示词，要求按固定格式转录评分表。
 
     Returns ImageProvenance recording which provider succeeded
     or which fallback path was used.
@@ -201,10 +206,11 @@ def describe_image_with_provenance(image_path: str) -> ImageProvenance:
     ext = img_path.suffix.lower()
     mime = "image/jpeg" if ext in (".jpg", ".jpeg") else "image/png"
 
-    prompt = (
-        "描述这张图片的内容。如果是K线图/走势图，描述趋势和关键形态；"
-        "如果是表格，提取关键数据；如果是文字截图，转录全文。用中文回答。"
-    )
+    if prompt is None:
+        prompt = (
+            "描述这张图片的内容。如果是K线图/走势图，描述趋势和关键形态；"
+            "如果是表格，提取关键数据；如果是文字截图，转录全文。用中文回答。"
+        )
 
     fallback_chain: list[str] = []
     clients = _get_vision_clients()

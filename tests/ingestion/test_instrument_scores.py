@@ -122,6 +122,25 @@ def test_parse_code_first_inline_rows() -> None:
     assert by_code["688200"].review_reason == "missing_fields:consensus"
 
 
+def test_parse_inline_rows_normalizes_a_share_suffix() -> None:
+    text = (
+        "301631.SZ 壹连科技：核心业务为电芯连接组件，所属板块为新能源设备，"
+        "利好度9.3，共识度86\n"
+        "688008.SH 澜起科技：核心业务为内存互连芯片，所属板块为半导体，"
+        "利好度9.5，共识度95\n"
+        "1651.HK 津上机床中国：核心业务为高端数控机床，所属板块为高端制造，"
+        "利好度9.0，共识度83\n"
+    )
+    drafts = parse_rows_from_text(text)
+    assert [(draft["code"], draft["name"]) for draft in drafts] == [
+        ("301631", "壹连科技"),
+        ("688008", "澜起科技"),
+        ("1651.HK", "津上机床中国"),
+    ]
+    assert drafts[0]["consensus"] == 8.6
+    assert drafts[1]["consensus"] == 9.5
+
+
 def test_missing_consensus_marks_needs_review() -> None:
     article = {
         "source_id": "zsxq-article-1",
