@@ -331,5 +331,7 @@
   低能量最新锚直接支撑动作（需外部/G 补强）；为 <6 定向补抓/
   延迟识图（owner：根本不进 KB）。
 - 状态：active（设计交接稿 docs/design/instrument-score-timeline.md；
-  代码待实施）· 证据：会话 20260902 trace；20260829 长文评分表；
-  instrument_scores.jsonl；本条目。
+  代码待实施）→ 2026-09-03 实施收口（af79ac2：门槛配置/parser v2/回填
+  445 行/问询探针全过；详见 docs/design/instrument-score-timeline.md §11）·
+  证据：会话 20260902 trace；20260829 长文评分表；instrument_scores.jsonl；
+  本条目。

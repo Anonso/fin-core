@@ -3,7 +3,8 @@
 > 基线：`docs/design/instrument-score-registry.md`（D-033/D-036 已落地部分）。
 > 触发：问询会话 `20260902`（09-03 10:14）——用户批评“7/7 老记录”被当最新；
 > 复核发现根因不在引用习惯，而在注册表覆盖盲区与查询语义。
-> 本文是交接稿：设计定稿、代码待实施；合入后本文随代码归档（Git 即归档）。
+> 本文是交接稿：设计定稿；2026-09-03 已收口（af79ac2），§11 为交接记录、
+> §12 为收口结果；合入后本文随代码归档（Git 即归档）。
 
 ## 1. 目标
 
@@ -179,3 +180,94 @@
    `instrument_scores.jsonl`（0600/0700 规则）。
 3. CLAUDE.md 位于 `~/fin-data/consult-agent/`（不在本仓），改动后
    需在问询环境即时生效验证，不进 git。
+
+## 11. 实施交接（2026-09-03 · 暂停时记录）
+
+> 状态：已恢复并收口（af79ac2，详见 §12）。下方快照与待办是恢复前的
+> 历史交接记录，仅作审计用。
+
+### 状态快照
+
+- 本会话接手基线 `438ab7c`（docs-only）时工作区干净；实施期间出现并行
+  macro 改动，已由并行会话提交为 `858b325` / `05cbefa` / `2a7eb22`
+  （当前 HEAD = `2a7eb22`）。
+- 分段暂存与并行提交交错：`858b325` 里**混入了本任务的 cdp_scraper 两个
+  hunk**（`.config` import `score_skip_min` + `_score_skip_enabled` 改读
+  配置阈值），但支撑它的 `config/zsxq_capture.json` 与 `config.py` 加载函数
+  仍在工作区未提交。**HEAD 此刻不是可运行状态**：导入 cdp_scraper 需要
+  `score_skip_min`，而 HEAD 的 `fin_analyse/scraper/config.py` 尚无该函数。
+- 本会话没有产生 commit、没有执行回填 `--write`、没有部署/重启。
+
+### 当前工作区（全部未提交）
+
+- 新增 `config/zsxq_capture.json`（`score_skip_min=6.0`、
+  `skip_unscored=false`）。
+- `fin_analyse/scraper/config.py`：`score_skip_min()` 配置加载 + 缺省 6.0。
+- `fin_analyse/scraper/cdp_scraper.py`：只剩过滤日志/注释 hunk 未提交
+  （import 与判定函数已在 `858b325` 的 HEAD 内）。
+- `fin_analyse/ingestion/instrument_scores.py`：parser v2、8/29 代码前置
+  inline 解析、共识度 88→8.8、reader 按 `published_at or article_date`
+  排序（含窗口判定）。
+- `fin_analyse/read_capabilities/server.py`：`read_instrument_scores`
+  描述补“能量 ≥6.0 覆盖边界 + 时间线 + 双查”语义。
+- `scripts/backfill_instrument_scores.py`：`--min-score` 默认 7→6；回填
+  `published_at` 优先 source_record，缺省用 index 的完整日期时间。
+- 测试：`tests/ingestion/test_instrument_scores.py`、
+  `tests/read_capabilities/test_instrument_score_reader.py`、
+  `tests/read_capabilities/test_tool_descriptions.py`、
+  `tests/scraper/test_cdp_score_skip.py`。
+- 本文档（本次交接追加）。
+
+### 已完成并验证
+
+- 定向测试 25 passed；全量 pytest 3042 passed / 2 skipped（跑于 macro
+  三连合入前；恢复后需在最终 HEAD + 剩余未提交改动上重跑全量）。
+- 真实 KB dry-run（只读，未写盘）：`candidates=161`（含 [6,7) 24 篇）、
+  `records_total=445`（ok 370 / needs_review 75）；8/29 长文解析出
+  600584 长电 8.6/8.8、`raw_origin=article_md.image_desc_section`、
+  `parser_version=v2`。
+- 生产执行点已确认：Windows `capture-zsxq.cjs` 无评分/跳过过滤（纯传输），
+  systemd 消费端跑 fin-core `capture_ingest → cdp_runtime`，门槛只在
+  fin-core 单侧；无需同步 Windows 副本。
+- `~/fin-data/consult-agent/CLAUDE.md` 已按 §5.5 落盘（双查、时间线、
+  [6,7) 弱锚、引用格式、覆盖边界、证据分层、大盘降级、动作合同分母/
+  退出/监控触发器）；**尚未在问询环境做即时生效验证**。
+
+### 恢复后待办（按序）
+
+1. 只提交本任务的剩余文件 + cdp_scraper 过滤日志 hunk，不碰 macro 三连
+   （历史已被混入的部分是否拆分为独立 D-037 commit，需 owner 拍板，默认
+   不 rewrite 已合入 main 的历史）。
+2. 在最终 HEAD 上重跑全量 pytest。
+3. 回填：先按 §7 探针 3 复核 dry-run 数字，备份 `instrument_scores.jsonl`
+   （0600/0700），owner 授权后 `--write`；预期补入 8/29 长电两行时间线
+   （8/29 前、7/7 后）。
+4. 问询环境验证 CLAUDE.md 新纪律 + `read_instrument_scores` 时间线回答。
+5. 按运维铁律部署（checkout 最终 SHA + uv sync + 重启绑定 HEAD 的单元，
+   核对 SHA/lock/PID/公共入口）；下一抓取窗口核对 6.0 门槛实际生效。
+
+### 风险提示
+
+- HEAD（`2a7eb22`）依赖未提交的 config 改动才能导入 cdp_scraper；恢复后
+  第一步应先落库剩余文件，不要只 checkout HEAD 就部署。
+- `858b325` 的提交信息是 macro_index，实际混入 D-037 的两个 cdp hunk；
+  任何按 commit message 回滚 macro 的操作都会把门槛代码一起滚掉。
+
+## 12. 实施收口（2026-09-03）
+
+- 落库：`af79ac2` 提交剩余 D-037 文件（config/zsxq_capture.json、
+  config.py `score_skip_min()`、cdp_scraper 过滤日志 hunk、parser v2、
+  reader/backfill/server 描述、4 组测试），858b325 混入 hunk 的支撑文件
+  补齐，HEAD（af79ac2）可直接导入 cdp_scraper。
+- 验证：全量 pytest 3043 passed / 2 skipped；真实 KB dry-run
+  candidates=161、records_total=445（ok 370 / needs_review 75）。
+- 回填：备份 `instrument_scores.jsonl.bak-20260903`（0600）后 `--write`
+  执行，added=38、updated=407；600584 长电 8/29（8.6/8.8、v2）与 7/7
+  （9.2/9.2）两行并存；文件 0600、无 tmp 残留。
+- 问询探针：09-03 12:49 CST 实弹“长电科技最新评分”，trace 出现
+  read_instrument_scores ok → read_article_search ok → read_article；
+  回答含 8/29 锚、7/7 参照、8/08 口径例外、本地覆盖边界与“近但弱”。
+- 部署：post-commit 钩子已将 zsxq poller/consumer 单元重渲染并绑定
+  af79ac2（LLM_CONFIG_PATH 指向 runtime-configs/af79ac2…）；
+  下一抓取窗口（≥13:50）核对 6.0 增量门槛与 macro_index 自动生成。
+- Windows 侧单侧确认（无代码改动）：capture wrapper 纯传输，无评分过滤。
