@@ -34,7 +34,7 @@ from fin_analyse.guo_teacher_research.source_contract import classify_g_source
 from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
 
 from .cdp_diagnostics import CdpBatchResult, classify_cdp_error
-from .config import COLUMN_PATTERNS, KNOWN_COMPANIES
+from .config import COLUMN_PATTERNS, KNOWN_COMPANIES, score_skip_min
 
 logger = logging.getLogger(__name__)
 
@@ -60,19 +60,19 @@ _IMAGE_VISION_RESERVE_SECONDS = 90.0
 _DEEP_READ_LLM_CONFIG_INVALID = "deep_read_llm_config_invalid"
 #: 每轮 ingest 排空的存量非新鲜 strict-G 深化上限（有界，防 LLM 突发）。
 _DEEP_READ_BACKLOG_DRAIN_LIMIT = 3
-#: 增量能量评分门槛（owner 2026-09-02 修订）：只有“有评分且 <7”的文章跳过；
-#: 无评分文章不拦——评分缺失不等于内容无价值（书单/宏观/问答等无表帖照常入库）。
-_SCORE_SKIP_MIN = 7.0
-
 GROUP_URL = "https://wx.zsxq.com/group/15522441811252"
 
 
 def _score_skip_enabled(score: Any) -> bool:
-    """评分门槛判定：score 缺失/非法 → 不跳过；有评分且 <7 → 跳过。"""
+    """评分门槛判定：score 缺失/非法 → 不跳过；有评分且低于配置阈值 → 跳过。
+
+    阈值来源 config/zsxq_capture.json（D-037 默认 6.0）；无评分/非法评分仍
+    不跳过——评分缺失不等于内容无价值（书单/宏观/问答等无表帖照常入库）。
+    """
     if score is None:
         return False
     try:
-        return float(score) < _SCORE_SKIP_MIN
+        return float(score) < score_skip_min()
     except (TypeError, ValueError):
         return False
 

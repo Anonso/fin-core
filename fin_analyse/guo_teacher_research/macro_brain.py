@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any, Mapping
 
+from fin_analyse.cognition.macro_index import load_macro_entries, load_rules
+
 _SHARED_BRAIN_PATH = Path("runtime/shared_brain/items.jsonl")
 _SHARED_BRAIN_SCOPES = frozenset(
     {"methodology_memory", "shared_brain_framework", "external_reference"}
@@ -135,8 +137,40 @@ def zsxq_macro_articles(
     window_days: int = 60,
     cap: int = 3,
 ) -> list[dict[str, Any]]:
-    """index.json 扫描 ZSXQ 宏观条目（普通栏宏观 + 每日热点），窗口+cap。"""
+    """ZSXQ 宏观条目（macro_index 优先；无侧车时回退 index.json 启发式），窗口+cap。"""
     from datetime import UTC, datetime, timedelta
+
+    now = as_of if as_of is not None else datetime.now(UTC)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
+    cutoff = now - timedelta(days=window_days)
+
+    index_entries = load_macro_entries(Path(knowledge_base_root))
+    if index_entries is not None:
+        found: list[tuple[str, dict[str, Any]]] = []
+        for item in index_entries:
+            date_text = str(item.get("date", ""))[:10]
+            try:
+                published = datetime.fromisoformat(date_text)
+            except ValueError:
+                continue
+            if published < cutoff.replace(tzinfo=None):
+                continue
+            found.append(
+                (
+                    date_text,
+                    {
+                        "article_id": str(item.get("article_id", "")),
+                        "title": str(item.get("title", ""))[:160],
+                        "column": str(item.get("column", "")),
+                        "date": date_text,
+                        "score": item.get("score"),
+                        "matched_terms": list(item.get("matched_terms") or ()),
+                    },
+                )
+            )
+        found.sort(key=lambda item: item[0], reverse=True)
+        return [item for _date, item in found[:cap]]
 
     index_path = Path(knowledge_base_root) / "index.json"
     if not index_path.exists():
@@ -148,10 +182,14 @@ def zsxq_macro_articles(
     rows = payload.get("articles") if isinstance(payload, dict) else None
     if not isinstance(rows, list):
         return []
-    now = as_of if as_of is not None else datetime.now(UTC)
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=UTC)
-    cutoff = now - timedelta(days=window_days)
+    try:
+        kept_ids = {
+            str(item.get("article_id", ""))
+            for item in load_rules().get("kept", [])
+            if isinstance(item, dict) and item.get("article_id")
+        }
+    except (OSError, ValueError):
+        kept_ids = set()
     found: list[tuple[str, dict[str, Any]]] = []
     for row in rows:
         if not isinstance(row, dict):
@@ -167,8 +205,11 @@ def zsxq_macro_articles(
         if published < cutoff.replace(tzinfo=None):
             continue
         title = str(row.get("title", ""))
+        article_id = str(row.get("id", ""))
         if column == "星大派每日热点":
             matched = ("ai_summary_reference",)
+        elif article_id in kept_ids:
+            matched = ()
         else:
             if any(term in title for term in _ZSXQ_REPORT_TITLE_TERMS):
                 continue
@@ -185,7 +226,7 @@ def zsxq_macro_articles(
             (
                 date_text,
                 {
-                    "article_id": str(row.get("id", "")),
+                    "article_id": article_id,
                     "title": title[:160],
                     "column": column,
                     "date": date_text,

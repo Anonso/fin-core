@@ -11,7 +11,9 @@ from fin_analyse.guo_teacher_research.macro_brain import (
     macro_search_signal,
     match_shared_brain_cards,
     suggested_queries,
+    zsxq_macro_articles,
 )
+from fin_analyse.cognition.macro_index import load_rules, update_macro_index
 
 
 def _cards(tmp_path: Path) -> list[dict]:
@@ -109,3 +111,110 @@ def test_reader_aggregates_zsxq_and_cards(tmp_path: Path) -> None:
     ]
     assert [card["item_id"] for card in value["shared_brain_cards"]] == ["c1"]
     assert value["search_needed"] is False
+
+
+def test_reader_prefers_macro_index_over_heuristic(tmp_path: Path) -> None:
+    kb_root = tmp_path / "kb"
+    kb_root.mkdir()
+    (kb_root / "index.json").write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "id": "zsxq-hot-1",
+                        "title": "星大派每日热点（0902）",
+                        "column": "星大派每日热点",
+                        "date": "2026-09-02 08:00",
+                        "companies": [],
+                    },
+                    {
+                        "id": "zsxq-rule-1",
+                        "title": "当前市场流动性与大类资产复盘",
+                        "column": "普通",
+                        "date": "2026-09-01 09:00",
+                        "score": 8.0,
+                        "companies": [],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    rules = load_rules()
+    rules = {**rules, "kept": [], "excluded": []}
+    update_macro_index(kb_root, saved_ids=["zsxq-hot-1"], rules=rules)
+
+    from datetime import UTC, datetime
+
+    got = zsxq_macro_articles(
+        kb_root,
+        as_of=datetime(2026, 9, 2, 12, 0, tzinfo=UTC),
+        cap=3,
+    )
+    assert [item["article_id"] for item in got] == ["zsxq-hot-1"]
+
+    fallback_kb = tmp_path / "no-index"
+    fallback_kb.mkdir()
+    (fallback_kb / "index.json").write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "id": "zsxq-hot-1",
+                        "title": "星大派每日热点（0902）",
+                        "column": "星大派每日热点",
+                        "date": "2026-09-02 08:00",
+                        "companies": [],
+                    },
+                    {
+                        "id": "zsxq-rule-1",
+                        "title": "当前市场流动性与大类资产复盘",
+                        "column": "普通",
+                        "date": "2026-09-01 09:00",
+                        "score": 8.0,
+                        "companies": [],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    fallback = zsxq_macro_articles(
+        fallback_kb,
+        as_of=datetime(2026, 9, 2, 12, 0, tzinfo=UTC),
+        cap=3,
+    )
+    assert [item["article_id"] for item in fallback] == [
+        "zsxq-hot-1",
+        "zsxq-rule-1",
+    ]
+
+
+def test_reader_fallback_honors_kept_list(tmp_path: Path) -> None:
+    kb_root = tmp_path / "kb"
+    kb_root.mkdir()
+    (kb_root / "index.json").write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "id": "zsxq-55522445554815414",
+                        "title": "还能撑一段时间，但“撑”的代价越来越高",
+                        "column": "普通",
+                        "date": "2026-08-02 10:00",
+                        "score": None,
+                        "companies": [],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    from datetime import UTC, datetime
+
+    got = zsxq_macro_articles(
+        kb_root,
+        as_of=datetime(2026, 9, 3, 8, 0, tzinfo=UTC),
+        cap=3,
+    )
+    assert [item["article_id"] for item in got] == ["zsxq-55522445554815414"]
