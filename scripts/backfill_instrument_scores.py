@@ -1,6 +1,6 @@
 """One-shot backfill: 普通栏研报评分表 → instrument_scores.jsonl.
 
-范围（owner 2026-09-02）：column=普通、能量评分 >= --min-score（默认 7.0）、
+范围（D-037，2026-09-03）：column=普通、能量评分 >= --min-score（默认 6.0）、
 文章日期 >= --since（默认 2026-07-04，60 自然日窗口）。幂等可重跑：
 record_id 唯一键 (source_id, code, 行序号)；内容 hash 变化才覆盖。
 
@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         help="knowledge-base root（默认运行时共享根）",
     )
     parser.add_argument("--since", default="2026-07-04", help="文章日期下限")
-    parser.add_argument("--min-score", type=float, default=7.0, help="能量评分下限")
+    parser.add_argument("--min-score", type=float, default=6.0, help="能量评分下限")
     parser.add_argument(
         "--write", action="store_true", help="真写（默认 dry-run 只统计）"
     )
@@ -92,14 +92,20 @@ def main(argv: list[str] | None = None) -> int:
     for row in candidates:
         source_id = str(row.get("id", ""))
         source_record = source_by_id.get(source_id)
+        row_date = str(row.get("date", ""))
+        source_published_at = (
+            str(source_record.get("published_at"))
+            if source_record and source_record.get("published_at")
+            else None
+        )
         article = {
             "source_id": source_id,
             "topic_id": str(row.get("topic_id", "") or ""),
             "column": str(row.get("column", "")),
             "title": str(row.get("title", "")),
-            "article_date": str(row.get("date", ""))[:10],
-            "published_at": (
-                str(source_record.get("published_at")) if source_record else None
+            "article_date": row_date[:10],
+            "published_at": source_published_at or (
+                row_date if ":" in row_date else None
             ),
             "article_score": _as_float(row.get("score")),
         }

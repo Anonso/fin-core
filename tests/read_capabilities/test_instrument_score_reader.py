@@ -22,6 +22,7 @@ def _record(
     sector: str = "半导体",
     core_business: str = "先进封装",
     status: str = "ok",
+    published_at: str | None = None,
 ) -> dict:
     return {
         "schema_version": "fin.instrument-scores/v1",
@@ -30,7 +31,7 @@ def _record(
         "column": "普通",
         "title": f"{sector}研报",
         "article_date": article_date,
-        "published_at": None,
+        "published_at": published_at,
         "article_score": 8.0,
         "code": code,
         "name": name,
@@ -120,3 +121,47 @@ def test_reader_missing_store_gap(tmp_path: Path) -> None:
     reader = _reader(tmp_path)
     result = reader.read(_request("通富微电 评分"))
     assert "instrument_scores_unavailable" in result.data_gaps
+
+
+def test_reader_same_day_rows_sorted_by_published_at(tmp_path: Path) -> None:
+    path = instrument_scores_path(tmp_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        _record(
+            code="600584",
+            name="长电科技",
+            article_date="2026-08-29",
+            published_at="2026-08-29 09:00",
+            lihao=8.0,
+        ),
+        _record(
+            code="600584",
+            name="长电科技",
+            article_date="2026-08-29",
+            published_at="2026-08-29 12:19",
+            lihao=8.6,
+            consensus=8.8,
+        ),
+        _record(
+            code="600584",
+            name="长电科技",
+            article_date="2026-07-07",
+            published_at=None,
+            lihao=9.2,
+            consensus=9.2,
+        ),
+    ]
+    body = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n"
+    path.write_text(body, encoding="utf-8")
+    path.chmod(0o600)
+    reader = _reader(tmp_path)
+    result = reader.read(_request("长电科技 历史评分演变"))
+    timeline = [
+        (row["article_date"], row["published_at"], row["lihao_score"])
+        for row in result.value["records"]
+    ]
+    assert timeline == [
+        ("2026-08-29", "2026-08-29 12:19", 8.6),
+        ("2026-08-29", "2026-08-29 09:00", 8.0),
+        ("2026-07-07", None, 9.2),
+    ]

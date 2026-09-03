@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 SCHEMA_VERSION = "fin.instrument-scores/v1"
-PARSER_VERSION = "v1"
+PARSER_VERSION = "v2"
 
 _SCORE_RE = re.compile(r"([0-9]+(?:\.[0-9]+)?)")
 _CODE_RE = re.compile(
@@ -97,6 +97,65 @@ def _alias_field(key: str) -> str | None:
             if _norm(alias) in normalized:
                 return field_name
     return None
+
+
+_INLINE_ITEM_RE = re.compile(
+    r"(?m)^\s*(?:[-*•]\s*)?(?:\d+[.、]\s*)?\*{0,2}\s*"
+    r"(?P<code>(?:[0-9]{6}|[0-9]{4}\.[A-Z]{2}|[A-Z]{1,6}\.[A-Z]{2}))\s+"
+    r"(?P<name>[\u4e00-\u9fa5A-Za-z][\u4e00-\u9fa5A-Za-z0-9·&（）()\-]{0,31}?)"
+    r"\*{0,2}\s*[:：]\s*(?P<body>.+?)\s*$"
+)
+_INLINE_LABEL_ALIASES: tuple[str, ...] = tuple(
+    dict.fromkeys(alias for _, aliases in _FIELD_ALIASES for alias in aliases)
+)
+_INLINE_LABEL_RE = re.compile(
+    "|".join(re.escape(alias) for alias in _INLINE_LABEL_ALIASES)
+)
+
+
+def _parse_inline_fields(body: str) -> dict[str, Any]:
+    """解析“核心业务为…，所属板块为…，利好度 X，共识度 Y”inline 字段。"""
+    fields: dict[str, Any] = {}
+    matches = tuple(_INLINE_LABEL_RE.finditer(body))
+    for index, match in enumerate(matches):
+        mapped = _alias_field(match.group(0))
+        if mapped is None or mapped in fields:
+            continue
+        value_start = match.end()
+        while value_start < len(body) and body[value_start] in "为是：: \t":
+            value_start += 1
+        value_end = matches[index + 1].start() if index + 1 < len(matches) else len(body)
+        value = body[value_start:value_end].strip(" 　\t，,。；;、")
+        if mapped in ("lihao", "consensus"):
+            fields[mapped] = normalize_score(value)
+        else:
+            fields[mapped] = value or None
+    return fields
+
+
+def _parse_inline_rows(text: str) -> list[dict[str, Any]]:
+    """支持“代码 名称：…核心业务为…，利好度…，共识度…”的图片描述格式。"""
+    drafts: list[dict[str, Any]] = []
+    for line in (text or "").splitlines():
+        match = _INLINE_ITEM_RE.match(line)
+        if match is None:
+            continue
+        fields = _parse_inline_fields(match.group("body"))
+        if fields.get("lihao") is None and fields.get("consensus") is None:
+            continue
+        draft: dict[str, Any] = {
+            "code": match.group("code").upper(),
+            "name": _clean_cell(match.group("name")),
+            "lihao": None,
+            "consensus": None,
+            "core_business": None,
+            "sector": None,
+            "launch_in": None,
+            "horizon": None,
+        }
+        draft.update(fields)
+        drafts.append(draft)
+    return drafts
 
 
 def _code_from_cell(cell: str) -> str | None:
@@ -228,12 +287,15 @@ def _parse_list_style(text: str) -> list[dict[str, Any]]:
 
 
 def parse_rows_from_text(text: str) -> list[dict[str, Any]]:
-    """解析一段载体文本为行草稿（表格或列表/段落风格）。"""
+    """解析一段载体文本为行草稿（表格或列表/代码前置 inline 风格）。"""
     cleaned = _FALLBACK_PREFIX_RE.sub("", text or "")
     table_drafts = _parse_table(cleaned)
     if table_drafts:
         return table_drafts
-    return _parse_list_style(cleaned)
+    list_drafts = _parse_list_style(cleaned)
+    if list_drafts:
+        return list_drafts
+    return _parse_inline_rows(cleaned)
 
 
 @dataclass(frozen=True, slots=True)
@@ -558,6 +620,13 @@ class InstrumentScoreQueryReader:
                 expanded.append(token)
         return tuple(expanded)
 
+    @staticmethod
+    def _sort_time(record: Mapping[str, Any]) -> str:
+        """时间线排序键：published_at 优先，缺省回退 article_date（D-037）。"""
+        return str(
+            record.get("published_at") or record.get("article_date") or ""
+        )
+
     def read(self, request: Any) -> Any:
         """Return ProductionReadResult-compatible value (avoid hard import in tests)."""
         from fin_analyse.read_capabilities.types import (
@@ -622,7 +691,7 @@ class InstrumentScoreQueryReader:
                             for key in ("name", "core_business", "sector", "title")
                         )
                     ),
-                    str(record.get("article_date", "")),
+                    self._sort_time(record),
                 ),
                 reverse=True,
             )
@@ -635,8 +704,11 @@ class InstrumentScoreQueryReader:
 
         def in_window(record: Mapping[str, Any]) -> bool:
             try:
+                date_text = str(
+                    record.get("published_at") or record.get("article_date") or ""
+                )
                 article_date = datetime.fromisoformat(
-                    str(record.get("article_date", ""))
+                    date_text
                 ).replace(tzinfo=None)
             except ValueError:
                 return False
@@ -655,7 +727,7 @@ class InstrumentScoreQueryReader:
             and (include_history or in_window(record))
         ]
         scoped_ok.sort(
-            key=lambda record: str(record.get("article_date", "")), reverse=True
+            key=lambda record: self._sort_time(record), reverse=True
         )
         returned = scoped_ok[:20]
         value: dict[str, object] = {

@@ -2215,13 +2215,14 @@ class CdpBridgeScraper:
             ):
                 continue
 
-            # 评分过滤（owner 2026-09-02 修订口径）：普通栏/Q&A 有评分且 <7
+            # 评分过滤（D-037，2026-09-03）：普通栏/Q&A 有评分且 < 配置阈值
             # 跳过；无评分不拦（评分缺失 ≠ 内容无价值）；专栏不受影响。
             if not is_authenticated_teacher_cursor and not is_column_article:
                 if _score_skip_enabled(post_score):
                     logger.info(
-                        "[FILTER] 评分 %.1f 不足 7.0，跳过: %s",
+                        "[FILTER] 评分 %.1f 不足 %.1f，跳过: %s",
                         post_score or 0,
+                        score_skip_min(),
                         post.get("title", "")[:40],
                     )
                     continue

@@ -80,6 +80,48 @@ def test_parse_list_style() -> None:
     assert draft["consensus"] == 9.2
 
 
+INLINE_MD = """1. **600584 长电科技**：核心业务为HBM/2.5D/3D先进封装，所属板块为先进封装，利好度8.6，共识度88。
+2. **002156 通富微电**：核心业务为AMD高端封测+存储封测，所属板块为先进封装，利好度8.4，共识度86。
+4. **688200 翔宇微电子**：核心业务为2.5D/3D多芯片集成，所属板块为先进封装，利好度8
+"""
+
+
+def test_parse_code_first_inline_rows() -> None:
+    """8/29 实测代码前置 inline 格式（D-037）：88 → 8.8。"""
+    drafts = parse_rows_from_text(INLINE_MD)
+    assert len(drafts) == 3
+    first = drafts[0]
+    assert first["code"] == "600584"
+    assert first["name"] == "长电科技"
+    assert first["core_business"] == "HBM/2.5D/3D先进封装"
+    assert first["sector"] == "先进封装"
+    assert first["lihao"] == 8.6
+    assert first["consensus"] == 8.8
+
+    article = {
+        "source_id": "zsxq-22258828218828111",
+        "topic_id": "22258828218828111",
+        "column": "普通",
+        "title": "8月下旬科技修复行情",
+        "article_date": "2026-08-29",
+        "published_at": "2026-08-29 12:19",
+        "article_score": 6.8,
+    }
+    records = parse_article_records(
+        article=article,
+        md_text=f"## 图片描述\n{INLINE_MD}",
+        source_record=None,
+    )
+    by_code = {record.code: record for record in records}
+    assert by_code["600584"].status == "ok"
+    assert by_code["600584"].lihao_score == 8.6
+    assert by_code["600584"].consensus_score == 8.8
+    assert by_code["600584"].article_score == 6.8
+    assert by_code["600584"].parser_version == "v2"
+    assert by_code["688200"].status == "needs_review"
+    assert by_code["688200"].review_reason == "missing_fields:consensus"
+
+
 def test_missing_consensus_marks_needs_review() -> None:
     article = {
         "source_id": "zsxq-article-1",

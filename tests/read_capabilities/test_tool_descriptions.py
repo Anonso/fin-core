@@ -45,6 +45,14 @@ def test_market_snapshot_description_keeps_gap_honesty_rule() -> None:
     assert "DATA UNAVAILABLE" in text
 
 
+def test_instrument_score_description_carries_coverage_boundary() -> None:
+    text = _TOOL_DESCRIPTIONS["read_instrument_scores"]
+    assert "energy score >= 6.0" in text
+    assert "newest row is the current anchor" in text
+    assert "does NOT mean ZSXQ" in text
+    assert "read_article_search" in text
+
+
 def test_all_tools_described() -> None:
     assert set(_TOOL_DESCRIPTIONS) == {
         "read_g_context",

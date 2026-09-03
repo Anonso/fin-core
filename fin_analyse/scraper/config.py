@@ -1,5 +1,6 @@
 """爬虫配置"""
 
+import json
 from datetime import timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -11,6 +12,21 @@ COLUMNS_URL = "https://wx.zsxq.com/columns/15522441811252"
 
 # 项目路径
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+ZSXQ_CAPTURE_CONFIG = PROJECT_ROOT / "config" / "zsxq_capture.json"
+_SCORE_SKIP_MIN_DEFAULT = 6.0
+
+
+def score_skip_min() -> float:
+    """普通栏/Q&A 增量能量评分门槛（D-037：默认 6.0，改配置不动代码）。"""
+    try:
+        payload = json.loads(ZSXQ_CAPTURE_CONFIG.read_text(encoding="utf-8"))
+        threshold = float(payload.get("score_skip_min"))  # type: ignore[arg-type]
+    except (OSError, TypeError, ValueError, AttributeError):
+        return _SCORE_SKIP_MIN_DEFAULT
+    if not 0 < threshold <= 10:
+        return _SCORE_SKIP_MIN_DEFAULT
+    return threshold
 
 
 @lru_cache(maxsize=1)
