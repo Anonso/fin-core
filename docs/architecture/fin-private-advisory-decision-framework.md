@@ -74,7 +74,7 @@ G 不必每轮全文预取，但在相关问题上必须进入推理起点。使
 | 对象 | 实际含义 | 使用边界 |
 | --- | --- | --- |
 | `guo:v0` | 旧 Persona 对象的身份与版本标签；可见于 `knowledge-base/runtime/teacher_personas.jsonl` 及旧模型/测试产物 | 只能说明旧 Persona 版本，不能代表完整 G 内容或认知演化 |
-| 6、7、8 月长认知时间线 | `<KB 根>/manual-annotations/g-cognition-mainline-2026-06-to-2026-08-19.md`（canonical KB 根，经 knowledge_root 缝解析）中经人工复核、保留来源回指和时间语义的认知主线 | 是认知内容与演化记录，仍须遵守 G 原文、混合材料和 Agent 推演的来源边界 |
+| 6、7、8 月长认知时间线 | `<KB 根>/manual-annotations/g-cognition-mainline.md`（canonical KB 根，经 knowledge_root 缝解析）中经人工复核、保留来源回指和时间语义的认知主线 | 是认知内容与演化记录，仍须遵守 G 原文、混合材料和 Agent 推演的来源边界 |
 
 因此，不能把“郭老师的历史认知版本 `guo:v0`”说成那份长认知，也不能让旧 Persona 快照取代
 6 月到 8 月的时间线。未来若保留 `guo:v0`，它也只能作为身份或兼容标识，不是认知正文的
@@ -414,7 +414,7 @@ FIN 的答案应当自然、直接，先让用户知道“现在该怎么做以�
 
 - `docs/architecture/user-design-principles.md`
 - `docs/architecture/fin-domain-kernel-agent-runtime.md`
-- `<KB 根>/manual-annotations/g-cognition-mainline-2026-06-to-2026-08-19.md`（canonical KB 根）
+- `<KB 根>/manual-annotations/g-cognition-mainline.md`（canonical KB 根）
 - `knowledge-base/runtime/teacher_personas.jsonl`（仅用于辨认旧 `guo:v0` 的身份/版本含义）
 - ZSXQ 文章 `20260810_zsxq-45544211821188818`、`20260819_zsxq-22255152288154551`
 - `knowledge-base/articles/20260629_cb77e93bf27b.md`

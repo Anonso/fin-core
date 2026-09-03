@@ -20,7 +20,7 @@ def _minimal_payload() -> dict:
         "as_of": "2026-08-20T00:00:00+00:00",
         "generation": 1,
         "content_hash": "0" * 64,
-        "annotation_ref": "manual-annotations/g-cognition-mainline-2026-06-to-2026-08-19.md",
+        "annotation_ref": "manual-annotations/g-cognition-mainline.md",
         "available_at": "2026-08-19T12:47:00+00:00",
         "processed_at": "2026-08-20T00:00:00+00:00",
         "pit_working_set_identity": "a" * 64,
@@ -204,7 +204,7 @@ ANNOTATION_DOC = str(
         or (Path.home() / ".local" / "share" / "fin-analyse" / "shared" / "knowledge-base")
     )
     / "manual-annotations"
-    / "g-cognition-mainline-2026-06-to-2026-08-19.md"
+    / "g-cognition-mainline.md"
 )
 needs_annotation_doc = pytest.mark.skipif(
     not Path(ANNOTATION_DOC).is_file(),

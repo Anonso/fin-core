@@ -499,7 +499,7 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
         annotation = (
             default_knowledge_base_root()
             / "manual-annotations"
-            / "g-cognition-mainline-2026-06-to-2026-08-19.md"
+            / "g-cognition-mainline.md"
         )
         result = rebuild_if_stale(
             annotation_path=annotation,
