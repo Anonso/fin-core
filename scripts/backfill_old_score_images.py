@@ -165,6 +165,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--article-id", default=None, help="只处理单篇（调试）")
     parser.add_argument("--write", action="store_true", help="真写；默认 dry-run")
     parser.add_argument("--force", action="store_true", help="已有图片描述也重跑")
+    parser.add_argument(
+        "--include-ocr-text",
+        action="store_true",
+        help="处理正文带旧 OCR 评分文本但尚无图片描述的文章（收尾 24 篇）",
+    )
     args = parser.parse_args(argv)
 
     kb_root = Path(args.kb_root) if args.kb_root else default_knowledge_base_root()
@@ -191,7 +196,9 @@ def main(argv: list[str] | None = None) -> int:
         if "## 图片描述" in md_text:
             if not args.force:
                 continue
-        elif "利好度" in md_text or "共识度" in md_text:
+        elif not args.include_ocr_text and (
+            "利好度" in md_text or "共识度" in md_text
+        ):
             continue
         images = _frontmatter_images(md_text)
         existing = [kb_root / ref.lstrip("/") for ref in images]

@@ -284,8 +284,12 @@
 - 定向识图收口（owner 09-03 指示）：154 篇“只有图片、无 `## 图片描述`”的
   普通栏 ≥6 文章已全部识图转录（scripts/backfill_old_score_images.py；
   A 股代码经名册归一）；注册表扩到 1348 行，覆盖 2026-05-13 起（新增
-  767 行、ok 1225 / needs_review 123）。原 24 篇旧 OCR 文本文章仍由
-  parser v2 不识别，走全文检索即可。
+  767 行、ok 1225 / needs_review 123）。
+- 24 篇旧 OCR 文本版式收口（owner 09-03 指示）：以 `--include-ocr-text`
+  对这 24 篇（60 张图）执行同一识图转录后回填，注册表扩到 1629 行
+  （新增 270 行；旧 OCR 与 vision 冲突行按 needs_review 保护，
+  cross_source_conflict 11 行）；5/13 起历史评分表已全部结构化，
+  老区候选清零、mismatch=0。
 - 存量质量已清理：注册表原有 30 行 A 股代码↔名称错位（2026-06/07/08，
   非识图批引入），已在解析层加 a_share 名册归一（parse_article_records
   name_map + upsert remove_record_ids 替换旧行），回填后 mismatch=0、
