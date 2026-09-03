@@ -29,14 +29,14 @@ from fin_analyse.consultation.instrument_identity import (
     ConsultationInstrumentIdentityResolver,
 )
 from fin_analyse.external_evidence import ExternalEvidenceReader
-from fin_analyse.guo_teacher_research.ready_evidence import (
-    RecentReferenceReadyEvidenceReader,
-)
 from fin_analyse.guo_teacher_research.macro_brain import (
     load_shared_brain_cards,
     macro_search_signal,
     match_shared_brain_cards,
     suggested_queries,
+)
+from fin_analyse.guo_teacher_research.ready_evidence import (
+    RecentReferenceReadyEvidenceReader,
 )
 from fin_analyse.guo_teacher_research.runtime_context import (
     AgentRuntimeContextProvider,
@@ -125,9 +125,7 @@ _EXTERNAL_BRAIN_MACRO_KEYWORDS = (
     "港股",
     "科技股",
 )
-_EXTERNAL_BRAIN_MACRO_CLASSIFICATIONS = frozenset(
-    {"market_observation", "ai_summary_reference"}
-)
+_EXTERNAL_BRAIN_MACRO_CLASSIFICATIONS = frozenset({"market_observation", "ai_summary_reference"})
 
 _STRICT_G_BUCKETS = frozenset({"pinned_source", "fresh_g", "latest_commentary"})
 _MARKET_SCALAR_FIELDS = (
@@ -1088,14 +1086,20 @@ def _g_layered_context_value(
                 ref = str(rule.get("source_ref") or "")
                 if not ref:
                     continue
-                methodology_rules.append({
-                    "topic": str(group.get("topic", "")),
-                    "rule": str(rule.get("rule", "")),
-                    "source_ref": ref,
-                    "published_at": str(rule.get("published_at") or rule.get("available_at") or ""),
-                    "teacher_quote": str(rule.get("teacher_quote") or ""),
-                    "apprentice_interpretation": str(rule.get("apprentice_interpretation") or ""),
-                })
+                methodology_rules.append(
+                    {
+                        "topic": str(group.get("topic", "")),
+                        "rule": str(rule.get("rule", "")),
+                        "source_ref": ref,
+                        "published_at": str(
+                            rule.get("published_at") or rule.get("available_at") or ""
+                        ),
+                        "teacher_quote": str(rule.get("teacher_quote") or ""),
+                        "apprentice_interpretation": str(
+                            rule.get("apprentice_interpretation") or ""
+                        ),
+                    }
+                )
                 if len(methodology_rules) >= _MAX_FRAMEWORK_ITEMS:
                     break
             if len(methodology_rules) >= _MAX_FRAMEWORK_ITEMS:
@@ -1114,13 +1118,19 @@ def _g_layered_context_value(
             for item in raw_cog:
                 if not isinstance(item, Mapping):
                     continue
-                cognition_items.append({
-                    "source_ref": str(item.get("source_ref") or ""),
-                    "title": str(item.get("title") or ""),
-                    "guidance_brief": _bounded_text(item.get("guidance_brief"), _MAX_TEXT_CHARS),
-                    "source_bucket": str(item.get("source_bucket") or "cognition_mainline_projection"),
-                    "published_at": str(item.get("published_at") or ""),
-                })
+                cognition_items.append(
+                    {
+                        "source_ref": str(item.get("source_ref") or ""),
+                        "title": str(item.get("title") or ""),
+                        "guidance_brief": _bounded_text(
+                            item.get("guidance_brief"), _MAX_TEXT_CHARS
+                        ),
+                        "source_bucket": str(
+                            item.get("source_bucket") or "cognition_mainline_projection"
+                        ),
+                        "published_at": str(item.get("published_at") or ""),
+                    }
+                )
                 if len(cognition_items) >= _MAX_FRAMEWORK_ITEMS:
                     break
     if cognition_items:
@@ -1184,14 +1194,14 @@ def _g_layered_context_value(
             for thesis in theme.get("theses", []):
                 if not isinstance(thesis, Mapping):
                     continue
-                theses.append({
-                    "title": str(thesis.get("title") or ""),
-                    "source_ref": str(thesis.get("source_ref") or ""),
-                    "published_at": str(thesis.get("published_at") or ""),
-                    "thesis_heads": [
-                        str(h) for h in thesis.get("thesis_heads", []) if h
-                    ],
-                })
+                theses.append(
+                    {
+                        "title": str(thesis.get("title") or ""),
+                        "source_ref": str(thesis.get("source_ref") or ""),
+                        "published_at": str(thesis.get("published_at") or ""),
+                        "thesis_heads": [str(h) for h in thesis.get("thesis_heads", []) if h],
+                    }
+                )
             if theses:
                 themes.append({"theme": str(theme.get("theme", "")), "theses": theses})
         if themes:
@@ -1200,9 +1210,9 @@ def _g_layered_context_value(
     if working_set_freshness is not None:
         bound = working_set_freshness.get("bound_article_ids", [])
         if isinstance(bound, list) and bound:
-            associations["bound_article_ids"] = [
-                str(aid) for aid in bound if isinstance(aid, str)
-            ][:_MAX_ASSOCIATION_ITEMS]
+            associations["bound_article_ids"] = [str(aid) for aid in bound if isinstance(aid, str)][
+                :_MAX_ASSOCIATION_ITEMS
+            ]
     if not associations:
         association_gaps.append("associations_unavailable")
 
@@ -1228,12 +1238,14 @@ def _g_layered_context_value(
         source_ref = _bounded_text(raw.get("source_ref"), _MAX_SHORT_TEXT_CHARS)
         if not source_ref:
             continue
-        macro_reference_items.append({
-            "source_ref": source_ref,
-            "title": _bounded_text(title, _MAX_SHORT_TEXT_CHARS),
-            "source_bucket": "macro_reference",
-            "published_at": str(raw.get("published_at") or raw.get("available_at") or ""),
-        })
+        macro_reference_items.append(
+            {
+                "source_ref": source_ref,
+                "title": _bounded_text(title, _MAX_SHORT_TEXT_CHARS),
+                "source_bucket": "macro_reference",
+                "published_at": str(raw.get("published_at") or raw.get("available_at") or ""),
+            }
+        )
         if len(macro_reference_items) >= _MAX_EXTERNAL_BRAIN_ITEMS:
             break
     if macro_reference_items:
@@ -1251,12 +1263,14 @@ def _g_layered_context_value(
             for item in raw_eb:
                 if not isinstance(item, Mapping):
                     continue
-                eb_items.append({
-                    "source_ref": str(item.get("source_ref") or ""),
-                    "title": str(item.get("title") or ""),
-                    "source_bucket": str(item.get("source_bucket") or "cognition_mainline"),
-                    "published_at": str(item.get("published_at") or ""),
-                })
+                eb_items.append(
+                    {
+                        "source_ref": str(item.get("source_ref") or ""),
+                        "title": str(item.get("title") or ""),
+                        "source_bucket": str(item.get("source_bucket") or "cognition_mainline"),
+                        "published_at": str(item.get("published_at") or ""),
+                    }
+                )
                 if len(eb_items) >= _MAX_EXTERNAL_BRAIN_ITEMS:
                     break
         if eb_items:
@@ -1654,6 +1668,9 @@ def _project_g_item(
     source_refs = _bounded_source_refs(raw.get("source_refs"))
     if source_refs:
         item["source_refs"] = list(source_refs)
+    jargon_notes = _bounded_jargon_notes(raw.get("jargon_notes"))
+    if jargon_notes:
+        item["jargon_notes"] = jargon_notes
     return item
 
 
@@ -1883,6 +1900,30 @@ def _add_string_list(destination: dict[str, object], key: str, value: object) ->
     strings = _bounded_strings(value)
     if strings:
         destination[key] = strings
+
+
+def _bounded_jargon_notes(value: object) -> list[dict[str, object]]:
+    """黑话译注窄契约的有界投影;缺失/畸形 → 空(无命中不附加)。"""
+    if not isinstance(value, (list, tuple)):
+        return []
+    notes: list[dict[str, object]] = []
+    for raw in value[:_MAX_LIST_CANDIDATE_SCAN]:
+        if not isinstance(raw, Mapping):
+            continue
+        term = _bounded_text(raw.get("term"), _MAX_SHORT_TEXT_CHARS)
+        meaning = _bounded_text(raw.get("meaning"), _MAX_TEXT_CHARS)
+        if not term or not meaning:
+            continue
+        notes.append(
+            {
+                "term": term,
+                "meaning": meaning,
+                "confidence": _bounded_text(raw.get("confidence"), _MAX_SHORT_TEXT_CHARS),
+            }
+        )
+        if len(notes) == _MAX_LIST_ITEMS:
+            break
+    return notes
 
 
 def _bounded_text(value: object, limit: int = _MAX_TEXT_CHARS) -> str:

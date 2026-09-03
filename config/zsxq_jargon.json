@@ -1,0 +1,294 @@
+{
+  "schema_version": "fin.zsxq-jargon/v1",
+  "updated_at": "2026-09-03",
+  "entries": [
+    {
+      "term": "炒饭",
+      "meaning": "炒股 / 交易",
+      "kind": "谐音",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-45548854118485288"],
+      "note": "owner 2026-09-03 确认"
+    },
+    {
+      "term": "老登",
+      "meaning": "旧质生产力 / 传统价值行业（银行、白酒、地产、煤炭等）",
+      "kind": "指代",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-55522825245845414"],
+      "note": "owner 2026-09-03 确认；8/18 问答原文自证"
+    },
+    {
+      "term": "科学家50",
+      "meaning": "科创50",
+      "kind": "指代",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-22258842281448251", "aaebffd7a76e"],
+      "note": "owner 2026-09-03 确认"
+    },
+    {
+      "term": "柚子",
+      "meaning": "游资",
+      "kind": "谐音",
+      "confidence": "owner_confirmed",
+      "evidence": ["ccde0e7406c5", "3a189968d343"],
+      "note": "owner 2026-09-03 确认；与家人/机构并列"
+    },
+    {
+      "term": "2光",
+      "meaning": "光纤",
+      "kind": "指代",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-22258842281448251"],
+      "note": "owner 2026-09-03 确认（二光=光纤）"
+    },
+    {
+      "term": "大光",
+      "meaning": "光模块",
+      "kind": "指代",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-22258842281448251"],
+      "note": "owner 2026-09-03 确认；语境特指大市值龙头时一般指中际旭创（ZJXC）"
+    },
+    {
+      "term": "通哥",
+      "meaning": "利通电子",
+      "kind": "指代",
+      "confidence": "owner_confirmed",
+      "evidence": ["2455fcdc8430"],
+      "note": "owner 2026-09-03 确认；算力租赁，英伟达中国区 Preferred 级 AI 云合作"
+    },
+    {
+      "term": "鸡排哥原理",
+      "meaning": "板块轮动（“做完你的做你的”）",
+      "kind": "框架术语",
+      "confidence": "owner_confirmed",
+      "evidence": ["f191cb596c56", "f0e87a1dc386"],
+      "note": "owner 2026-09-03 确认；网络热梗"
+    },
+    {
+      "term": "老M",
+      "meaning": "Masochism / 受虐者（反人性、扛得住打才赚钱）",
+      "kind": "隐喻",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-55522488814815124"],
+      "note": "owner 2026-09-03 确认；“渴望挨打，因为挨打了有补偿”"
+    },
+    {
+      "term": "大屁股",
+      "meaning": "大市值权重股 / 汇金、公积金、养老金等大体量资金",
+      "kind": "指代",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-22258842281448251", "zsxq-22255154852422841"],
+      "note": "owner 2026-09-03 补充"
+    },
+    {
+      "term": "狮驼岭",
+      "meaning": "美国（美股市场）",
+      "kind": "指代",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-82258881528514542"],
+      "note": "owner 2026-09-03 确认；39万亿国债/美联储语境"
+    },
+    {
+      "term": "亮化",
+      "meaning": "量化",
+      "kind": "谐音",
+      "confidence": "owner_confirmed",
+      "evidence": ["zsxq-82255444125152452"],
+      "note": "owner 2026-09-03 指示收录；小故事藏话谐音"
+    },
+    {
+      "term": "十六字",
+      "meaning": "大涨大卖/小涨小卖/大跌大买/小跌小买",
+      "kind": "框架术语",
+      "confidence": "owner_confirmed",
+      "evidence": [],
+      "note": "G 口诀；不是黑话，是十六字方针简称"
+    },
+    {
+      "term": "中登",
+      "meaning": "中生代成长板块（新能源链/电力设备/军工/创新药）",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-55522825245845414"],
+      "note": "8/18 问答原文自证"
+    },
+    {
+      "term": "小登",
+      "meaning": "前沿科技板块（AI芯片/光模块/机器人/算力硬件）",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-55522825245845414"],
+      "note": "8/18 问答原文自证"
+    },
+    {
+      "term": "峡谷",
+      "meaning": "A股",
+      "kind": "谐音",
+      "confidence": "corpus_inferred",
+      "evidence": ["aaebffd7a76e", "zsxq-55522488814815124"],
+      "note": "特刊标题“7月峡谷（含科学家/创业导师）”"
+    },
+    {
+      "term": "科学家",
+      "meaning": "科创",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["aaebffd7a76e"],
+      "note": "特刊标题平行结构：科学家/创业导师=科创/创业"
+    },
+    {
+      "term": "创业导师",
+      "meaning": "创业",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["aaebffd7a76e"],
+      "note": "特刊标题平行结构"
+    },
+    {
+      "term": "家人",
+      "meaning": "散户",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-14422824148881242"],
+      "note": "与机构/柚子并列"
+    },
+    {
+      "term": "散修",
+      "meaning": "散户",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-82258881528514542"],
+      "note": "“去散修”=去散户化"
+    },
+    {
+      "term": "凤A",
+      "meaning": "A股",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-55522488814815124"],
+      "note": "凤仙郡系（凤=中国）"
+    },
+    {
+      "term": "凤哥",
+      "meaning": "中国（供应链/数字经济主体）",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["e46f7ebb835d", "zsxq-22255442225441581"],
+      "note": "凤哥供应链/凤哥自身数字经济"
+    },
+    {
+      "term": "凤仙郡",
+      "meaning": "中国（政策/监管/国家队视角）",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["25c44059b537", "aaebffd7a76e"],
+      "note": "凤仙郡小故事栏目同源"
+    },
+    {
+      "term": "凤队",
+      "meaning": "国家队 / 主力 / 政策资金",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-55522488814815124"],
+      "note": "原文自证“凤队（国家队/主力/政策）”"
+    },
+    {
+      "term": "昊天意志",
+      "meaning": "政策主线 / 国家战略意志（科技自立+新质生产力）",
+      "kind": "隐喻",
+      "confidence": "corpus_inferred",
+      "evidence": ["ccde0e7406c5"],
+      "note": "原文自证“昊天意志=科技自立+新质生产力”"
+    },
+    {
+      "term": "韩国因子",
+      "meaning": "韩国存储股（三星/SK海力士）因子",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-14422115528111282", "zsxq-22258842281448251"],
+      "note": "“存储因子太重，不参考韩国因子不可能”"
+    },
+    {
+      "term": "炼丹",
+      "meaning": "纯概念/故事炒作",
+      "kind": "隐喻",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-22255445184445280"],
+      "note": "“纯故事、纯概念就是纯粹的炼丹”"
+    },
+    {
+      "term": "划市",
+      "meaning": "横盘磨市",
+      "kind": "隐喻",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-14422824148881242"],
+      "note": "“混时长划水的划市”"
+    },
+    {
+      "term": "派货",
+      "meaning": "出货",
+      "kind": "指代",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-14422824148881242"],
+      "note": "“拉起来派货”"
+    },
+    {
+      "term": "雷劫",
+      "meaning": "大跌 / 深度洗盘（推测含控盘下跌成分）",
+      "kind": "隐喻",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-14425558582828422"],
+      "note": "“雷劫就是大跌洗礼”；owner 提示可能含国家队控盘下跌义"
+    },
+    {
+      "term": "欢乐豆",
+      "meaning": "资金 / 本金",
+      "kind": "框架术语",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-55522441445445816"],
+      "note": "版本强势英雄框架（游戏货币隐喻）"
+    },
+    {
+      "term": "英雄",
+      "meaning": "主线个股 / 板块",
+      "kind": "框架术语",
+      "confidence": "corpus_inferred",
+      "evidence": ["zsxq-55522441445445816"],
+      "note": "版本强势英雄框架"
+    },
+    {
+      "term": "上分",
+      "meaning": "上涨 / 走强",
+      "kind": "框架术语",
+      "confidence": "corpus_inferred",
+      "evidence": ["f0e87a1dc386"],
+      "note": "游戏隐喻"
+    },
+    {
+      "term": "赛马机制",
+      "meaning": "多点轮动（凤队拉多只赛马）",
+      "kind": "框架术语",
+      "confidence": "corpus_inferred",
+      "evidence": ["f0e87a1dc386"],
+      "note": "游戏隐喻"
+    },
+    {
+      "term": "河神",
+      "meaning": "大盘 / 控盘力量的拟人化（“跌=献祭，祭够才放行”）",
+      "kind": "隐喻",
+      "confidence": "speculative",
+      "evidence": ["3ba65adfee33", "cbb66cf0bc32"],
+      "note": "“跌就是河神要祭品”；谁在收祭品未定，仅记录不注入"
+    },
+    {
+      "term": "国补",
+      "meaning": "国家补贴 / 政策刺激（疑似双义，未定）",
+      "kind": "指代",
+      "confidence": "speculative",
+      "evidence": ["zsxq-45548854118485288"],
+      "note": "消费语境=国家补贴；另一语境疑为“被割即自动给国家做贡献”戏称；仅记录不注入"
+    }
+  ]
+}

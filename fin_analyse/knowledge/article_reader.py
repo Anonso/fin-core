@@ -6,10 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from fin_analyse.common.zsxq_jargon import jargon_notes as scan_jargon_notes
 from fin_analyse.utils.markdown import parse_frontmatter
 
 _MAX_BODY_CHARS = 20_000
-_G_LAYER_COLUMNS = frozenset(
+
+#: G 层栏目（黑话旁注只对 G 层材料做，避免普通栏「家人/英雄」误注）。
+G_LAYER_COLUMNS = frozenset(
     {
         "星大派锐评",
         "星大派每日热点",
@@ -40,7 +43,9 @@ class ArticleContentReader:
         rows = payload.get("articles") if isinstance(payload, dict) else None
         if not isinstance(rows, list):
             return None
-        return {str(row.get("id", "")): row for row in rows if isinstance(row, dict) and row.get("id")}
+        return {
+            str(row.get("id", "")): row for row in rows if isinstance(row, dict) and row.get("id")
+        }
 
     def read(self, request: Any) -> Any:
         from fin_analyse.read_capabilities.types import ProductionReadResult
@@ -88,7 +93,7 @@ class ArticleContentReader:
             "column": str(row.get("column", "") or meta.get("column", "")),
             "layer": (
                 "g"
-                if str(row.get("column", "") or meta.get("column", "")) in _G_LAYER_COLUMNS
+                if str(row.get("column", "") or meta.get("column", "")) in G_LAYER_COLUMNS
                 else "reference"
             ),
             "date": str(row.get("date", ""))[:10] or str(meta.get("date", ""))[:10],
@@ -103,4 +108,10 @@ class ArticleContentReader:
             "truncated": truncated,
             "content": body,
         }
+        # 黑话旁注（设计稿落点 3）：只对 G 层材料附加，窄契约字段，
+        # 原文 content 零改写；无命中不附加该键。
+        if value["layer"] == "g":
+            jargon_notes = scan_jargon_notes(body)
+            if jargon_notes:
+                value["jargon_notes"] = jargon_notes
         return ProductionReadResult(value=value, data_gaps=())

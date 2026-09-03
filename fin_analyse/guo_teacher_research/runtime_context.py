@@ -101,9 +101,7 @@ _LATEST_FOCUS_FOCUS_TOKENS = (
 
 _G_SOURCE_CLASSIFICATIONS = frozenset({"teacher_original"})
 _COMMENTARY_COLUMNS = frozenset({"星大派锐评", "星大派每日热点"})
-_SPECIAL_REPORT_COLUMNS = frozenset(
-    {"星大派特刊", "凤仙郡小故事", "星大派人脉", "版本强势英雄"}
-)
+_SPECIAL_REPORT_COLUMNS = frozenset({"星大派特刊", "凤仙郡小故事", "星大派人脉", "版本强势英雄"})
 # 星大派好问题 = 老师回答会员提问（teacher_original 原文观点）；
 # 与特刊并列按相关性排序进入 G 上下文。
 _GOOD_QUESTION_COLUMNS = frozenset({"星大派好问题"})
@@ -216,6 +214,7 @@ _INTENT_SHINGLE_STOP = frozenset(
 )
 
 # ── Position → topic inference rules (FreshG) ────────────────────────────────
+
 
 def _position_topic_rules() -> tuple[tuple[tuple[str, ...], tuple[str, ...]], ...]:
     """Position→topic rules: configured table or built-in default.
@@ -742,9 +741,7 @@ class AgentRuntimeContextProvider:
                 "reason": "semantic_contract_budget",
             },
             "pinned_candidate_seen": pinned_resolution["candidate_seen"],
-            "methodology_low_confidence_skipped": methodology_projection[
-                "low_confidence_skipped"
-            ],
+            "methodology_low_confidence_skipped": methodology_projection["low_confidence_skipped"],
             "pinned_injected": pinned_resolution["injected"],
             "latest_commentary_injected": fresh_g_resolution.get("commentary_injected", False),
             "advisory_only": True,
@@ -881,7 +878,11 @@ class AgentRuntimeContextProvider:
             injected_any = any(d.get("injected") for d in decisions)
             skipped_any = any(d.get("skip_gap") for d in decisions)
             result["relevance_gate"] = (
-                "mixed" if injected_any and skipped_any else "all_passed" if injected_any else "all_skipped"
+                "mixed"
+                if injected_any and skipped_any
+                else "all_passed"
+                if injected_any
+                else "all_skipped"
             )
         return result
 
@@ -1022,11 +1023,7 @@ class AgentRuntimeContextProvider:
             return result
 
         # ── 3. Exclude 好问题/普通 columns + Q&A articles ──
-        eligible = [
-            c
-            for c in eligible
-            if not _qa_excluded(c)
-        ]
+        eligible = [c for c in eligible if not _qa_excluded(c)]
         selection_counts["column_eligible"] = len(eligible)
 
         # ── 4. Time window ──
@@ -1091,9 +1088,7 @@ class AgentRuntimeContextProvider:
                 kept.append(c)
             deduped = kept
             if excluded_count:
-                result["excluded_sources"].append(
-                    f"pinned_pre_excluded:{excluded_count}_articles"
-                )
+                result["excluded_sources"].append(f"pinned_pre_excluded:{excluded_count}_articles")
         selection_counts["after_pinned_exclusion"] = len(deduped)
 
         # ── 6.5 Enrich with compact deep_read for information-driven selection ──
@@ -1387,6 +1382,9 @@ class AgentRuntimeContextProvider:
                 "_enriched_themes": list(candidate.get("_enriched_themes") or []),
                 "_enriched_keywords": list(candidate.get("_enriched_keywords") or []),
             }
+            jargon_notes = _candidate_jargon_notes(dr)
+            if jargon_notes:
+                candidate_entry["jargon_notes"] = jargon_notes
             result["candidates"].append(candidate_entry)
 
         result["count"] = len(result["candidates"])
@@ -1435,9 +1433,7 @@ class AgentRuntimeContextProvider:
         if self._fresh_g_candidates is not None:
             raw_candidates = list(self._fresh_g_candidates)
         else:
-            raw_candidates, index_unavailable = _read_index_reference_candidates(
-                self._kb_root
-            )
+            raw_candidates, index_unavailable = _read_index_reference_candidates(self._kb_root)
         if not raw_candidates:
             if index_unavailable:
                 result["data_gaps"].append("recent_reference_index_unavailable")
@@ -1474,9 +1470,7 @@ class AgentRuntimeContextProvider:
                 continue  # never promote external / research_reference
             if not _is_reference_eligible(c):
                 continue  # only reference-tier items (Q&A / 普通 / observation)
-            if not _is_recent_within(
-                c, now, days=reference_window_days(_candidate_column(c))
-            ):
+            if not _is_recent_within(c, now, days=reference_window_days(_candidate_column(c))):
                 continue
             if not _reference_is_relevant(c, request, intent_tokens):
                 continue
@@ -2077,7 +2071,7 @@ def _canonical_article_id(
         return None, False
     zsxq_id = raw.rsplit("/", 1)[-1].replace(".html", "").strip()
     if zsxq_id.startswith("zsxq-"):
-        zsxq_id = zsxq_id[len("zsxq-"):]
+        zsxq_id = zsxq_id[len("zsxq-") :]
     if not zsxq_id:
         return None, False
     if index_articles is None:
@@ -2099,10 +2093,7 @@ def _canonical_article_id(
         str(a.get("id"))
         for a in index_articles
         if isinstance(a, dict)
-        and (
-            str(a.get("topic_id", "")) == zsxq_id
-            or str(a.get("id", "")) == zsxq_id
-        )
+        and (str(a.get("topic_id", "")) == zsxq_id or str(a.get("id", "")) == zsxq_id)
     ]
     if len(canonical) == 1:
         return canonical[0], True
@@ -2182,9 +2173,7 @@ def _extract_tickers_from_core_theses(
     dr: dict[str, Any],
 ) -> list[str]:
     """Extract tickers from deep_read company names (units/core_theses)."""
-    return _map_companies_to_tickers(
-        kb_root, _deep_read_company_names(dr)
-    )
+    return _map_companies_to_tickers(kb_root, _deep_read_company_names(dr))
 
 
 def _deep_read_company_names(dr: dict[str, Any]) -> set[str]:
@@ -3222,11 +3211,9 @@ def _candidate_relevance_score(
             score += 6
     # 3.3b：compact thesis/title/theme 关键词面，双向包含（封测 vs
     # “封测是中游平台…”这类非词表问句）。
-    for keyword in (candidate.get("_enriched_keywords") or []):
+    for keyword in candidate.get("_enriched_keywords") or []:
         for intent_topic in intent_tokens["topics"]:
-            if len(intent_topic) >= 2 and (
-                intent_topic in keyword or keyword in intent_topic
-            ):
+            if len(intent_topic) >= 2 and (intent_topic in keyword or keyword in intent_topic):
                 score += 3
                 break
 
@@ -4858,6 +4845,10 @@ def _build_llm_context(
         sug = c.get("suggestions", [])
         if sug:
             entry["suggestions"] = sug
+        # 黑话译注(黑话设计落点 2 透传):compact 附加字段,无命中不附加。
+        jn = c.get("jargon_notes")
+        if isinstance(jn, list) and jn:
+            entry["jargon_notes"] = jn[:6]
         # Reference (not-G) key points, if this is a recent_reference item
         rkp = c.get("reference_key_points", [])
         if rkp:
@@ -5245,6 +5236,40 @@ def _candidate_methodology_rules(dr: Mapping[str, Any] | None) -> list[dict[str,
             }
         )
     return rules
+
+
+def _candidate_jargon_notes(dr: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """归一化 compact 的 jargon_notes(黑话译注窄契约);缺失/畸形 → 空。
+
+    旧工件无该字段时返回空,调用方不附加键,行为与引入前一致。
+    """
+    if dr is None or not isinstance(dr, Mapping):
+        return []
+    raw = dr.get("jargon_notes")
+    if not isinstance(raw, (list, tuple)):
+        return []
+    notes: list[dict[str, Any]] = []
+    for entry in raw:
+        if not isinstance(entry, Mapping):
+            continue
+        term = entry.get("term")
+        meaning = entry.get("meaning")
+        if not isinstance(term, str) or not isinstance(meaning, str):
+            continue
+        term = term.strip()
+        meaning = meaning.strip()
+        if not term or not meaning:
+            continue
+        notes.append(
+            {
+                "term": term[:24],
+                "meaning": meaning[:80],
+                "confidence": str(entry.get("confidence") or "").strip(),
+            }
+        )
+        if len(notes) >= 6:
+            break
+    return notes
 
 
 def _build_mainline_projection(

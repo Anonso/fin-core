@@ -43,6 +43,7 @@ from typing import Any, cast
 from uuid import uuid4
 
 from fin_analyse.cognition.llm import CognitionCompletionControl
+from fin_analyse.common.zsxq_jargon import jargon_notes as scan_jargon_notes
 
 logger = logging.getLogger(__name__)
 
@@ -407,12 +408,8 @@ class DeepReadArtifactService:
                             content_hash,
                             allow_retryable_failure=True,
                         )
-                        if retryable_pair is None or not self._verify_artifact_store(
-                            store
-                        ):
-                            raise _ArtifactStoreBoundaryError(
-                                "written artifact pair invalid"
-                            )
+                        if retryable_pair is None or not self._verify_artifact_store(store):
+                            raise _ArtifactStoreBoundaryError("written artifact pair invalid")
                         retryable = True
             finally:
                 self._close_artifact_store(store)
@@ -1104,6 +1101,11 @@ class DeepReadArtifactService:
 
         injectable_summary = "\n".join(injectable_parts)
 
+        # 黑话译注（设计稿落点 2）：规则扫 title+content，确定性附加字段。
+        # 同输入同输出，不 bump artifact_version；无命中不附加该键，旧工件
+        # 缺字段时消费方一律保持旧行为。
+        jargon_notes = scan_jargon_notes(f"{title}\n{source.get('content', '')}")
+
         usage_boundary = (
             "research/advisory only — 不得用于自动调仓、绕过风控或作为直接买卖信号。"
             "本内容来源于教师文章深度阅读，仅用于研究参考和上下文注入。"
@@ -1128,6 +1130,7 @@ class DeepReadArtifactService:
             ),
             "theme_clusters": compact_clusters,
             "suggestions": compact_suggestions,
+            **({"jargon_notes": jargon_notes} if jargon_notes else {}),
             "injectable_summary": injectable_summary,
             "warnings": full_result.get("warnings", []),
             "usage_boundary": usage_boundary,

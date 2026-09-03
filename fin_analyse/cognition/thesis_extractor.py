@@ -14,11 +14,28 @@ from fin_analyse.cognition.models import (
     UsagePolicy,
     ZsxqCognitionSource,
 )
+from fin_analyse.common.zsxq_jargon import jargon_note_lines
 from fin_analyse.utils.ids import stable_id
 
 logger = logging.getLogger(__name__)
 
 _T0_TEACHER_SOURCE_RANKS = frozenset({"t0_xingdapai", "t0_fengxian"})
+
+
+def _jargon_prompt_part(title: str, content: str) -> str:
+    """「本文命中黑话对照」输入段（设计稿落点 1，只增强不作必译验收）。
+
+    无命中返回空串（prompt 与旧版逐字节一致）。措辞经 2026-09-03 学徒
+    翻译 A/B 验证：标准义只进 interpretation，evidence 保持逐字零污染。
+    """
+    lines = jargon_note_lines(f"{title}\n{content}")
+    if not lines:
+        return ""
+    return (
+        "# 本文命中黑话对照\n"
+        + "\n".join(lines)
+        + "\n（命中词可在学徒翻译中使用标准义；不得写入 evidence）"
+    )
 
 
 @dataclass(frozen=True)
@@ -136,9 +153,7 @@ class RuleBasedZsxqThesisExtractor:
                 text,
                 now,
                 taken={
-                    unit.original_evidence[0]
-                    for unit in discipline_units
-                    if unit.original_evidence
+                    unit.original_evidence[0] for unit in discipline_units if unit.original_evidence
                 },
             )
         )
@@ -223,7 +238,6 @@ class RuleBasedZsxqThesisExtractor:
             )
             for sentence in sentences
         ]
-
 
 
 # ---------------------------------------------------------------------------
@@ -459,6 +473,9 @@ class LlmZsxqThesisExtractor:
             f"# 文章标题\n{source.title}",
             f"# 文章内容\n{source.content[:4000]}",
         ]
+        jargon_part = _jargon_prompt_part(source.title, source.content[:4000])
+        if jargon_part:
+            parts.insert(2, jargon_part)
         prompt = _CENTRAL_IDEA_PROMPT + "\n---\n" + "\n\n".join(parts)
         try:
             if control is not None:
@@ -569,6 +586,9 @@ class LlmZsxqThesisExtractor:
             f"# 文章标题\n{source.title}",
             f"# 文章内容\n{source.content[:4000]}",
         ]
+        jargon_part = _jargon_prompt_part(source.title, source.content[:4000])
+        if jargon_part:
+            parts.insert(2, jargon_part)
         if source.image_descriptions:
             parts.append("# 图片描述\n" + "\n".join(source.image_descriptions[:5]))
         if visual_facts_text:
@@ -613,20 +633,14 @@ class LlmZsxqThesisExtractor:
                         exhausted_bare_empty = False
                         break
                     data = result.data
-                    units_probe = (
-                        data.get("units", []) if isinstance(data, dict) else data
-                    )
+                    units_probe = data.get("units", []) if isinstance(data, dict) else data
                     if not isinstance(units_probe, list) or units_probe:
                         exhausted_bare_empty = False
                         break
-                    if isinstance(data, dict) and str(
-                        data.get("empty_reason", "") or ""
-                    ).strip():
+                    if isinstance(data, dict) and str(data.get("empty_reason", "") or "").strip():
                         exhausted_bare_empty = False  # 合法空：带因即停
                         break
-                    backend_failure = getattr(
-                        getattr(llm, "backend", None), "last_failure", None
-                    )
+                    backend_failure = getattr(getattr(llm, "backend", None), "last_failure", None)
                     if backend_failure is not None:
                         # 后端失败哨兵：complete()/complete_bounded() 重试耗尽时
                         # 返回字面 "[]" 且 last_failure 非空——与模型真产空数组
@@ -644,16 +658,12 @@ class LlmZsxqThesisExtractor:
             # 空链守卫：全部 backend 熔断/不可用时链为空，循环零迭代。
             # 返回与旧 backend-unavailable 语义一致的 typed 失败（命中
             # retryable 契约，后续排空可重试），绝不带 None 走 .ok。
-            return ThesisExtraction(
-                [], [], ["LLM extraction failed: LLM backend unavailable"]
-            )
+            return ThesisExtraction([], [], ["LLM extraction failed: LLM backend unavailable"])
         if exhausted_bare_empty and sentinel_details:
             # 全链以硬失败哨兵收尾：不能落「合法空」的不可重试语义；产出
             # typed retryable 失败（命中 LLM extraction failed 正则），排空/
             # 重生成后续可补做。
-            return ThesisExtraction(
-                [], [], [f"LLM extraction failed: {sentinel_details[-1]}"]
-            )
+            return ThesisExtraction([], [], [f"LLM extraction failed: {sentinel_details[-1]}"])
         if exhausted_bare_empty:
             logger.warning(
                 "LLM empty extraction persisted across escalation chain (%s)",
