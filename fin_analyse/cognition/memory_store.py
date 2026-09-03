@@ -7,7 +7,7 @@ shared reference, and agent private memory.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +17,8 @@ from fin_analyse.cognition.evidence_store import (
     validate_existing_owner_only_directory,
 )
 from fin_analyse.cognition.models import (
-    CognitiveFeedback,
     CognitivePattern,
     EvidenceItem,
-    PersonaAnalysis,
     ReasoningTrace,
     TeacherPersona,
     TraceVerification,
@@ -34,7 +32,6 @@ _READ_ONLY_OPERATIONS = frozenset(
         "list_traces",
         "list_patterns",
         "list_personas",
-        "list_feedback",
         "list_trace_verifications",
         "select_low_confidence_traces",
     }
@@ -73,8 +70,6 @@ class CognitionMemoryRequest:
     trace: ReasoningTrace | None = None
     pattern: CognitivePattern | None = None
     persona: TeacherPersona | None = None
-    analysis: PersonaAnalysis | None = None
-    feedback: CognitiveFeedback | None = None
     trace_verification: TraceVerification | None = None
     evidence_id: str = ""
     threshold: float = 0.5
@@ -105,7 +100,6 @@ class CognitionMemoryStoreService:
       - reasoning_traces.jsonl
       - cognitive_patterns.jsonl
       - teacher_personas.jsonl
-      - persona_analyses.jsonl
 
     Scope validation enforces that teacher_cognition writes carry a matching
     teacher_id, external_evidence cannot write cognition objects, and
@@ -134,12 +128,6 @@ class CognitionMemoryStoreService:
         )
         self.persona_repo: JsonlRepository[TeacherPersona] = repository_type(
             root / "teacher_personas.jsonl", TeacherPersona, "persona_id"
-        )
-        self.analysis_repo: JsonlRepository[PersonaAnalysis] = repository_type(
-            root / "persona_analyses.jsonl", PersonaAnalysis, "analysis_id"
-        )
-        self.feedback_repo: JsonlRepository[CognitiveFeedback] = repository_type(
-            root / "feedback.jsonl", CognitiveFeedback, "feedback_id"
         )
         self.trace_verification_repo: JsonlRepository[TraceVerification] = repository_type(
             root / "trace_verifications.jsonl", TraceVerification, "verification_id"
@@ -207,18 +195,6 @@ class CognitionMemoryStoreService:
         # ── list_personas ────────────────────────────────────────────
         if op == "list_personas":
             return self._validate_and_list_personas(scope)
-
-        # ── upsert_analysis ──────────────────────────────────────────
-        if op == "upsert_analysis":
-            return self._validate_and_upsert_analysis(request, scope)
-
-        # ── record_feedback ─────────────────────────────────────────
-        if op == "record_feedback":
-            return self._validate_and_record_feedback(request, scope)
-
-        # ── list_feedback ───────────────────────────────────────────
-        if op == "list_feedback":
-            return self._validate_and_list_feedback(scope)
 
         # ── upsert_trace_verification ───────────────────────────────
         if op == "upsert_trace_verification":
@@ -618,119 +594,6 @@ class CognitionMemoryStoreService:
             status="success",
             source_boundary=self._resolve_boundary(scope),
             payload={"personas": filtered},
-        )
-
-    def _validate_and_upsert_analysis(
-        self, request: CognitionMemoryRequest, scope: CognitionMemoryScope
-    ) -> CognitionMemoryResult:
-        if request.analysis is None:
-            return CognitionMemoryResult(
-                operation="upsert_analysis",
-                status="error",
-                source_boundary=scope.memory_kind,
-                payload={"error_code": "MISSING_ANALYSIS", "detail": "No analysis provided."},
-            )
-        self.analysis_repo.upsert(request.analysis)
-        return CognitionMemoryResult(
-            operation="upsert_analysis",
-            status="success",
-            source_boundary=self._resolve_boundary(scope),
-            write_effect="analysis_upserted",
-            payload={"analysis_id": request.analysis.analysis_id},
-        )
-
-    # ── feedback operations ─────────────────────────────────────────────
-
-    def _validate_and_record_feedback(
-        self, request: CognitionMemoryRequest, scope: CognitionMemoryScope
-    ) -> CognitionMemoryResult:
-        if request.feedback is None:
-            return CognitionMemoryResult(
-                operation="record_feedback",
-                status="error",
-                source_boundary=scope.memory_kind,
-                payload={"error_code": "MISSING_FEEDBACK", "detail": "No feedback provided."},
-            )
-        if scope.memory_kind == "agent_private" and not scope.agent_id:
-            return CognitionMemoryResult(
-                operation="record_feedback",
-                status="error",
-                source_boundary="agent_private",
-                payload={
-                    "error_code": "MISSING_AGENT_ID",
-                    "detail": "agent_private scope requires agent_id.",
-                },
-            )
-        if scope.memory_kind == "teacher_cognition" and not scope.teacher_id:
-            return self._missing_teacher_result(
-                operation="record_feedback",
-                entity_label="feedback",
-            )
-        scoped_feedback = replace(
-            request.feedback,
-            scope_kind=scope.memory_kind,
-            teacher_id=scope.teacher_id,
-            agent_id=scope.agent_id,
-        )
-        self.feedback_repo.upsert(scoped_feedback)
-        return CognitionMemoryResult(
-            operation="record_feedback",
-            status="success",
-            source_boundary=self._resolve_boundary(scope),
-            write_effect="feedback_recorded",
-            payload={"feedback": scoped_feedback, "feedback_id": scoped_feedback.feedback_id},
-        )
-
-    def _validate_and_list_feedback(self, scope: CognitionMemoryScope) -> CognitionMemoryResult:
-        if scope.memory_kind == "agent_private" and not scope.agent_id:
-            return CognitionMemoryResult(
-                operation="list_feedback",
-                status="error",
-                source_boundary="agent_private",
-                payload={
-                    "error_code": "MISSING_AGENT_ID",
-                    "detail": "agent_private scope requires agent_id.",
-                },
-            )
-        if scope.memory_kind == "teacher_cognition" and not scope.teacher_id:
-            return self._missing_teacher_result(
-                operation="list_feedback",
-                entity_label="feedback",
-            )
-        if scope.memory_kind in ("external_evidence", "shared_reference"):
-            return CognitionMemoryResult(
-                operation="list_feedback",
-                status="error",
-                source_boundary=scope.memory_kind,
-                payload={
-                    "error_code": f"{scope.memory_kind.upper()}_CANNOT_LIST_FEEDBACK",
-                    "detail": (
-                        f"{scope.memory_kind} scope cannot list feedback. "
-                        "Feedback is scoped to teacher_cognition or agent_private."
-                    ),
-                },
-            )
-        all_feedback = self.feedback_repo.list_all()
-        if scope.memory_kind == "teacher_cognition":
-            filtered = [
-                f
-                for f in all_feedback
-                if f.scope_kind in ("", "teacher_cognition")
-                and (not scope.teacher_id or f.teacher_id in ("", scope.teacher_id))
-            ]
-        elif scope.memory_kind == "agent_private":
-            filtered = [
-                f
-                for f in all_feedback
-                if f.scope_kind == "agent_private" and f.agent_id == scope.agent_id
-            ]
-        else:
-            filtered = all_feedback
-        return CognitionMemoryResult(
-            operation="list_feedback",
-            status="success",
-            source_boundary=self._resolve_boundary(scope),
-            payload={"feedbacks": filtered},
         )
 
     # ── trace verification operations ───────────────────────────────────

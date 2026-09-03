@@ -9,11 +9,11 @@ import pytest
 def _disable_real_industry_chain_llm_in_tests(monkeypatch):
     """Block real LLM calls from IndustryChainAnalyzer in all tests.
 
-    ResearchPackageBuilder._industry_chain_position calls IndustryChainAnalyzer.analyze
-    which creates an OpenAICompatibleBackend and makes live HTTP calls.  This fixture
-    replaces analyze with a deterministic stub that returns a minimal valid result so
-    every test gets a safe default — tests that need real industry chain analysis should
-    override this fixture with their own monkeypatch.
+    IndustryChainAnalyzer.analyze creates an OpenAICompatibleBackend and makes
+    live HTTP calls.  This fixture replaces analyze with a deterministic stub
+    that returns a minimal valid result so every test gets a safe default —
+    tests that need real industry chain analysis should override this fixture
+    with their own monkeypatch.
     """
     from fin_analyse.analysis.industry_chain import IndustryChainResult
 

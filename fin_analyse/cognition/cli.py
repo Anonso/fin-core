@@ -1,4 +1,4 @@
-"""CLI adapter for cognition backfill, persona rebuild, analysis, and sampling."""
+"""CLI adapter for cognition backfill, verification, and sampling."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from fin_analyse.cognition.service import CognitiveService
 
 @click.group()
 def main() -> None:
-    """fin-cognition — 认知层回填、Persona、分析、抽样。"""
+    """fin-cognition — 认知层回填、验证、抽样。"""
 
 
 main.add_command(tags_cli)
@@ -69,44 +69,6 @@ def backfill(limit: int, resume: bool, dry_run: bool, all_: bool, teacher: str) 
         click.echo(f"errors_sample: {report.errors_sample[:5]}")
     if report.sample_trace_ids:
         click.echo(f"sample_trace_ids: {report.sample_trace_ids[:10]}")
-
-
-@main.command()
-@click.option("--teacher", default="guo", help="老师 ID")
-def rebuild_persona(teacher: str) -> None:
-    """重建指定老师的 Persona。"""
-    from fin_analyse.cognition.service import CognitiveService
-    from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
-
-    kb_root = default_knowledge_base_root()
-    svc = CognitiveService(runtime_root=kb_root / "runtime" / "cognition")
-    persona = svc.rebuild_persona(teacher)
-    click.echo(json.dumps(persona.to_dict(), ensure_ascii=False, indent=2))
-
-
-@main.command()
-@click.option("--question", "-q", required=True, help="要分析的问题")
-@click.option("--company", default=None, help="目标公司")
-@click.option("--teacher", default="guo", help="老师 ID")
-def analyze(question: str, company: str | None, teacher: str) -> None:
-    """用老师 Persona 分析问题。"""
-    from fin_analyse.cognition.service import CognitiveService
-    from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
-
-    kb_root = default_knowledge_base_root()
-    svc = CognitiveService(runtime_root=kb_root / "runtime" / "cognition")
-
-    analysis = svc.analyze_with_persona(
-        question,
-        teacher_id=teacher,
-        company=company,
-    )
-
-    from fin_analyse.cognition.persona import format_qq_summary
-
-    click.echo(format_qq_summary(analysis))
-    click.echo()
-    click.echo(json.dumps(analysis.to_dict(), ensure_ascii=False, indent=2))
 
 
 @main.command()

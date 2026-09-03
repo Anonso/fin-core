@@ -5,10 +5,8 @@ from pathlib import Path
 import pytest
 
 from fin_analyse.cognition.models import (
-    CognitiveFeedback,
     CognitivePattern,
     EvidenceItem,
-    PersonaAnalysis,
     ReasoningTrace,
     SourceLabel,
     TeacherPersona,
@@ -97,29 +95,6 @@ def _sample_persona(persona_id: str = "per-001", teacher_id: str = "guo") -> Tea
         last_built_at="2026-07-07T00:00:00+00:00",
     )
 
-
-def _sample_analysis(analysis_id: str = "ana-001") -> PersonaAnalysis:
-    return PersonaAnalysis(
-        analysis_id=analysis_id,
-        persona_id="per-001",
-        question="测试问题",
-        company=None,
-        ticker=None,
-        activated_trace_ids=[],
-        activated_pattern_ids=[],
-        evidence_ids=[],
-        reasoning_steps=["step"],
-        conclusion="测试结论",
-        stance="中性",
-        confidence=0.7,
-        uncertainty=[],
-        contradictions=[],
-        unsupported_claims=[],
-        invalidation_conditions=[],
-        suggested_followups=[],
-        created_at="2026-07-07T00:00:00+00:00",
-        metadata={},
-    )
 
 
 def _owner_only_store_with_persona(root: Path):
@@ -582,26 +557,6 @@ def test_store_upserts_and_lists_personas(tmp_path: Path) -> None:
     assert any(p.persona_id == "per-001" for p in listed.payload["personas"])
 
 
-def test_store_upserts_analysis(tmp_path: Path) -> None:
-    from fin_analyse.cognition.memory_store import (
-        CognitionMemoryRequest,
-        CognitionMemoryScope,
-        CognitionMemoryStoreService,
-    )
-
-    store = CognitionMemoryStoreService(runtime_root=tmp_path)
-    scope = CognitionMemoryScope(memory_kind="teacher_cognition", teacher_id="guo")
-
-    analysis = _sample_analysis("ana-001")
-    r = store.handle(
-        CognitionMemoryRequest(operation="upsert_analysis", scope=scope, analysis=analysis)
-    )
-    assert r.status == "success"
-    assert r.write_effect == "analysis_upserted"
-
-
-# ── unknown operation ───────────────────────────────────────────────────
-
 
 def test_unknown_operation_returns_error(tmp_path: Path) -> None:
     from fin_analyse.cognition.memory_store import (
@@ -620,22 +575,6 @@ def test_unknown_operation_returns_error(tmp_path: Path) -> None:
 
 # ── migration guard tests ────────────────────────────────────────────────
 
-
-def _sample_feedback(
-    feedback_id: str = "fb-001",
-    target_type: str = "persona_analysis",
-    target_id: str = "pa-1",
-    feedback_type: str = "valuable",
-    note: str | None = "有用",
-) -> CognitiveFeedback:
-    return CognitiveFeedback(
-        feedback_id=feedback_id,
-        target_type=target_type,
-        target_id=target_id,
-        feedback_type=feedback_type,
-        note=note,
-        created_at="2026-07-07T00:00:00+00:00",
-    )
 
 
 def _sample_verification(
@@ -662,147 +601,8 @@ def _sample_verification(
 # ── feedback scope tests ─────────────────────────────────────────────────
 
 
-def test_memory_store_records_and_lists_feedback_by_scope(
-    tmp_path: Path,
-) -> None:
-    from fin_analyse.cognition.memory_store import (
-        CognitionMemoryRequest,
-        CognitionMemoryScope,
-        CognitionMemoryStoreService,
-    )
-
-    store = CognitionMemoryStoreService(runtime_root=tmp_path)
-    scope = CognitionMemoryScope(memory_kind="teacher_cognition", teacher_id="guo")
-
-    feedback = _sample_feedback("fb-guo", target_type="persona_analysis", target_id="pa-1")
-    result = store.handle(
-        CognitionMemoryRequest(operation="record_feedback", scope=scope, feedback=feedback)
-    )
-    assert result.status == "success"
-    assert result.write_effect == "feedback_recorded"
-    assert result.source_boundary == "teacher_cognition"
-    stored = result.payload.get("feedback")
-    assert stored is not None
-    assert stored.feedback_id == "fb-guo"
-    assert stored.scope_kind == "teacher_cognition"
-    assert stored.teacher_id == "guo"
-
-    # list by teacher scope returns only matching feedbacks
-    list_result = store.handle(CognitionMemoryRequest(operation="list_feedback", scope=scope))
-    assert list_result.status == "success"
-    feedbacks = list_result.payload.get("feedbacks", [])
-    assert any(f.feedback_id == "fb-guo" for f in feedbacks)
-
-    # old rows without scope metadata are still readable
-    store.feedback_repo.append(
-        CognitiveFeedback(
-            feedback_id="fb-old",
-            target_type="trace",
-            target_id="tr-old",
-            feedback_type="incorrect",
-            note=None,
-            created_at="2026-01-01T00:00:00+00:00",
-        )
-    )
-    list_all = store.handle(CognitionMemoryRequest(operation="list_feedback", scope=scope))
-    all_ids = {f.feedback_id for f in list_all.payload.get("feedbacks", [])}
-    assert "fb-old" in all_ids
 
 
-def test_memory_store_agent_private_feedback_requires_agent_id_and_is_filtered(
-    tmp_path: Path,
-) -> None:
-    from fin_analyse.cognition.memory_store import (
-        CognitionMemoryRequest,
-        CognitionMemoryScope,
-        CognitionMemoryStoreService,
-    )
-
-    store = CognitionMemoryStoreService(runtime_root=tmp_path)
-
-    # agent_private without agent_id → error
-    bad_scope = CognitionMemoryScope(memory_kind="agent_private")
-    feedback = _sample_feedback("fb-ap-bad")
-    r_bad = store.handle(
-        CognitionMemoryRequest(operation="record_feedback", scope=bad_scope, feedback=feedback)
-    )
-    assert r_bad.status == "error"
-    assert "MISSING_AGENT_ID" in str(r_bad.payload)
-
-    # agent_private with agent_id → success
-    ap_scope = CognitionMemoryScope(memory_kind="agent_private", agent_id="agent-42")
-    ap_feedback = _sample_feedback("fb-ap-ok")
-    r_ok = store.handle(
-        CognitionMemoryRequest(operation="record_feedback", scope=ap_scope, feedback=ap_feedback)
-    )
-    assert r_ok.status == "success"
-    stored = r_ok.payload.get("feedback")
-    assert stored.scope_kind == "agent_private"
-    assert stored.agent_id == "agent-42"
-
-    # list for agent_private scope returns only agent-private feedbacks
-    list_result = store.handle(CognitionMemoryRequest(operation="list_feedback", scope=ap_scope))
-    assert list_result.status == "success"
-    feedbacks = list_result.payload.get("feedbacks", [])
-    assert any(f.feedback_id == "fb-ap-ok" for f in feedbacks)
-
-    # agent_private list requires agent_id
-    r_list_bad = store.handle(CognitionMemoryRequest(operation="list_feedback", scope=bad_scope))
-    assert r_list_bad.status == "error"
-
-
-def test_teacher_cognition_feedback_list_without_teacher_id_returns_error(
-    tmp_path: Path,
-) -> None:
-    """teacher_cognition list_feedback must require teacher_id."""
-    from fin_analyse.cognition.memory_store import (
-        CognitionMemoryRequest,
-        CognitionMemoryScope,
-        CognitionMemoryStoreService,
-    )
-
-    store = CognitionMemoryStoreService(runtime_root=tmp_path)
-    scope = CognitionMemoryScope(memory_kind="teacher_cognition")
-    result = store.handle(CognitionMemoryRequest(operation="list_feedback", scope=scope))
-    assert result.status == "error"
-    assert result.payload.get("error_code") == "MISSING_TEACHER_ID"
-
-
-def test_external_and_shared_scope_list_feedback_does_not_expose_teacher_feedback(
-    tmp_path: Path,
-) -> None:
-    """external_evidence and shared_reference scopes cannot list feedback."""
-    from fin_analyse.cognition.memory_store import (
-        CognitionMemoryRequest,
-        CognitionMemoryScope,
-        CognitionMemoryStoreService,
-    )
-
-    store = CognitionMemoryStoreService(runtime_root=tmp_path)
-
-    # Record a teacher_cognition feedback first
-    tc_scope = CognitionMemoryScope(memory_kind="teacher_cognition", teacher_id="guo")
-    feedback = _sample_feedback("fb-teacher", target_type="trace", target_id="tr-1")
-    store.handle(
-        CognitionMemoryRequest(operation="record_feedback", scope=tc_scope, feedback=feedback)
-    )
-
-    # external_evidence list_feedback → error, does not leak teacher feedback
-    ext_scope = CognitionMemoryScope(memory_kind="external_evidence")
-    ext_result = store.handle(CognitionMemoryRequest(operation="list_feedback", scope=ext_scope))
-    assert ext_result.status == "error"
-    assert "EXTERNAL_EVIDENCE" in str(ext_result.payload)
-
-    # shared_reference list_feedback → error, does not leak teacher feedback
-    shared_scope = CognitionMemoryScope(memory_kind="shared_reference")
-    shared_result = store.handle(
-        CognitionMemoryRequest(operation="list_feedback", scope=shared_scope)
-    )
-    assert shared_result.status == "error"
-    assert "SHARED_REFERENCE" in str(shared_result.payload)
-
-
-# ── trace verification scope tests ───────────────────────────────────────
 
 
 def test_memory_store_upserts_and_lists_trace_verifications_by_teacher_scope(
@@ -951,8 +751,6 @@ def test_cognitive_service_has_memory_store_attribute(tmp_path: Path) -> None:
     assert service.trace_repo is service.memory_store.trace_repo
     assert service.pattern_repo is service.memory_store.pattern_repo
     assert service.persona_repo is service.memory_store.persona_repo
-    assert service.analysis_repo is service.memory_store.analysis_repo
-    assert service.feedback_repo is service.memory_store.feedback_repo
     assert service.trace_verification_repo is service.memory_store.trace_verification_repo
 
 
@@ -995,103 +793,6 @@ def test_cognitive_service_uses_external_scope_for_external_evidence(
     assert fetched.source_boundary == "external_evidence"
     assert fetched.payload["evidence"].evidence_id == "ev-ext-scope"
 
-
-def test_rebuild_persona_ignores_other_teacher_traces_even_if_eligible(
-    tmp_path: Path,
-) -> None:
-    from fin_analyse.cognition.service import CognitiveService
-
-    service = CognitiveService(runtime_root=tmp_path)
-
-    # Seed guo teacher with eligible evidence and trace
-    guo_evidence = EvidenceItem(
-        evidence_id="ev-guo-ok",
-        source_type="zsxq_article",
-        source_id="article-guo",
-        title="星大派观察",
-        content="关键是订单和利润率是否兑现。不追高，等待确认信号。",
-        author="郭老师",
-        published_at="2026-07-07",
-        collected_at="2026-07-07T00:00:00+00:00",
-        companies=["测试公司"],
-        topics=["订单"],
-        source_label=SourceLabel("teacher_original", "guo", 1.0, []),
-        reliability=0.9,
-        metadata={
-            "column": "星大派锐评",
-            "persona_eligible": True,
-            "persona_gate": {"category": "star_teacher_original"},
-        },
-    )
-    guo_trace = ReasoningTrace(
-        trace_id="tr-guo",
-        teacher_id="guo",
-        source_evidence_id="ev-guo-ok",
-        topic="订单",
-        companies=["测试公司"],
-        premises=["订单是关键"],
-        observed_variables=["订单量"],
-        inferred_relationships=["订单增长→利润改善"],
-        conclusion="等待订单和利润率确认",
-        stance="watch",
-        time_horizon="1个月",
-        risk_boundaries=["订单下滑"],
-        invalidation_conditions=["订单未兑现"],
-        action_implications=["等待确认信号"],
-        extraction_confidence=0.8,
-    )
-
-    # Seed other teacher with eligible evidence and trace
-    other_evidence = EvidenceItem(
-        evidence_id="ev-other",
-        source_type="zsxq_article",
-        source_id="article-other",
-        title="其他老师观点",
-        content="这个行业长期看好，短期波动不用在意。",
-        author="其他老师",
-        published_at="2026-07-07",
-        collected_at="2026-07-07T00:00:00+00:00",
-        companies=["测试公司"],
-        topics=["行业"],
-        source_label=SourceLabel("teacher_original", "other", 1.0, []),
-        reliability=0.8,
-        metadata={
-            "persona_eligible": True,
-            "persona_gate": {"category": "regular_teacher_original"},
-        },
-    )
-    other_trace = ReasoningTrace(
-        trace_id="tr-other",
-        teacher_id="other",
-        source_evidence_id="ev-other",
-        topic="行业",
-        companies=["测试公司"],
-        premises=["长期看好"],
-        observed_variables=["股价"],
-        inferred_relationships=["短期波动不影响长期"],
-        conclusion="长期看好",
-        stance="看多",
-        time_horizon="1年",
-        risk_boundaries=["系统性风险"],
-        invalidation_conditions=["政策突变"],
-        action_implications=["逢低布局"],
-        extraction_confidence=0.7,
-    )
-
-    # Use compatibility repos for direct seeding (both teachers)
-    service.evidence_repo.upsert(guo_evidence)
-    service.trace_repo.upsert(guo_trace)
-    service.evidence_repo.upsert(other_evidence)
-    service.trace_repo.upsert(other_trace)
-
-    # rebuild_persona("guo") should only use guo traces
-    persona = service.rebuild_persona("guo")
-    assert persona.teacher_id == "guo"
-
-    # Verify the other teacher's trace was NOT consumed
-    all_traces = service.trace_repo.list_all()
-    assert any(t.trace_id == "tr-guo" for t in all_traces)
-    assert any(t.trace_id == "tr-other" for t in all_traces)
 
 
 def test_external_evidence_persists_but_does_not_create_traces(

@@ -139,38 +139,6 @@ class TeacherPersona:
 
 
 @dataclass(frozen=True)
-class PersonaAnalysis:
-    analysis_id: str
-    persona_id: str
-    question: str
-    company: str | None
-    ticker: str | None
-    activated_trace_ids: list[str]
-    activated_pattern_ids: list[str]
-    evidence_ids: list[str]
-    reasoning_steps: list[str]
-    conclusion: str
-    stance: str
-    confidence: float
-    uncertainty: list[str]
-    contradictions: list[str]
-    unsupported_claims: list[str]
-    invalidation_conditions: list[str]
-    suggested_followups: list[str]
-    created_at: str
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PersonaAnalysis:
-        restored = dict(data)
-        restored.setdefault("metadata", {})
-        return cls(**restored)
-
-
-@dataclass(frozen=True)
 class TraceabilityReport:
     analysis_id: str
     supported_steps: list[str]
@@ -543,38 +511,3 @@ class ZsxqApprenticeResult:
             ],
             warnings=list(data.get("warnings", [])),
         )
-
-
-@dataclass(frozen=True)
-class CognitiveFeedback:
-    feedback_id: str
-    target_type: str
-    target_id: str
-    feedback_type: str
-    note: str | None
-    created_at: str
-    scope_kind: str = ""
-    teacher_id: str = ""
-    agent_id: str = ""
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> CognitiveFeedback:
-        filtered = {
-            k: v
-            for k, v in data.items()
-            if k in {
-                "feedback_id",
-                "target_type",
-                "target_id",
-                "feedback_type",
-                "note",
-                "created_at",
-                "scope_kind",
-                "teacher_id",
-                "agent_id",
-            }
-        }
-        return cls(**filtered)

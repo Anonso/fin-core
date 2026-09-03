@@ -1,14 +1,12 @@
 """Investment cognition layer."""
 
 from fin_analyse.cognition.models import (
-    CognitiveFeedback,
     CognitivePattern,
     DynamicClock,
     EvidenceChain,
     EvidenceItem,
     InformationUnit,
     InvestmentResearchSuggestion,
-    PersonaAnalysis,
     ReasoningTrace,
     SourceLabel,
     TeacherPersona,
@@ -32,14 +30,12 @@ from fin_analyse.cognition.write_gate import (
 from fin_analyse.cognition.zsxq_apprentice import ZsxqCognitionApprentice
 
 __all__ = [
-    "CognitiveFeedback",
     "CognitivePattern",
     "DynamicClock",
     "EvidenceChain",
     "EvidenceItem",
     "InformationUnit",
     "InvestmentResearchSuggestion",
-    "PersonaAnalysis",
     "ReasoningTrace",
     "SourceLabel",
     "TeacherPersona",
