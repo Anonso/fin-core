@@ -10,7 +10,9 @@ Checks:
      PIT 字段；违反即整份拒绝）。
   2. Excerpt spans —— 每个单元的非空 ``g_original_quote`` /
      ``source_material_quote`` 必须逐字出现在其来源文章里（KB 根 +
-     article_ref 解析）。先精确子串，失败再做空白折叠比对（段落换行差异）。
+     article_ref 解析）。标注惯例：弯引号 ``“”`` 是摘录包装（一句引用可拆
+     多段 span），机验先按引号切出 span 再逐段比对；先精确子串，失败再做
+     空白折叠比对（拷贝空格差异）。
   3. Node coverage —— 每个 G_ORIGINAL 单元必须被至少一条 evolution 节点行
      覆盖（payload unit_refs，任意 change type），否则它永远不会出现在投影
      里（实弹验收会假失败）。混合/AI 辅助单元只提示不计失败——投影按
@@ -22,6 +24,7 @@ Checks:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -33,10 +36,30 @@ from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
 
 _ARTICLE_REF_PREFIX = "knowledge-base/"
 _QUOTE_FIELDS = ("g_original_quote", "source_material_quote")
+_SPAN_SEPARATOR_RE = re.compile(r"[“”‘’\"]")
+# 来源性质免责语（标注契约）：混合材料的 g_original_quote 可写此说明，
+# 表达「无可分离的纯 G 口述」——它是「无摘录主张」的声明，不是摘录本身。
+_DISCLAIMER_PREFIX = "无可分离的纯 G 口述"
 
 
 def _collapse(text: str) -> str:
     return "".join(text.split())
+
+
+def _quote_fragments(quote: str) -> list[str]:
+    """摘录 span 提取：只有引号**内**的文字是摘录主张。
+
+    ``“A。”“B”。`` → ``["A", "B"]``；``“A”， glue “B” tail`` →
+    ``["A", "B"]``（引号外是标注者行文，不作为 span 核对）。无引号整句
+    按单一 span 处理。
+    """
+
+    text = quote.strip()
+    if not _SPAN_SEPARATOR_RE.search(text):
+        return [text]
+    pieces = _SPAN_SEPARATOR_RE.split(text)
+    spans = [piece.strip() for piece in pieces[1::2] if piece.strip()]
+    return spans if spans else [text]
 
 
 def _article_path(kb_root: Path, article_ref: str) -> Path | None:
@@ -124,15 +147,33 @@ def main(argv: list[str] | None = None) -> int:
                 failures += 1
                 continue
             quote_text = str(quote)
-            if quote_text in text:
-                print(f"ok unit {unit.get('unit_id')} {field_name}: exact")
-            elif _collapse(quote_text) in _collapse(text):
-                print(f"ok unit {unit.get('unit_id')} {field_name}: whitespace-normalized")
-            else:
-                print(
-                    f"FAIL unit {unit.get('unit_id')} {field_name}: "
-                    f"excerpt not found in source ({article_ref})"
-                )
+            fragments = _quote_fragments(quote_text)
+            collapsed_text = _collapse(text)
+            field_failed = False
+            for index, fragment in enumerate(fragments, start=1):
+                if fragment.startswith(_DISCLAIMER_PREFIX):
+                    print(
+                        f"info unit {unit.get('unit_id')} {field_name}"
+                        f"#{index}: source-nature disclaimer (no excerpt claim)"
+                    )
+                    continue
+                if fragment in text:
+                    print(
+                        f"ok unit {unit.get('unit_id')} {field_name}"
+                        f"#{index}: exact"
+                    )
+                elif _collapse(fragment) in collapsed_text:
+                    print(
+                        f"ok unit {unit.get('unit_id')} {field_name}"
+                        f"#{index}: whitespace-normalized"
+                    )
+                else:
+                    print(
+                        f"FAIL unit {unit.get('unit_id')} {field_name}"
+                        f"#{index}: excerpt not found in source ({article_ref})"
+                    )
+                    field_failed = True
+            if field_failed:
                 failures += 1
 
     # ── check 3: node coverage（G_ORIGINAL 才硬失败）──

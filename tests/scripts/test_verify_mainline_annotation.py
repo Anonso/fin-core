@@ -105,8 +105,8 @@ def test_pass_exact_and_whitespace_normalized_quotes(monkeypatch, tmp_path: Path
     code, out = _run(monkeypatch, tmp_path, annotation, kb)
 
     assert code == 0, out
-    assert "CU-0001-01 g_original_quote: exact" in out
-    assert "CU-0002-01 g_original_quote: whitespace-normalized" in out
+    assert "CU-0001-01 g_original_quote#1: exact" in out
+    assert "CU-0002-01 g_original_quote#1: whitespace-normalized" in out
     assert "RESULT: PASS" in out
 
 
@@ -168,6 +168,57 @@ def test_mixed_unit_without_node_row_is_info_only(monkeypatch, tmp_path: Path) -
     assert "RESULT: PASS" in out
 
 
+def test_pass_multi_fragment_curly_quote_spans(monkeypatch, tmp_path: Path) -> None:
+    """标注惯例：弯引号是包装，span 是引号内文字，多段逐段核。"""
+
+    kb = _write_kb(
+        tmp_path,
+        {"s-0001.md": "我提示了无数次，有利润点的才去抱龙，没有的可以去旅游。\n真有人为了1%，冒-20%的风险。"},
+    )
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(
+        annotation,
+        as_of="2026-01-02",
+        sources=[("S-0001", "2026-01-01 10:00", "G 原文；测试。")],
+        time_rows=[("CU-0001-01", "2026-01-01 10:00")],
+        units=[
+            _unit(
+                "CU-0001-01",
+                "S-0001",
+                "2026-01-01",
+                "“有利润点的才去抱龙，没有的可以去旅游。”“真有人为了1%，冒-20%的风险”。",
+            )
+        ],
+        evolution_rows=[("2026-01-01 测试", "无", "`baseline`", "CU-0001-01")],
+    )
+
+    code, out = _run(monkeypatch, tmp_path, annotation, kb)
+
+    assert code == 0, out
+    assert "g_original_quote#1: exact" in out
+    assert "g_original_quote#2: exact" in out
+
+
+def test_fail_forged_fragment_inside_curly_quotes(monkeypatch, tmp_path: Path) -> None:
+    kb = _write_kb(tmp_path, {"s-0001.md": "真实片段一。真实片段二。"})
+    annotation = tmp_path / "annotation.md"
+    forged = "“真实片段一。”“伪造的片段”。"
+    _write_annotation(
+        annotation,
+        as_of="2026-01-02",
+        sources=[("S-0001", "2026-01-01 10:00", "G 原文；测试。")],
+        time_rows=[("CU-0001-01", "2026-01-01 10:00")],
+        units=[_unit("CU-0001-01", "S-0001", "2026-01-01", forged)],
+        evolution_rows=[("2026-01-01 测试", "无", "`baseline`", "CU-0001-01")],
+    )
+
+    code, out = _run(monkeypatch, tmp_path, annotation, kb)
+
+    assert code == 1
+    assert "g_original_quote#2: excerpt not found" in out
+    assert "伪造的片段" not in out  # span 内容绝不入日志
+
+
 def test_fail_whole_payload_validation(monkeypatch, tmp_path: Path) -> None:
     kb = _write_kb(tmp_path, {"s-0001.md": "内容。"})
     annotation = tmp_path / "annotation.md"
@@ -177,3 +228,61 @@ def test_fail_whole_payload_validation(monkeypatch, tmp_path: Path) -> None:
 
     assert code == 1
     assert "FAIL whole-payload-validation" in out
+
+
+def test_glue_between_quoted_spans_is_not_an_excerpt_claim(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """引号外的标注者行文（如「并以…作为收束」）不作为 span 核对。"""
+
+    kb = _write_kb(tmp_path, {"s-0001.md": "文章里有切记不要反复横跳和忍耐。"})
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(
+        annotation,
+        as_of="2026-01-02",
+        sources=[("S-0001", "2026-01-01 10:00", "G 原文；测试。")],
+        time_rows=[("CU-0001-01", "2026-01-01 10:00")],
+        units=[
+            _unit(
+                "CU-0001-01",
+                "S-0001",
+                "2026-01-01",
+                "“切记不要反复横跳”，并以“忍耐”作为收束。",
+            )
+        ],
+        evolution_rows=[("2026-01-01 测试", "无", "`baseline`", "CU-0001-01")],
+    )
+
+    code, out = _run(monkeypatch, tmp_path, annotation, kb)
+
+    assert code == 0, out
+    assert "g_original_quote#1: exact" in out
+    assert "g_original_quote#2: exact" in out
+
+
+def test_source_nature_disclaimer_is_not_an_excerpt_claim(
+    monkeypatch, tmp_path: Path
+) -> None:
+    kb = _write_kb(tmp_path, {"s-0001.md": "发布材料正文。"})
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(
+        annotation,
+        as_of="2026-01-02",
+        sources=[("S-0001", "2026-01-01 10:00", "AI-assisted/content-mixed；逐段归属。")],
+        time_rows=[("CU-0001-M01", "2026-01-01 10:00")],
+        units=[
+            _unit(
+                "CU-0001-M01",
+                "S-0001",
+                "2026-01-01",
+                "“无可分离的纯 G 口述；以下为发布材料原文”。",
+            )
+        ],
+        evolution_rows=[("2026-01-01 测试", "无", "`baseline`", "（无新增单元）")],
+    )
+
+    code, out = _run(monkeypatch, tmp_path, annotation, kb)
+
+    assert code == 0, out
+    assert "source-nature disclaimer" in out
+    assert "RESULT: PASS" in out
