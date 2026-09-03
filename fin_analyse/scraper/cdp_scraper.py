@@ -1995,6 +1995,26 @@ class CdpBridgeScraper:
                 result.warnings.append(f"deep_read_artifacts_failed: {e}")
             self._surface_checkpoint()
 
+        # Macro index（sidecar，best-effort）：每日热点在 watch 面即打标。
+        try:
+            from fin_analyse.cognition.macro_index import update_macro_index
+
+            macro_report = update_macro_index(self._kb_root, saved_ids=all_saved)
+            if macro_report.incomplete:
+                logger.warning(
+                    "[MACRO-INDEX] watch 面部分完成: tagged=%d removed=%d warnings=%s",
+                    macro_report.tagged,
+                    macro_report.removed,
+                    ",".join(macro_report.warnings[:3]),
+                )
+                result.warnings.append(
+                    "macro_index_incomplete:"
+                    f"lock_busy={macro_report.lock_busy},warnings={len(macro_report.warnings)}"
+                )
+        except Exception as e:  # noqa: BLE001 — 钩子绝不阻塞 ingest
+            logger.warning("[MACRO-INDEX] watch 面打标失败(不阻塞): %s", e)
+            result.warnings.append(f"macro_index_failed: {e}")
+
         logger.info(
             "[PRIORITY-SCAN] 完成: new=%d priority=%d deep_read=%d sources=%s",
             result.new_count,
@@ -2415,6 +2435,27 @@ class CdpBridgeScraper:
             except Exception as e:  # noqa: BLE001 — 钩子绝不阻塞 ingest
                 logger.warning("[ARTICLE-TAGS] 打标失败(不阻塞): %s", e)
                 result.warnings.append(f"article_tags_failed: {e}")
+
+        # ── 11b. Macro index（sidecar，best-effort）: 基线 + 本次新文宏观打标。
+        # 失败 warning 不阻塞 ingest；宏观缺料由下一次运行/手动 CLI 闭合。
+        try:
+            from fin_analyse.cognition.macro_index import update_macro_index
+
+            macro_report = update_macro_index(self._kb_root, saved_ids=saved_ids)
+            if macro_report.incomplete:
+                logger.warning(
+                    "[MACRO-INDEX] 部分完成: tagged=%d removed=%d warnings=%s",
+                    macro_report.tagged,
+                    macro_report.removed,
+                    ",".join(macro_report.warnings[:3]),
+                )
+                result.warnings.append(
+                    "macro_index_incomplete:"
+                    f"lock_busy={macro_report.lock_busy},warnings={len(macro_report.warnings)}"
+                )
+        except Exception as e:  # noqa: BLE001 — 钩子绝不阻塞 ingest
+            logger.warning("[MACRO-INDEX] 打标失败(不阻塞): %s", e)
+            result.warnings.append(f"macro_index_failed: {e}")
 
         coverage_reason = (
             "dom_header_cutoff"
