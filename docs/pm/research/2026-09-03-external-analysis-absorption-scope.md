@@ -144,7 +144,11 @@ owner 转来一篇外部 AI 建议（Claude Code 编码偏向 → 换 Goose / �
   20 次（13 次记忆缝读写 + 4 次配置/记忆读 + 3 次环境自检 Bash），**0 次进入
   答案内容**；「遇事先写脚本」污染在现存真实会话中零例。边界：仅 CC 客户端
   有独立会话存档，codex 侧无同口径数据；风格半边（工程腔/答风漂移）未测，
-  即候选 3 题集第一刀的双腿对比（codex-glm vs CC 同题配对 + 盲评污染项）。
+  即候选 3 题集第一刀的双腿对比（`finqa` = CC harness·glm-5.3，
+  `finqac/finqai` = codex harness·deepseek-v4-pro〔consult .codex home 现钉
+  opencode_go/deepseek-v4-pro，D-019 降为次锚〕；「codex-glm」是
+  codex_routes.yaml 里的路由 id 供管线消费，非命令、非 consult 入口。两腿
+  现生产态不同模型——基线按真实入口跑，纯 harness 隔离切面须另钉同模）。
 - **Hermes 定位澄清（owner 问「后期代替 CC/codex 是否更好」）**：接入=是，
   即 D-032 原范围（P5 飞书家人入口的第三个客户端，三缝同源）；代替=无举证
   不做——收回自维护层逆 D-016 核心赢面、验收基线全部重付、且行为污染实测
