@@ -74,6 +74,16 @@ def _publish_initial(readmodel_root: Path, annotation: Path, identity: str) -> N
         expected_prior_identity=None,
     )
     assert publication.disposition == "PUBLISHED"
+    # Establish the published annotation baseline (sidecar contract:
+    # sha256(document name + b"\n" + document bytes) — restated here on
+    # purpose so a fingerprint change breaks this helper loudly).
+    digest = hashlib.sha256()
+    digest.update(annotation.name.encode("utf-8"))
+    digest.update(b"\n")
+    digest.update(annotation.read_bytes())
+    (readmodel_root / "annotation.sha256").write_text(
+        digest.hexdigest() + "\n", encoding="utf-8"
+    )
 
 
 def _artifact_identity(readmodel_root: Path) -> str:
@@ -108,6 +118,7 @@ def test_rebuild_skips_when_identity_is_current(tmp_path: Path) -> None:
 
     assert result.disposition == "ALREADY_CURRENT"
     assert result.candidate_identity == identity
+    assert result.trigger is None
     assert _file_sha256(readmodel_root / _MANIFEST_NAME) == before
 
 
@@ -160,11 +171,193 @@ def test_rebuild_publishes_generation_plus_one_with_new_identity(
     assert result.disposition == "PUBLISHED"
     assert result.candidate_identity == new_identity
     assert result.generation == 2
+    assert result.trigger == "identity_changed"
     artifact = json.loads(
         (readmodel_root / _MANIFEST_NAME).read_text(encoding="utf-8")
     )
     assert artifact["pit_working_set_identity"] == new_identity
     assert artifact["generation"] == 2
+    assert (readmodel_root / "annotation.sha256").exists()
+
+
+def test_rebuild_self_heals_when_sidecar_baseline_missing(tmp_path: Path) -> None:
+    from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import (
+        rebuild_if_stale,
+    )
+
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(annotation)
+    readmodel_root = tmp_path / "readmodel"
+    manifest = tmp_path / "manifest.json"
+    identity = "a" * 64
+    _write_manifest(manifest, identity)
+    _publish_initial(readmodel_root, annotation, identity)
+    (readmodel_root / "annotation.sha256").unlink()
+
+    result = rebuild_if_stale(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+
+    # Unknown baseline -> exactly one self-healing rebuild, then stable.
+    assert result.disposition == "PUBLISHED"
+    assert result.generation == 2
+    assert result.trigger == "annotation_changed"
+    assert (readmodel_root / "annotation.sha256").exists()
+    again = rebuild_if_stale(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+    assert again.disposition == "ALREADY_CURRENT"
+
+
+def test_rebuild_fires_on_annotation_content_change(tmp_path: Path) -> None:
+    from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import (
+        rebuild_if_stale,
+    )
+
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(annotation)
+    readmodel_root = tmp_path / "readmodel"
+    manifest = tmp_path / "manifest.json"
+    identity = "a" * 64
+    _write_manifest(manifest, identity)
+    _publish_initial(readmodel_root, annotation, identity)
+    before = _file_sha256(readmodel_root / _MANIFEST_NAME)
+    annotation.write_text(
+        annotation.read_text(encoding="utf-8").replace("测试深化。", "测试深化（修订）。"),
+        encoding="utf-8",
+    )
+
+    result = rebuild_if_stale(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+
+    assert result.disposition == "PUBLISHED"
+    assert result.generation == 2
+    assert result.trigger == "annotation_changed"
+    assert _file_sha256(readmodel_root / _MANIFEST_NAME) != before
+    again = rebuild_if_stale(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+    assert again.disposition == "ALREADY_CURRENT"
+
+
+def test_rebuild_fires_on_rename_even_with_unchanged_content(tmp_path: Path) -> None:
+    from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import (
+        rebuild_if_stale,
+    )
+
+    annotation = tmp_path / "annotation-dated.md"
+    _write_annotation(annotation)
+    readmodel_root = tmp_path / "readmodel"
+    manifest = tmp_path / "manifest.json"
+    identity = "a" * 64
+    _write_manifest(manifest, identity)
+    _publish_initial(readmodel_root, annotation, identity)
+
+    renamed = tmp_path / "annotation.md"
+    annotation.rename(renamed)
+
+    result = rebuild_if_stale(
+        annotation_path=renamed,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+
+    # 设计门 P2（annotation_ref 悬挂）：改名即使内容不变也必须触发一次重建，
+    # 让工件 annotation_ref 跟上真实文件名。
+    assert result.disposition == "PUBLISHED"
+    assert result.trigger == "annotation_changed"
+    artifact = json.loads(
+        (readmodel_root / _MANIFEST_NAME).read_text(encoding="utf-8")
+    )
+    assert artifact["annotation_ref"] == "manual-annotations/annotation.md"
+
+
+def test_rebuild_reports_both_triggers(tmp_path: Path) -> None:
+    from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import (
+        rebuild_if_stale,
+    )
+
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(annotation)
+    readmodel_root = tmp_path / "readmodel"
+    manifest = tmp_path / "manifest.json"
+    _write_manifest(manifest, "b" * 64)
+    _publish_initial(readmodel_root, annotation, "a" * 64)
+    annotation.write_text(
+        annotation.read_text(encoding="utf-8").replace("测试深化。", "测试深化（修订）。"),
+        encoding="utf-8",
+    )
+
+    result = rebuild_if_stale(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+
+    assert result.disposition == "PUBLISHED"
+    assert result.trigger == "both"
+
+
+def test_rebuild_skips_when_annotation_unreadable(tmp_path: Path) -> None:
+    from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import (
+        rebuild_if_stale,
+    )
+
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(annotation)
+    readmodel_root = tmp_path / "readmodel"
+    manifest = tmp_path / "manifest.json"
+    identity = "a" * 64
+    _write_manifest(manifest, identity)
+    _publish_initial(readmodel_root, annotation, identity)
+    before = _file_sha256(readmodel_root / _MANIFEST_NAME)
+    annotation.unlink()
+
+    result = rebuild_if_stale(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+
+    assert result.disposition == "SKIPPED"
+    assert result.reason == "annotation_unreadable"
+    assert _file_sha256(readmodel_root / _MANIFEST_NAME) == before
+    baseline = (readmodel_root / "annotation.sha256").read_text(encoding="utf-8")
+    assert len(baseline.strip()) == 64  # baseline untouched by the skip
+
+
+def test_failed_rebuild_does_not_write_baseline(tmp_path: Path) -> None:
+    from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import (
+        rebuild_if_stale,
+    )
+
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(annotation)
+    readmodel_root = tmp_path / "readmodel"
+    manifest = tmp_path / "manifest.json"
+    _write_manifest(manifest, "b" * 64)
+    _publish_initial(readmodel_root, annotation, "a" * 64)
+    (readmodel_root / "annotation.sha256").unlink()
+    annotation.write_text("不是合法标注文档", encoding="utf-8")
+
+    result = rebuild_if_stale(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        manifest_path=manifest,
+    )
+
+    assert result.disposition == "FAILED"
+    assert result.trigger == "both"  # identity moved + baseline sidecar missing
+    assert not (readmodel_root / "annotation.sha256").exists()
 
 
 def test_rebuild_fails_closed_on_invalid_annotation(tmp_path: Path) -> None:
