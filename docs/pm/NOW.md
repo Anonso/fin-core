@@ -120,6 +120,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·P5 前 | 10 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
+| 旁路·owner | 14 | 黑话译注下批消费方：cognition mainline 投影（读自身 readmodel，需显式加）+ Daily 生成器（`_render_g_context` 冻结六字段映射需显式加 jargon_notes）；一期三落点已在用（a06db30） | owner 决定下批时点 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
 
