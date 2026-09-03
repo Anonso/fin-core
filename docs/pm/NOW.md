@@ -108,12 +108,12 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
 | 主线 | 1 | CLI 实弹：BUG-005 G-first ✅（09-02 21:22 持仓分析 read_g_context ok/gaps=[]，答案带 G 框架）；3.2 fresh pair ✅（21:24 长电封测 read_g_context ok，答案引 8/13 特刊+锐评）；BUG-012 ✅（09-03 19:11 真实 CLI 首次触发→暴露残余三投影门，外审裁决 A 定修，19:36 端到端 RPC status ok/gaps=[] 三字段全过，BUGS 已闭）；BUG-002 盘后 gaps 仅五类常驻型，盘前 08:55-09:25 实弹待问 | BUG-002 随真实问询（盘前窗） |
-| 主线 | 2 | finq 使用日志：09-02 四探针已补记（satisfied 待 owner 回填 y/n），不满意项当日落 BUGS | 随用随记；D3 供数依赖 |
+| 主线 | 2 | finq 使用日志：09-02/09-03 六条已回填（y=持仓分析、锐评参考探针；n=长电封测、星球研报探针〔对应 BUG-012 已闭〕、大盘〔对应 BUG-002 开放〕、宏观；--help 噪音行标记待 owner 定去留）；4 条 n 的「哪里不最优」一句话原因待 owner 补注，补注后按协议落 BUGS | 随用随记；原因补注待 owner |
 | 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 1629 条〔index 内全部 ≥6 可解析：5/13 起 178 篇老图/旧 OCR 已定向识图收口、存量代码↔名称错位已按名册清零〕、read_instrument_scores 时间线 + read_article_search 双查已接 thin server、G/reference 窗口分级落地；增量门槛 6.0 走 config/zsxq_capture.json〔D-036/037〕）；09-03 实弹 sync 过（8/29 长电 8.6/8.8 锚 + 7/7 参照）；首篇 [6,7) 或 <6 新帖边界样本待自然窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
 | 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 每日热点）已落 config/macro_brain_rules.json；macro_index 09-03 12:58 已生成（22 条：12 kept + 8 每日热点 + 2 新规则命中），reader 索引优先已生效；宏观问询实弹 ✅（09-03 19:2x read_macro_brain 被调 status ok/gaps=[]，答案融合星球宏观材料 + 外搜核验带时点） | 已交付；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
 | 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
 | 主线 | 3.3 | ZSXQ 评分时间线 v2（D-037）：门槛 ≥6（config/zsxq_capture.json）+ parser v2 + 回填 445 行 + published_at 排序 + CLAUDE 纪律已交付（6273ab8，09-03 12:58 实弹 sync 过，Windows 单侧无同步项）；首篇 [6,7) 边界样本待自然窗口 | 随自然窗口（预计数日内）；交接稿 [../design/instrument-score-timeline.md](../design/instrument-score-timeline.md) |
-| 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：候选范围初稿已落盘（[research/2026-09-03](research/2026-09-03-external-analysis-absorption-scope.md)：五候选〔双边论证/查询分档/问询盲评/信息丰富度评级/数字双源〕+ ai-berkshire 定向调研补记 + 不吸清单），无举证项不施工 | owner 确认 ai-berkshire 是否即其所记 + 圈定候选 |
+| 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：owner 已圈定（09-03，[research/2026-09-03](research/2026-09-03-external-analysis-absorption-scope.md) §7）——盲评立项（finqai 主/finqa 辅双腿，产出问询基线+harness 风格半边）、候选 1/2/4/5 挂观察名单等举证、ai-berkshire 确认；待办 #4 转入盲评执行 | 盲评跑完落分维结果，观察名单按分过闸 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
