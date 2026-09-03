@@ -40,7 +40,7 @@ def test_evidence_item_round_trips_dict():
 def test_persona_analysis_tracks_support_and_uncertainty():
     analysis = PersonaAnalysis(
         analysis_id="pa-1",
-        persona_id="guo:v0",
+        persona_id="persona-guo",
         question="测试公司怎么看？",
         company="测试公司",
         ticker="000001",
