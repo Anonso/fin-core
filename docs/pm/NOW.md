@@ -80,7 +80,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | read_market_snapshot | 标的行情 | 在用（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修；BUG-022 已闭：09-01 22:33 真实 CLI 问询 002428 READY/gaps=[]/94.9） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011/022 已闭 |
 | read_market_overview | 大盘结构 | 问询验收中（08-31 定修 + 09-01 修复尝试2〔gate 5 + 失败诊断〕已部署；**09-01 08:55 盘前实弹 gap 仍在 → 未闭环**；09:35 盘中 gaps=[]；D-030 停推后无自动窗口，待手动 CLI 盘前实弹） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
-| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 问询验收中（供料链已通：08-30 实弹公告腿过 + items 非空实证；08-31 残余二定修：标题 4 字门 + 有事实帖优先 + latest-focus 误判修正，公共 RPC 端到端仅返回目标帖；**09-01 21:01/21:08 实弹仍 ready_evidence_unavailable → 未闭环**） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 |
+| read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 在用（BUG-012 全链闭环 09-03：残余三投影门外审裁决 A 定修，端到端 RPC status ok/gaps=[] 三字段全过、真实 CLI 触发实证；宏观叙事帖可注入，映射类证据归 read_external_evidence；残余一券商通道为已知限制 P2-8） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 已闭 |
 | read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 问询验收中（08-30 公告探针过：外搜带时点、持仓联动正确；现役面=外搜 MCP 辅助面） | 公告类问题，验工具被调 + gaps 空 | BUG-012 公告腿已闭 |
 | read_user_watchlist | 自选股清单（user context 注意力焦点，永非投资证据；含 provenance/tags） | 在用（08-29 接入；09-01 加标签/来源投影） | 「看下当前自选股」，验工具被调 + 空表诚实答空 | 短设计已按规则 5 归档（git 历史：read-user-watchlist-tool、watchlist-tags-and-owner-profile）；写通道=manage_user_watchlist.py |
 | update_user_watchlist | 自选股受限写（add/tag/remove；不得自动删除，remove 需用户明确指示；assistant 来源服务端强制；preview→apply 两段式） | 运行态（09-01 建；待真实问询使用） | 「把 XX 加入自选 / 给自选打标签 / 删掉 XX」 | 短设计已按规则 5 归档（git 历史：watchlist-tags-and-owner-profile） |
@@ -107,14 +107,13 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 1 | CLI 实弹：BUG-005 G-first ✅（09-02 21:22 持仓分析 read_g_context ok/gaps=[]，答案带 G 框架）；3.2 fresh pair ✅（21:24 长电封测 read_g_context ok，答案引 8/13 特刊+锐评）；BUG-012 未触发 read_ready_evidence（模型改走 article_search，当天无同天公司帖，诚实空）待真场景；BUG-002 盘后 gaps 仅五类常驻型，盘前 08:55-09:25 实弹待问 | BUG-012/002 随真实问询 |
+| 主线 | 1 | CLI 实弹：BUG-005 G-first ✅（09-02 21:22 持仓分析 read_g_context ok/gaps=[]，答案带 G 框架）；3.2 fresh pair ✅（21:24 长电封测 read_g_context ok，答案引 8/13 特刊+锐评）；BUG-012 ✅（09-03 19:11 真实 CLI 首次触发→暴露残余三投影门，外审裁决 A 定修，19:36 端到端 RPC status ok/gaps=[] 三字段全过，BUGS 已闭）；BUG-002 盘后 gaps 仅五类常驻型，盘前 08:55-09:25 实弹待问 | BUG-002 随真实问询（盘前窗） |
 | 主线 | 2 | finq 使用日志：09-02 四探针已补记（satisfied 待 owner 回填 y/n），不满意项当日落 BUGS | 随用随记；D3 供数依赖 |
 | 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 1629 条〔index 内全部 ≥6 可解析：5/13 起 178 篇老图/旧 OCR 已定向识图收口、存量代码↔名称错位已按名册清零〕、read_instrument_scores 时间线 + read_article_search 双查已接 thin server、G/reference 窗口分级落地；增量门槛 6.0 走 config/zsxq_capture.json〔D-036/037〕）；09-03 实弹 sync 过（8/29 长电 8.6/8.8 锚 + 7/7 参照）；首篇 [6,7) 或 <6 新帖边界样本待自然窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
-| 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 每日热点）已落 config/macro_brain_rules.json；macro_index 09-03 12:58 已生成（22 条：12 kept + 8 每日热点 + 2 新规则命中），reader 索引优先已生效；宏观问询实弹待真实问题 | 随真实宏观问询；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
+| 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 每日热点）已落 config/macro_brain_rules.json；macro_index 09-03 12:58 已生成（22 条：12 kept + 8 每日热点 + 2 新规则命中），reader 索引优先已生效；宏观问询实弹 ✅（09-03 19:2x read_macro_brain 被调 status ok/gaps=[]，答案融合星球宏观材料 + 外搜核验带时点） | 已交付；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
 | 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
 | 主线 | 3.3 | ZSXQ 评分时间线 v2（D-037）：门槛 ≥6（config/zsxq_capture.json）+ parser v2 + 回填 445 行 + published_at 排序 + CLAUDE 纪律已交付（6273ab8，09-03 12:58 实弹 sync 过，Windows 单侧无同步项）；首篇 [6,7) 边界样本待自然窗口 | 随自然窗口（预计数日内）；交接稿 [../design/instrument-score-timeline.md](../design/instrument-score-timeline.md) |
 | 旁路·owner | 4 | 外部项目吸收范围盘点（D-016 A1/A2 + 三道闸）：候选范围初稿已落盘（[research/2026-09-03](research/2026-09-03-external-analysis-absorption-scope.md)：五候选〔双边论证/查询分档/问询盲评/信息丰富度评级/数字双源〕+ ai-berkshire 定向调研补记 + 不吸清单），无举证项不施工 | owner 确认 ai-berkshire 是否即其所记 + 圈定候选 |
-| 旁路·时间 | 5 | BUG-019 ZSXQ deep-read retryable 观察（backlog 重试成功即关闭） | poller 重试 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |
 | 旁路·P5 前 | 10 | G 主线手工批注 durable 归位：从本仓布局路径（`.gitignore` 内盘上文件，fresh checkout 须自备份复原）移入 canonical KB 根 + consume 读点换 knowledge_root 缝；备份 `$STATE/fin-analyse/w2-step5-cutover-20260829/kb-repo-backup-20260829/` | P5 前 KB 收拢步首项 |

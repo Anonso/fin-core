@@ -487,6 +487,27 @@
   `ready_evidence_unavailable` 与契约一致（该工具=公司/链映射证据，
   非公司帖本来就不该出）。结论：残余二代码已修，未闭环是内容/问句依赖，
   有效探针=存在同日带公司/链事实普通帖的日子 + 对应真实问询（随主线1）。
+- 残余三（2026-09-03 立案并定修，外审裁决 A）：19:11 真实 CLI 问询首次触发
+  read_ready_evidence，仍 `ready_evidence_mapping_facts_missing → unavailable`；
+  判别实验定位=当天两条 eligible 宏观叙事帖（恒生科技 zsxq-45548825441882218 /
+  美联储 zsxq-55521141814224844，summary+key_points 齐、local_ready=True）被
+  `_project_item` 三空硬拒——宏观/叙事帖天然无 instrument 映射，该门使其结构性
+  永不可注入，工具面恒空（7 天 12 调 0 ok）。09-02「非公司帖本来就不该出」的
+  收束结论据此反转：工具描述承诺的是 reference context（当天参考材料），非
+  instrument 映射证据；映射证据另有 read_external_evidence 面。外审
+  （codex-open·deepseek-v4-pro·max，read-only，elapsed 420s，发现 1P1/3P2/1P3
+  全采纳）四问：契约无 P0 破坏、无 durable 写入、引用闭包干净、不劣于直接
+  Agent；裁决=删三空硬拒（门改「须有可注入内容」，summary/key_points 双空仍拒
+  ready_evidence_local_content_unavailable），备选 B（观点帖只走 G 面）会使能力面
+  恒空不可取。施工：删 `_project_item` 三空分支 + 两处排序注释校准（生存排序→
+  纯优先级）+ 两条回归测试（三空有内容→准入；三空无内容→仍拒）；gap 码
+  ready_evidence_mapping_facts_missing 退役（仓内零引用；P3 声明：外部按码统计
+  会断流）。影响口径校准（P2）：此前「模型 0 料」不成立——材料一直经 g_context
+  可见，未闭环的是 read_ready_evidence 这个密封工具面自身。
+  验证：supply 套件 11/11 绿、guo_teacher_research+read_capabilities 608 绿；
+  19:36 真实 KB 薄 server 公共 RPC 端到端=同两帖完整注入；trace 三字段首次全过
+  （工具被调 / status ok / gaps=[]）。
+- 状态：已闭（残余一券商通道缺口仍记档为已知限制 P2-8，不挡使用）。
 
 ## BUG-013 cognition 提取空坍塌：推理预算耗尽 + 失败哨兵误判（2026-08-30 立案并定修）
 
@@ -585,7 +606,9 @@
 - 根因：待查（retryable 判据为何在产物已落盘时仍触发；是否应使整 run 失败；两篇旧文
   是否已成功重生成未确认——不在 20 天活跃窗口，不影响当前 G 工作集）。
 - 修复：无（自愈）。
-- 状态：开放（观察；backlog 若重试成功即关闭）。
+- 状态：已闭（2026-09-03 核对：两篇 backlog 旧文 095bcfba4a03 / 557595c49f26 已于
+  08-30 11:03/11:06 CST 重试成功——full 工件各带 2/1 个 units、payload warnings
+  零 retryable 标记，其后 poller 持续 succeeded；NOW 旁路·时间行同日出队）。
 
 ## BUG-020 星大派新栏目落「普通」→ 系统性漏 G（2026-09-01）
 
