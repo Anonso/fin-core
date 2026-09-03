@@ -3,22 +3,22 @@
 
 models:
   # GLM-5.3 (官方 bigmodel coding plan，CC 同款凭据) - 难题质量锚（T0）
-  # 暂时禁用（owner 2026-08-31：GLM 额度耗尽，二轮盲评质量锚已用完）
+  # owner 2026-09-03：coding-plan 额度恢复，复启用（D-028 暂关解除）
   glm53:
     provider: openai_compatible
     model: glm-5.3
     api_key: ${GLM_API_KEY}
     base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
-    enabled: false
+    enabled: true
 
   # GLM-5.3-Flash (官方 bigmodel coding plan，同款凭据) - 简单任务吞吐锚（T1）
-  # 暂时禁用（owner 2026-08-31：GLM 额度耗尽）
+  # owner 2026-09-03：coding-plan 额度恢复，复启用（D-028 暂关解除）
   glm53_flash:
     provider: openai_compatible
     model: glm-5.3-flash
     api_key: ${GLM_API_KEY}
     base_url: "https://open.bigmodel.cn/api/coding/paas/v4"
-    enabled: false
+    enabled: true
 
   # 通义千问 Qwen3.6-35B (硅基流动 SiliconFlow)
   qwen:
