@@ -19,6 +19,8 @@ from pathlib import Path
 
 from fin_analyse.ingestion.instrument_scores import (
     instrument_scores_path,
+    load_records,
+    normalize_inline_codes,
     parse_article_records,
     upsert_records,
 )
@@ -39,6 +41,31 @@ def _as_float(value: object) -> float | None:
         return None
 
 
+def _load_a_share_entries(kb_root: Path) -> dict[str, dict[str, object]]:
+    path = kb_root / "runtime" / "a_share_name_map.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    entries = payload.get("entries") if isinstance(payload, dict) else None
+    return entries if isinstance(entries, dict) else {}
+
+
+def _compact(value: object) -> str:
+    return "".join(str(value or "").split())
+
+
+def _is_code_name_mismatch(
+    record: dict[str, object], entries: dict[str, dict[str, object]]
+) -> bool:
+    name = _compact(record.get("name"))
+    for key, entry in entries.items():
+        if _compact(key) == name and isinstance(entry, dict):
+            expected = str(entry.get("ticker") or "")
+            return bool(expected) and str(record.get("code")) != expected
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -56,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     kb_root = Path(args.kb_root) if args.kb_root else default_knowledge_base_root()
+    a_share_entries = _load_a_share_entries(kb_root)
     since = date.fromisoformat(args.since)
     index_path = kb_root / "index.json"
     index = json.loads(index_path.read_text(encoding="utf-8"))
@@ -115,8 +143,21 @@ def main(argv: list[str] | None = None) -> int:
         except OSError:
             stats["md_read_error"] += 1
             continue
+        md_text, _ = normalize_inline_codes(md_text, a_share_entries)
+        normalized_source: dict[str, object] | None = None
+        if source_record is not None:
+            normalized_source = dict(source_record)
+            descriptions = source_record.get("image_descriptions")
+            if isinstance(descriptions, list):
+                normalized_source["image_descriptions"] = [
+                    normalize_inline_codes(str(item), a_share_entries)[0]
+                    for item in descriptions
+                ]
         records = parse_article_records(
-            article=article, md_text=md_text, source_record=source_record
+            article=article,
+            md_text=md_text,
+            source_record=normalized_source,
+            name_map=a_share_entries,
         )
         if records:
             stats["articles_with_tables"] += 1
@@ -136,8 +177,17 @@ def main(argv: list[str] | None = None) -> int:
         print("dry-run: 未写盘；加 --write 真写")
         return 0
     target = instrument_scores_path(kb_root)
-    added, updated = upsert_records(target, all_records)
-    print(f"written: {target} added={added} updated={updated}")
+    obsolete: set[str] = set()
+    for record in load_records(target).values():
+        if _is_code_name_mismatch(record, a_share_entries):
+            obsolete.add(str(record.get("record_id", "")))
+    added, updated = upsert_records(
+        target, all_records, remove_record_ids=obsolete
+    )
+    print(
+        f"written: {target} added={added} updated={updated} "
+        f"removed_obsolete={len(obsolete)}"
+    )
     return 0
 
 

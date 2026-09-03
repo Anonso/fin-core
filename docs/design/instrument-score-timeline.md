@@ -286,8 +286,10 @@
   A 股代码经名册归一）；注册表扩到 1348 行，覆盖 2026-05-13 起（新增
   767 行、ok 1225 / needs_review 123）。原 24 篇旧 OCR 文本文章仍由
   parser v2 不识别，走全文检索即可。
-- 存量质量待清理：注册表另有 30 行 A 股代码↔名称错位（2026-06/07/08，
-  非本次识图批引入），需按名册替换 record_id 修正；待 owner 确认后执行。
+- 存量质量已清理：注册表原有 30 行 A 股代码↔名称错位（2026-06/07/08，
+  非识图批引入），已在解析层加 a_share 名册归一（parse_article_records
+  name_map + upsert remove_record_ids 替换旧行），回填后 mismatch=0、
+  注册表 1359 行。
 - vision 链修正：mimo-token-plan model 从 mimo-v2.5-pro 改为 mimo-v2.5
   （llm.yaml，fc8f4fe）；实测 404 消失，函数级调用返回
   mimo-token-plan/mimo-v2.5 ok。

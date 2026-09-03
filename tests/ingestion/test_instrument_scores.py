@@ -10,6 +10,7 @@ import pytest
 from fin_analyse.ingestion.instrument_scores import (
     InstrumentScoreRecord,
     build_record,
+    normalize_inline_codes,
     normalize_score,
     parse_article_records,
     parse_rows_from_text,
@@ -141,6 +142,65 @@ def test_parse_inline_rows_normalizes_a_share_suffix() -> None:
     assert drafts[1]["consensus"] == 9.5
 
 
+def test_normalize_inline_codes_uses_name_map() -> None:
+    name_map = {
+        "壹连科技": {"ticker": "301631"},
+        "301631": {"ticker": "301631"},
+        "澜起科技": {"ticker": "688008"},
+        "万  科Ａ": {"ticker": "000002"},
+        "华泰证券": {"ticker": "601688"},
+        "广联达": {"ticker": "002410"},
+    }
+    text = (
+        "688008 壹连科技：核心业务为电芯连接组件，利好度9.3，共识度86\n"
+        "688041.SH 海光信息：核心业务为CPU，利好度8.5\n"
+        "1651.HK 津上机床中国：核心业务为机床，利好度9.0\n"
+        "688008.SH/6809.HK 澜起科技：核心业务为内存互连芯片\n"
+        "300002 万 科Ａ：核心业务为地产\n"
+        "1. **688268 华泰证券**：核心业务为证券\n"
+        "| 广联达（688548.SH） | 数字建筑 | 软件 | 9.4 | 82 | 一周 | 3个月 |\n"
+    )
+    normalized, count = normalize_inline_codes(text, name_map)
+    assert count == 5
+    assert "301631 壹连科技：" in normalized
+    assert "688008 澜起科技：" in normalized
+    assert "000002 万 科Ａ：" in normalized
+    assert "688041.SH 海光信息" in normalized
+    assert "1651.HK 津上机床中国" in normalized
+    assert "601688 华泰证券：核心业务为证券" in normalized
+    assert "| 广联达（002410.SH） |" in normalized
+
+
+def test_parse_article_records_name_map_fixes_drafts() -> None:
+    article = {
+        "source_id": "src-2",
+        "column": "普通",
+        "title": "t",
+        "article_date": "2026-06-27",
+        "published_at": None,
+        "article_score": 8.0,
+    }
+    md_text = (
+        "| 公司名称 | 代码 | 核心业务 | 所属板块 | 共识度 | 利好度 | 预计多久启动 | 期待周期 |\n"
+        "| :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- |\n"
+        "| 源杰科技 | 688515.SH | 光芯片 | 光芯片/半导体 | 87 | 8.5 | 一周 | 半年 |\n"
+        "| 赛微电子 | 前道设备 | 半导体材料 | 78 | 7.5 | 1周 | 1-3个月 |\n"
+    )
+    name_map = {
+        "源杰科技": {"ticker": "688498"},
+        "赛微电子": {"ticker": "300456"},
+    }
+    records = parse_article_records(
+        article=article,
+        md_text=md_text,
+        source_record=None,
+        name_map=name_map,
+    )
+    by_name = {record.name: record.code for record in records}
+    assert by_name["源杰科技"] == "688498"
+    assert by_name["赛微电子"] == "300456"
+
+
 def test_missing_consensus_marks_needs_review() -> None:
     article = {
         "source_id": "zsxq-article-1",
@@ -241,3 +301,35 @@ def test_upsert_store_is_atomic_and_idempotent(tmp_path: Path) -> None:
     assert len(lines) == 1
     payload = json.loads(lines[0])
     assert payload["record_id"] == record.record_id
+
+
+def test_upsert_records_removes_obsolete_ids(tmp_path: Path) -> None:
+    path = tmp_path / "instrument_scores.jsonl"
+    article = {
+        "source_id": "src-1",
+        "column": "普通",
+        "title": "t",
+        "article_date": "2026-08-01",
+        "published_at": None,
+        "article_score": 8.0,
+    }
+    record = build_record(
+        draft={
+            "code": "688268",
+            "name": "华泰证券",
+            "core_business": "证券",
+            "sector": "非银",
+            "lihao": 8.0,
+            "consensus": 8.0,
+            "launch_in": None,
+            "horizon": None,
+        },
+        article=article,
+        raw_origin="test",
+        provenance=None,
+        sequence=0,
+    )
+    upsert_records(path, [record])
+    assert len(path.read_text(encoding="utf-8").splitlines()) == 1
+    upsert_records(path, [], remove_record_ids={record.record_id})
+    assert path.read_text(encoding="utf-8").strip() == ""

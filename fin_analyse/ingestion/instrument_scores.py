@@ -18,7 +18,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 SCHEMA_VERSION = "fin.instrument-scores/v1"
 PARSER_VERSION = "v2"
@@ -112,6 +112,101 @@ _INLINE_LABEL_ALIASES: tuple[str, ...] = tuple(
 _INLINE_LABEL_RE = re.compile(
     "|".join(re.escape(alias) for alias in _INLINE_LABEL_ALIASES)
 )
+
+_LEAD_NAME_RE = re.compile(
+    r"([\u4e00-\u9fa5][\u4e00-\u9fa5A-Za-z0-9\uFF21-\uFF3A\uFF41-\uFF5A·&（）()\- ]*)$"
+)
+_TABLE_CELL_RE = re.compile(
+    r"(?P<name>[\u4e00-\u9fa5][\u4e00-\u9fa5A-Za-z0-9\uFF21-\uFF3A"
+    r"\uFF41-\uFF5A·&（）()\- ]*?)\s*[（(](?P<code>[0-9]{4,6}(?:\.[A-Z]{2})?)[）)]"
+)
+
+
+def _compact_name(value: str) -> str:
+    return "".join(value.split())
+
+
+def _normalize_table_cell(
+    cell: str, normalized_entries: dict[str, dict[str, Any]]
+) -> tuple[str, int]:
+    match = _TABLE_CELL_RE.search(cell)
+    if match is None:
+        return cell, 0
+    name = _compact_name(match.group("name"))
+    entry = normalized_entries.get(name)
+    if entry is None:
+        return cell, 0
+    expected = str(entry.get("ticker") or "")
+    if not expected.isdigit():
+        return cell, 0
+    raw_code = match.group("code")
+    if "." in raw_code:
+        suffix = raw_code.rsplit(".", 1)[1]
+        replacement = f"{expected}.{suffix}"
+    else:
+        replacement = expected
+    if raw_code == replacement:
+        return cell, 0
+    start, end = match.span("code")
+    return cell[:start] + replacement + cell[end:], 1
+
+
+def normalize_inline_codes(
+    text: str, name_map: Mapping[str, Any]
+) -> tuple[str, int]:
+    """把“代码 名称：…”行的已知 A 股代码归一为名册 ticker（不改其他行）。
+
+    name_map 为 a_share_name_map.json 的 entries（键含代码与名称，可能带空格）。
+    返回 (修正后文本, 归一行数)；用于 md/图片描述/正文的解析前统一清洗，
+    避免 vision/OCR 转录错码进注册表。
+    """
+    normalized_entries: dict[str, dict[str, Any]] = {}
+    for key, entry in name_map.items():
+        compact = _compact_name(str(key))
+        if compact and isinstance(entry, Mapping):
+            normalized_entries.setdefault(compact, dict(entry))
+    corrected = 0
+    output: list[str] = []
+    for raw in (text or "").splitlines():
+        if not raw.strip():
+            output.append(raw)
+            continue
+        if "|" in raw:
+            cells = raw.split("|")
+            rebuilt: list[str] = []
+            for cell in cells:
+                normalized_cell, cell_hits = _normalize_table_cell(
+                    cell, normalized_entries
+                )
+                rebuilt.append(normalized_cell)
+                corrected += cell_hits
+            output.append("|".join(rebuilt))
+            continue
+        colons = [index for index, ch in enumerate(raw) if ch in "：:"]
+        if not colons:
+            output.append(raw)
+            continue
+        lead = raw[: colons[0]]
+        rest = raw[colons[0] + 1 :]
+        clean_lead = re.sub(r"^[\s\d.、*#\-]+", "", lead).rstrip("*# \t")
+        name_match = _LEAD_NAME_RE.search(clean_lead)
+        if name_match is None:
+            output.append(raw)
+            continue
+        name = _compact_name(name_match.group(1))
+        entry = normalized_entries.get(name)
+        if entry is None:
+            output.append(raw)
+            continue
+        expected = str(entry.get("ticker") or "")
+        if not expected.isdigit():
+            output.append(raw)
+            continue
+        output.append(
+            f"{expected} {name_match.group(1).strip()}{raw[colons[0]]}{rest}"
+        )
+        corrected += 1
+    return "\n".join(output), corrected
 
 
 def _parse_inline_fields(body: str) -> dict[str, Any]:
@@ -388,8 +483,27 @@ def parse_article_records(
     article: Mapping[str, Any],
     md_text: str | None,
     source_record: Mapping[str, Any] | None,
+    name_map: Mapping[str, Any] | None = None,
 ) -> list[InstrumentScoreRecord]:
     """跨载体解析一篇普通栏文章的全部评分记录（去重 + 交叉冲突标记）。"""
+    normalized_entries: dict[str, dict[str, Any]] = {}
+    if name_map is not None:
+        for key, entry in name_map.items():
+            compact = _compact_name(str(key))
+            if compact and isinstance(entry, Mapping):
+                normalized_entries.setdefault(compact, dict(entry))
+
+    def normalize_draft_code(draft: Mapping[str, Any]) -> dict[str, Any]:
+        fixed = dict(draft)
+        name = _compact_name(str(fixed.get("name") or ""))
+        entry = normalized_entries.get(name)
+        if entry is None:
+            return fixed
+        expected = str(entry.get("ticker") or "")
+        if expected.isdigit():
+            fixed["code"] = expected
+        return fixed
+
     carriers: list[tuple[str, str, str | None]] = []
     if source_record:
         descriptions = source_record.get("image_descriptions") or []
@@ -427,6 +541,7 @@ def parse_article_records(
             continue
         drafts = parse_rows_from_text(text)
         for sequence, draft in enumerate(drafts):
+            draft = normalize_draft_code(draft)
             code = draft.get("code") or str(draft.get("name") or "")
             if not code:
                 continue
@@ -493,12 +608,22 @@ def load_records(path: Path) -> dict[str, dict[str, Any]]:
     return loaded
 
 
-def upsert_records(path: Path, records: list[InstrumentScoreRecord]) -> tuple[int, int]:
-    """原子 upsert；返回 (新增, 更新)。文件 0600、目录 0700。"""
+def upsert_records(
+    path: Path,
+    records: list[InstrumentScoreRecord],
+    remove_record_ids: Iterable[str] = (),
+) -> tuple[int, int]:
+    """原子 upsert；返回 (新增, 更新)。文件 0600、目录 0700。
+
+    remove_record_ids 用于代码归一后的旧行替换：先按 record_id 删除，
+    再 upsert 新行，避免错码行残留。
+    """
     target = Path(path)
     target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     target.parent.chmod(0o700)
     existing = load_records(target)
+    for record_id in remove_record_ids:
+        existing.pop(str(record_id), None)
     added = 0
     updated = 0
     for record in records:
