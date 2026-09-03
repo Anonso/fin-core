@@ -1,9 +1,10 @@
 # g-mainline-growth-v1 · 设计页（G 主线生长管线 v1：候选提名 → 起草机验 → 扫批入档）
 
 > 依据：D-038（2026-09-03 owner 拍板）。定位：施工输入，合入后本页删除（Git 即归档）。
-> 状态：**设计门已过**（2026-09-03 · codex-open deepseek-v4-pro · max · read-only：
-> 12 发现 = P0×0 / P1×4 / P2×8，**12 采纳 0 驳回**，elapsed=1360s；裁决已并入下文，
-> 改动处标「门」）。施工待 owner 令。
+> 状态：**设计门已过 + 施工完成**（2026-09-04）。设计门：codex-open deepseek-v4-pro ·
+> max · read-only，12 发现 = P0×0 / P1×4 / P2×8，**12 采纳 0 驳回**（elapsed=1360s），
+> 裁决已并入下文（标「门」处）。施工：五部件落地（e5bcddf/866f454/1ca0eac/47c62bd/
+> 8697c18/d8eb47e），实弹记录见文末施工记录。
 
 ## 目标 / 非目标
 
@@ -25,7 +26,7 @@
 
 | 事实 | 值 / 位置 |
 | --- | --- |
-| 标注文档 | `<KB根>/manual-annotations/g-cognition-mainline-2026-06-to-2026-08-19.md`：538 行 / 26 个 CU 单元（另有「主线变化证据」「预测窗口与观察状态」2 个非单元三级头）/ evolution 4 节点，文档头 as_of=2026-08-20；owner durable 数据（家规 4 迁移史见 81c28d4） |
+| 标注文档 | `<KB根>/manual-annotations/g-cognition-mainline.md`（2026-09-04 去日期化改名，原名 `g-cognition-mainline-2026-06-to-2026-08-19.md` 见家规4迁移史 81c28d4 与 09-04 备份 manifest）：538 行 / 26 个 CU 单元（另有「主线变化证据」「预测窗口与观察状态」2 个非单元三级头）/ evolution 4 节点，文档头 as_of=2026-08-20；owner durable 数据 |
 | read-model 工件 | `$XDG_STATE_HOME/fin-analyse/cognition-mainline-readmodel-v1/readmodel.v1.json`：generation 41；重建审计 `cognition-mainline-rebuild.v1.jsonl` 最近 PUBLISHED→ALREADY_CURRENT |
 | rebuild 触发条件 | 仅 WS READY + `pit_working_set_identity` 变化（`cognition_mainline_rebuild.py:97-121`）；标注编辑不触发（缺口 B 本体） |
 | 工件内已有 hash 字段 | readmodel 顶层 `content_hash` = payload canonical hash（构建期占位后按最终 canonical 计算，`cognition_mainline_readmodel.py:655-675`），**非标注 hash**；schema `_ReadModel` `extra="forbid"` 冻结（:185），不加字段——缺口 B 基线走 sidecar，不复用（门评 P1 定案，见部件3） |
@@ -135,3 +136,25 @@ consume 读点、runtime_context.py 探针、server 层探针行落点、测试�
 flock :816-852、is_qa 覆盖实测 36/36 与 12/17、S-0730G/M 同文双段、逐出循环 :675-677、
 30s 预算 :87）；仅一处行号偏差（S-0730 来源表实为标注 :38-39，评审所称 :17-18），
 不影响裁决。
+
+## 施工记录（2026-09-04）
+
+- 提交链：e5bcddf（缺口B）→ 866f454（探针）→ 1ca0eac（扫描器）→ 47c62bd
+  （机验脚本）→ 8697c18（去日期化）→ efdda8f（机验 span 口径）→ d8eb47e
+  （reader 装配修复）。guo:v0 清运（83af6f4，NOW #17）由并行会话同期落地，
+  文件集不相交。
+- 缺口B 实弹：改名迁移末尾强制重建 generation 42（PUBLISHED，
+  trigger=annotation_changed），annotation_ref 刷新新名，sidecar 0600 落位，
+  幂等复跑 ALREADY_CURRENT。
+- 机验 span 口径（实弹首跑 26 失败逐条诊断后修正，efdda8f）：弯引号是标注
+  包装、只有引号**内**是摘录主张；「无可分离的纯 G 口述…」是来源性质免责语
+  （info 不计失败）。修正后真实 26 单元全 span 逐字可回指，RESULT: PASS。
+- **部件5 实弹发现并修复装配缺口**：生产 composition 从未注入
+  cognition_mainline_reader，cognition 投影在真实入口恒为 unavailable——
+  「接线之外有没有真被消费」首答为「从未」。修复后真实探针：6 单元投影
+  （generation 42，framework 层可见），生产 trace 行
+  `summary.cognition_mainline_consumption` 落盘，问询探针三字段全过。
+- 扫描器实弹：1242 扫描 / 123 过 as_of / 16 提名 / 8 排除 ai_summary_reference
+  / 99 闭集未命中；草稿 `~/.local/state/fin-analyse/mainline-candidates.md`。
+- 未竟半链：候选 → **owner 勾选** → CC 起草 → owner 终审入档的首次走通待
+  owner 勾选（管线唯一人工步）；自然 ingest 窗口将自动产增量草稿。
