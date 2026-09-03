@@ -357,4 +357,9 @@
   guo:v0 代码字面清零，活读链 list_personas→agent_runtime 不动、数据留存
   原地+家规4 备份 `~/fin-data/backups/guo-v0-retirement-20260903`；生产
   rebuild/analyze 线留仓为无测试 owner 手动线【残留已报备】；「断供
-  fallback 画像」入 NOW 旁路·使用触发）· 证据：本条目+备份 manifest。
+  fallback 画像」入 NOW 旁路·使用触发；同日残留清运 83af6f4：死代码面
+  -3453 行〔persona/persona_moa/feedback/integration/research_package/
+  research_enricher 六模块+三测试文件+service/memory_store/models/cli/
+  两测试面切除〕，persona_gate 入库门与 memory_store 写护栏保留，
+  全量 3053 绿；conversation.py research_package 休眠字段零填充零读取
+  留置）· 证据：本条目+备份 manifest。
