@@ -24,6 +24,9 @@ def main(argv: list[str]) -> int:
     if not 1 <= len(argv) <= 3:
         print(__doc__, file=sys.stderr)
         return 64
+    if argv[0] in {"--help", "-h", "help"}:
+        print(__doc__, end="")
+        return 0
     question = argv[0]
     satisfied = argv[1] if len(argv) > 1 else ""
     not_best = argv[2] if len(argv) > 2 else ""
