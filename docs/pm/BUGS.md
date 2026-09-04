@@ -74,9 +74,18 @@
   `MARKET_OVERVIEW_SECTION_TRADE_DATE_MISMATCH` 拒绝。修复：仅存活分节
   参与 trade-date 门；回归测试钉死「盘前被丢弃分节带盘前时间戳 → PARTIAL」。
   同日另加失败诊断落盘，二者同批部署。
-- 状态：修复尝试 2 已部署（诊断 + gate 5）；D-030 09-01 停推后无自动盘前窗口，
-  复验改手动 CLI 盘前实弹（NOW 主线1）；若仍失败，诊断 JSONL 直接给出剩余门名，
-  按证据再修。
+- 状态：**已关闭（2026-09-04 09:07 盘前实弹闭环，owner 会话 1c718317）**。
+  owner 于盘前窗（09:03 问、09:07 工具完成）finqa-c 实弹「今天大盘怎么样」：
+  `l1_material_market_overview_unavailable`/整链拒三兄弟（UNAVAILABLE/
+  COVERAGE_INVALID/TRADE_DATE_MISMATCH）**零出现**——验收字据字面达成；
+  现形态 = PARTIAL + 7 命名 gap（5 常驻良性〔SINGLE_SOURCE/PERSISTENCE_NOT_
+  EVALUATED/BJ_NOT_COVERED/PROVIDER_CONCEPT_TAXONOMY_LIMITED/DELAYED_
+  REFERENCE，盘后同款〕+ 2 项盘前特有数据缺席〔SECTION_ROWS_UNPROJECTABLE
+  =f3/f6 占位、BREADTH_UNAVAILABLE=盘前无广度〕）。两次修复（08-31 定修+
+  09-01 gate5）生效；盘前源数据缺席属东财 PRE_OPEN 源属性，PARTIAL 降级+
+  诚实标注=设计内形态（回归测试钉死），非缺陷。答案质量：正确识别盘前
+  语境、以 9/3 收盘+隔夜为底（纳指 +1.40% 双源核验）、G 口径衔接、
+  web-reader 429 自切换抓取通道。
 
 ## BUG-003 ZSXQ 问询空返回（2026-08-28 二次诊断改写，原「停更」结论有误）
 
