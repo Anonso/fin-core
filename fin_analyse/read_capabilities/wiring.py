@@ -45,6 +45,7 @@ from fin_analyse.ingestion.instrument_scores import InstrumentScoreQueryReader
 from fin_analyse.knowledge.article_search import ArticleKeywordSearchReader
 from fin_analyse.knowledge.article_reader import ArticleContentReader
 from fin_analyse.guo_teacher_research.macro_brain import MacroBrainQueryReader
+from fin_analyse.guo_teacher_research.shared_brain_reader import SharedBrainQueryReader
 from fin_analyse.market.instrument_directory import RuntimeAshareInstrumentDirectory
 
 READ_TOOL_NAMES: tuple[str, ...] = (
@@ -253,6 +254,16 @@ def build_reader_wiring(
         runners["read_macro_brain"] = macro_brain_reader.read
     else:
         unavailable.append(("read_macro_brain", "macro_brain_reader_unavailable"))
+
+    shared_brain_reader: SharedBrainQueryReader | None = None
+    try:
+        shared_brain_reader = SharedBrainQueryReader(knowledge_base_root=knowledge_base_root)
+    except (OSError, ValueError) as exc:
+        _stderr_note(f"shared_brain reader construction failed: {type(exc).__name__}")
+    if shared_brain_reader is not None:
+        runners["read_shared_brain"] = shared_brain_reader.read
+    else:
+        unavailable.append(("read_shared_brain", "shared_brain_reader_unavailable"))
 
     return ReaderWiring(
         runners=runners,

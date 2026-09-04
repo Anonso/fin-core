@@ -94,6 +94,7 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_article_search": 15.0,
     "read_article": 20.0,
     "read_macro_brain": 20.0,
+    "read_shared_brain": 15.0,
     "read_user_watchlist": 10.0,
     "update_user_watchlist": 10.0,
 }
@@ -207,13 +208,27 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "the teacher's own G opinion."
     ),
     "read_macro_brain": (
-        "Unified macro query: aggregates ZSXQ macro references (普通栏 market/"
-        "policy reviews + 每日热点 AI summaries) and external-brain book cards "
-        "(methodology/framework, non-G). When local sources are insufficient it "
-        "returns search_needed + suggested_queries — run your search_web tool "
-        "for live macro facts and cite source+time. All macro material is "
+        "Unified macro query over ZSXQ macro references (普通栏 market/policy "
+        "reviews + 每日热点 AI summaries). When local sources are insufficient "
+        "it returns search_needed + suggested_queries — run your search_web "
+        "tool for live macro facts and cite source+time. All macro material is "
         "background reference, NOT teacher opinion; G mainline comes from "
-        "read_g_context."
+        "read_g_context. Methodology/framework book cards live behind "
+        "read_shared_brain, not here."
+    ),
+    "read_shared_brain": (
+        "Read non-G framework cards from the shared brain library (knowledge-"
+        "base B): entry questions, checklists, failure conditions, usage "
+        "teeth. Two-level matching: card-declared activation terms first, "
+        "token-overlap fallback second; returns up to 3 cards, each carrying "
+        "forbidden_usages and usage_policy as a TOOL CONTRACT: framework "
+        "findings may only enter the question checklist and tighten position/"
+        "invalidation — never override a thesis on their own, never raise "
+        "confidence, never outrank the G mainline (read_g_context stays the "
+        "decision anchor; a framework finding becomes a conclusion flip only "
+        "after being verified as evidence). For judgment/analysis questions "
+        "call read_g_context FIRST, then this as a lens. An empty return means "
+        "no card matched — say so plainly, it is not an error."
     ),
     "read_user_watchlist": (
         "Read the user-maintained A-share watchlist (自选股/观察票): codes, "

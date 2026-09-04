@@ -96,23 +96,40 @@ def _tokens(text: str) -> tuple[str, ...]:
     return tuple(tokens)
 
 
+def _activation_hit(card: dict[str, Any], question: str) -> bool:
+    """卡自声明激活词（metadata.activation_terms）主级命中：精确/子串。"""
+    terms = (card.get("metadata") or {}).get("activation_terms") or ()
+    if not isinstance(terms, (list, tuple)):
+        return False
+    lowered = question.lower()
+    return any(
+        isinstance(term, str) and term.strip() and term.lower() in lowered
+        for term in terms
+    )
+
+
 def match_shared_brain_cards(
     cards: list[dict[str, Any]], question: str, *, cap: int = 3
 ) -> list[dict[str, Any]]:
-    """按标题/摘要命中数召回书卡，cap 条、updated_at 降序。"""
+    """两级命中（analysis-mindset-v1 件1）：①卡自声明 activation_terms 主级
+    （精确/子串，零重叠也命中——卡设计了钥匙，门必须有锁孔）；②既有
+    2-gram 字面重叠兜底。同段内 updated_at 降序，cap 条。"""
     query_tokens = _tokens(question)
     if not query_tokens:
         return []
-    scored: list[tuple[int, str, dict[str, Any]]] = []
+    scored: list[tuple[int, int, str, dict[str, Any]]] = []
     for card in cards:
         haystack = " ".join(
             str(card.get(key) or "") for key in ("title", "summary", "source_ref")
         )
         hits = sum(1 for token in query_tokens if token in haystack)
-        if hits:
-            scored.append((hits, str(card.get("updated_at") or ""), card))
-    scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    return [card for _hits, _updated, card in scored[:cap]]
+        tier = 0 if _activation_hit(card, question) else 1
+        if tier == 0 or hits:
+            scored.append((tier, hits, str(card.get("updated_at") or ""), card))
+    # 稳定双排序：先 updated_at 降序，再 (tier 升, hits 降)。
+    scored.sort(key=lambda item: item[2], reverse=True)
+    scored.sort(key=lambda item: (item[0], -item[1]))
+    return [card for _tier, _hits, _updated, card in scored[:cap]]
 
 
 def macro_search_signal(question: str) -> bool:
@@ -240,7 +257,12 @@ def zsxq_macro_articles(
 
 
 class MacroBrainQueryReader:
-    """read_macro_brain：ZSXQ 宏观 + 外置大脑书卡 + search_web 引导。"""
+    """read_macro_brain：ZSXQ 宏观材料 + search_web 引导（宏观纯化，v2）。
+
+    分析思维注入 v1 件1：书卡腿整体拆出——书卡召回归知识库B 前门
+    ``read_shared_brain``（SharedBrainQueryReader），本接口只管宏观材料；
+    search_needed/gaps 只依赖 zsxq（否则空卡库每问误报 no_local_match）。
+    """
 
     def __init__(self, knowledge_base_root: Path, *, max_items: int = 3) -> None:
         self._kb_root = Path(knowledge_base_root)
@@ -249,37 +271,20 @@ class MacroBrainQueryReader:
     def read(self, request: Any) -> Any:
         from fin_analyse.read_capabilities.types import ProductionReadResult
 
-        cards = match_shared_brain_cards(
-            load_shared_brain_cards(self._kb_root), request.question, cap=self._max_items
-        )
         zsxq = zsxq_macro_articles(self._kb_root, as_of=request.as_of, cap=self._max_items)
-        search_needed = not cards and not zsxq and macro_search_signal(request.question)
+        search_needed = not zsxq and macro_search_signal(request.question)
         value: dict[str, object] = {
-            "schema_version": "fin.macro-brain/v1",
+            "schema_version": "fin.macro-brain/v2",
             "source_boundary": "zsxq_macro_brain",
             "source_kind": "external_reference",
             "source_trust": "non_g",
             "status": "READY",
             "question": request.question,
             "zsxq_macro": zsxq,
-            "shared_brain_cards": [
-                {
-                    "item_id": str(card.get("item_id", "")),
-                    "title": str(card.get("title", "")),
-                    "scope": str(card.get("scope", "")),
-                    "summary": str(card.get("summary", ""))[:600],
-                    "source_ref": str(card.get("source_ref", "")),
-                    "updated_at": str(card.get("updated_at", "")),
-                    "usage_policy": str(
-                        ((card.get("metadata") or {}).get("usage_policy") or "")
-                    ),
-                }
-                for card in cards
-            ],
             "search_needed": search_needed,
             "suggested_queries": suggested_queries(request.question) if search_needed else [],
         }
         gaps: tuple[str, ...] = ()
-        if not cards and not zsxq:
+        if not zsxq:
             gaps = ("macro_brain_no_local_match",)
         return ProductionReadResult(value=value, data_gaps=gaps)

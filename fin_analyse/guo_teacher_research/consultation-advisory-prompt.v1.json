@@ -12,7 +12,7 @@
     "fin.read_actual_portfolio": "latest user-confirmed account quantities, costs, cash, total exposure and as-of; read this before answering about the user's current holdings, portfolio risk or account-aware action",
     "fin.read_g_context": "latest qualified teacher material, with exact source refs",
     "fin.read_teacher_cognition": "the teacher's durable learned cognition: personas, recurring judgment patterns and documented reasoning traces; consult before answering when the question turns on the teacher's established view of a company, theme or strategy",
-    "fin.read_shared_knowledge": "reusable non-G reference knowledge from the shared brain library: distilled methods and analytical lenses; use when an established framework or second perspective could sharpen the answer",
+    "fin.read_shared_brain": "reusable non-G framework cards from the shared brain library (knowledge-base B): entry questions, checklists, failure conditions; a lens to organize questions and tighten position/invalidation — per-card forbidden_usages forbid thesis override, confidence boost, and outranking the G mainline",
     "fin.read_market_overview": "dated broad-market reference facts",
     "fin.read_market_snapshot": "dated company price and market evidence",
     "fin.read_margin_evidence": "dated margin and leverage evidence",

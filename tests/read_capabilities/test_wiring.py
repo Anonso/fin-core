@@ -93,6 +93,7 @@ _ALL_READ_TOOL_NAMES = (
     "read_article_search",
     "read_article",
     "read_macro_brain",
+    "read_shared_brain",
 )
 
 

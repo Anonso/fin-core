@@ -522,6 +522,10 @@ def test_consultation_has_one_bounded_toolbelt_for_every_scope() -> None:
     assert "fin.read_actual_portfolio" in consultation_general
     assert consultation_general[0] == "fin.read_actual_portfolio"
     assert "fin.independent_deliberation" not in consultation_general
+    # 双前门统一（analysis-mindset-v1 件1）：知识库B 唯一前门 = 薄 server
+    # read_shared_brain；本 catalog 不开第二前门，旧死名 read_shared_knowledge
+    # 已自 advisory prompt 资产删除。
+    assert "fin.read_shared_brain" not in consultation_general
     assert "fin.read_shared_knowledge" not in consultation_general
 
     non_general_contexts = (
@@ -545,6 +549,7 @@ def test_consultation_has_one_bounded_toolbelt_for_every_scope() -> None:
         assert "fin.read_external_evidence" in consultation
         assert "fin.read_actual_portfolio" in consultation
         assert "fin.read_cached_external_research" not in consultation
+        assert "fin.read_shared_brain" not in consultation
         assert "fin.read_shared_knowledge" not in consultation
         assert "fin.inspect_portfolio_snapshot" not in consultation
 

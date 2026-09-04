@@ -134,6 +134,7 @@ class TestStdioRoundTrip:
             "read_market_overview",
             "read_market_snapshot",
             "read_ready_evidence",
+            "read_shared_brain",
             "read_user_watchlist",
             "update_user_watchlist",
         ]
