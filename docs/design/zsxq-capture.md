@@ -30,7 +30,7 @@
 ## 关键不变量
 
 1. **content_sha256 完整性**：canonical hash 函数排除自引用字段后计算（`capture_artifact.py:149-156`）；校验即重算比对（:311-313）；artifact 命名 `{run_id}.{content_sha256}.artifact.json` 且重读再比（`capture_ingest.py:905-960`）；ledger 表持久 `content_sha256` 列（`runtime_repository.py:192`）。
-2. **六时点窗口单一事实源**：`_EXPECTED_TIMES`（08:45/13:50/14:40/15:30/18:00/20:20）同时驱动 Task 渲染、poller 窗口推导与 verifier（`zsxq_windows_incremental_scheduler.py:26-34`）；verifier 拒绝触发器与事实源漂移（:475,517）——时钟/拓扑不能有两份真相。
+2. **六时点窗口单一事实源**：`_EXPECTED_TIMES`（08:45/12:20/14:40/15:30/18:00/20:20，午间时点 09-04 由 13:50 改）同时驱动 Task 渲染、poller 窗口推导与 verifier（`zsxq_windows_incremental_scheduler.py:26-34`）；verifier 拒绝触发器与事实源漂移（:475,517）——时钟/拓扑不能有两份真相。
 3. **3 天 coverage 先证后写**：sync 必须先证明 group timeline 三日窗口 coverage，之后才允许会写入的 priority surface（`capture_artifact.py:4` 文档；coverage 证明 `oldest_seen < cutoff` 否则 `window_coverage_incomplete`，:508-511）。
 4. **exactly-once 单向恢复链**：`capture_ingests` phase 只进不退（`runtime_repository.py:190-216`）；终态发布顺序 = raw → receipt marker → 删 stage；五类 kill point 精确重放，冲突/漂移/symlink/torn marker fail closed（目录条目）。
 5. **skip-audit**：wrapper 中途死亡留下的可验证 failed v1 artifact，由 poller 记 `poller-skip-audit.v1.jsonl` 后跳过；succeeded/不可读/未知载荷仍 fail-closed（`consume_zsxq_capture_folder.py:80,111,124`）。
