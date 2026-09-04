@@ -292,7 +292,8 @@
   宏观是语义判断，需要维度化 + 自动增量 + 校准闭环，不能靠在线每次全库猜。
 - 否决了什么：把 ZSXQ 普通栏全部当宏观（个股/行业点评走 read_article_search/
   read_article）；每天人工校准；接口内默认 auto 联网（额度/时延不可控）。
-- 状态：active（设计定稿；候选清单校准 → 打标器 → 接口依次施工）· 证据：
+- 状态：active（设计定稿；候选清单校准 → 打标器 → 接口依次施工）· **2026-09-04
+  部分取代：书卡腿拆分至独立前门 read_shared_brain（接口B），见 D-039** · 证据：
   docs/design/macro-brain-interface-a.md；NOW 主线 3.1-3.3。
 
 ## D-035 · 2026-09-02 · 3.3b 装配预算：recent_reference 与 fresh_g 按问句相关性竞争（owner 拍板）
@@ -363,3 +364,23 @@
   两测试面切除〕，persona_gate 入库门与 memory_store 写护栏保留，
   全量 3053 绿；conversation.py research_package 休眠字段零填充零读取
   留置）· 证据：本条目+备份 manifest。
+
+## D-039 · 2026-09-04 · 知识库B 拆分：书卡出宏观接口、独立前门 read_shared_brain（设计门 22/22 采纳，owner 预授权）
+- 决策：外置大脑书卡（SharedKnowledgeBrain）不再由 read_macro_brain 代管——
+  新只读工具 `read_shared_brain(question)` 作知识库B 唯一前门（两级命中：
+  卡自声明 activation_terms 主级 + 2-gram 兜底；逐卡透传 forbidden_usages/
+  usage_policy，牙齿=单向棘轮只收紧）。read_macro_brain 删卡腿升
+  fin.macro-brain/v2，search_needed/gaps 只依赖 zsxq；matcher 一份实现，
+  read_g_context.external_brain 槽同路径受益。**部分取代 D-034 的
+  「书卡并入宏观接口」**——D-034 的宏观聚合/ZSXQ 面/macro_index/external_brain
+  槽复用均保持有效。
+- 为什么：宏观接口管材料、接口B 管透镜是正交轴（大盘类问题两者可同调）；
+  卡的牙齿（禁推翻论点/禁提置信/永不凌驾 G）需要成为工具契约而非文本纪律；
+  空卡库曾让宏观接口每问误报 no_local_match。
+- 否决了什么：问题类型语义分类器（新抽象撞家规 11，评审替代方案：人格触发
+  规则决定何时调用）；applicable_tasks 语义路由；双前门并存（死键
+  fin.read_shared_knowledge 删除统一为 read_shared_brain）。
+- 状态：active（件1 已施工 c1da3ea，全量 3065 绿；件2 人格门槛已布；件3
+  回填+三新卡 preview 停 owner 确认门；复压测验收跑批中）· 证据：
+  docs/design/analysis-mindset-v1.md（设计门 22/22，8930b22）；baseline
+  台账 `~/.local/state/fin-analyse/analysis-mindset-stress-20260904/`。
