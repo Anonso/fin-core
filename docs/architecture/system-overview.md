@@ -14,6 +14,25 @@
 
 旧飞书/Hermes 交互咨询入口已停用（2026-08-27 拍板，允许报错）。
 
+## 分域定位：谁拥有控制流
+
+两种 LLM 用法按域拆开，判据是**谁拥有控制流**（D-016、rebaseline §4；问询侧
+哲学权威 = [user-design-principles](user-design-principles.md)「LLM-as-Kernel /
+Agent-as-Product」节）：
+
+- **问询面（顾问咨询）= LLM 为核心的 agent**：CC/codex 客户端即宿主，agent loop
+  （会话/记忆/工具循环/模型）归 harness，FIN 不自持问询 LLM；FIN 只供数据器官
+  （薄 server 只读工具）与领域人格。增量只许是上下文/人格/证据的投递质量，不许是
+  控制流——同题不得弱于直接 Agent（家规 11）。
+- **供给链（ZSXQ→入库→深化→G 工作集）= LLM 作器官的应用**：确定性代码拥有
+  控制流（poller/consumer/排空），LLM 调用是带类型工件的纯步骤（deep-read、
+  parser、评分），质量由盲评守门，成本走 L1 吞吐池。Daily 生成同属此侧（L1 直调），
+  D-031 规划迁入问询环境（[设计骨架](../design/d031-daily-consult-env.md)）。
+
+新能力归侧：交互问答 → 骑 agent loop，禁止新建编排层；可重复数据变换 → 管线
+步骤 + 盲评。要防的回归是把问询面重新应用化（重建 router、硬编排、自持问询模型
+——第一次坍塌的形态）。
+
 ## 主链图
 
 ```
