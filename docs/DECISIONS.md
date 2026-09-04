@@ -409,3 +409,22 @@
   过门=本合同改动 diff（155s·发现 3 条·采纳 3 条·126990 tokens：
   P1 决策链漏 D-040 与 D-023/D-027 指针、P2 GLOSSARY 家规行、
   P3 CLAUDE.md 入口行，均已落本条 commit）。
+
+## D-041 · 2026-09-04 · 外部审视 kit 成文：packet 模板+落盘约定+裁决四件套（设计门 7 发现 7 采纳 0 驳回）
+- 决策：新增 docs/design-gate-packet-template.md——packet 骨架（触发/背景/
+  固定四问 case 扩展/专项问≤3/范围约束/P1-P3 分级/总评≤3 句）+落盘约定
+  （`design-gate/<name>-<date>/` 固定三件 packet/review/review.stderr，
+  条件件设计稿快照与 retry.ts）+owner-only 权限线（umask 077，目录 0700/
+  文件 0600）+diff allowlist 防 secrets+跑门预期 3~25 分钟；AGENTS.md
+  裁决摘要三件套升四件套（+驳回数，含部分采纳逐条一句理由）并指模板；
+  GLOSSARY 同步。
+- 为什么：8 天几十次门 packet 全靠手搓仍漂移三代（P0→P1 刻度、台账两代、
+  ZCode 即兴弱版），结晶只在 CC 会话记忆；D-040 双执行者后需同源下限；
+  commit 层跨两代模型近似 100% 采纳，读不出高精度还是橡皮裁决。
+- 否决了什么：自动化重试与包脚本（规则 11 无事故不作证）；施工门入约
+  （仅 1 例，再现再议）；四问/三触发语义改动；历史门记录追改；「跨
+  packet 前缀缓存」强主张（门裁决降格：触发/背景槽在四问前，公共前缀短）。
+- 状态：active · 证据：docs/design-gate-packet-template.md；AGENTS.md
+  外部审视节；本门台账 ~/.local/state/fin-analyse/design-gate/
+  design-gate-kit-20260904/（elapsed 310s·发现 1P1+4P2+2P3·采纳 7·
+  驳回 0）；设计稿 design-gate-kit-v1 已按规则 5 归档删除。

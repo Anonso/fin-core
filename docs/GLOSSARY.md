@@ -58,7 +58,7 @@
 | **熔断** | 按命名空间（如 `vision:`）的故障隔离，防单点拖垮整链。 | [backend_health.py](../fin_analyse/claims/backend_health.py)（BackendCircuitBreaker） |
 | **vision chain** | 识图链：glm53_flash → glm-4.6v-flash → 硅基流动 → mimo，已配置化。 | [config/llm.yaml](../config/llm.yaml) `vision.chain` 段 |
 | **复评第一层** | `/review`（实名 skill，自固定比较点）；Spec 轴源指向 docs/design/、NOW.md、commit message，不依赖 issue tracker。 | [AGENTS.md](../AGENTS.md) 复评第一层节 |
-| **外部审视** | 统一外部评审机制，CC 与 ZCode 会话同等执行：评审者固定 scripts/codex_open.sh --sandbox read-only（当前 codex-glm·glm-5.3·max，换规格只改脚本）；三触发各一次=设计门/吓人 diff/外援；packet 冻结四问；评审只产发现、裁决归执行会话；裁决记录附时长。codex-open 不设设计门/外部审计，全部自己完成。 | [AGENTS.md](../AGENTS.md) 审查机制归属 |
+| **外部审视** | 统一外部评审机制，CC 与 ZCode 会话同等执行：评审者固定 scripts/codex_open.sh --sandbox read-only（当前 codex-glm·glm-5.3·max，换规格只改脚本）；三触发各一次=设计门/吓人 diff/外援；packet 冻结四问（骨架与落盘约定见 [packet 模板](design-gate-packet-template.md)）；评审只产发现、裁决归执行会话；裁决记录四件套=时长/发现/采纳/驳回。codex-open 不设设计门/外部审计，全部自己完成。 | [AGENTS.md](../AGENTS.md) 审查机制归属 |
 
 ## 运行与发布
 
