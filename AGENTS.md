@@ -75,7 +75,7 @@ docs/GLOSSARY.md（术语指路）；认知域深度词汇以 UBIQUITOUS_LANGUAG
 指向 docs/design/、NOW.md、commit message 引用，不依赖 issue tracker）。
 外部审视（CC 专属，按需动词，无常驻设施）：CC 的评审者固定
 scripts/codex_open.sh
---sandbox read-only（当前 codex-open · deepseek-v4-pro · max；换
+--sandbox read-only（当前 codex-glm · glm-5.3 · max；换
 provider/模型/强度只改该脚本，本文件不写死）。三触发、每触发一次：
 核心设计稿动代码前（设计门，规则5 那类，非核心豁免）；吓人 diff 合入前
 （按规则5 核心判据：durable state/公共入口/大删大改/契约变更）；同一

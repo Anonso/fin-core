@@ -3,11 +3,10 @@
 set -euo pipefail
 
 WORKSPACE="/home/ypk/fin-core"
-AUTH_FILE="${XDG_DATA_HOME:-${HOME:?}/.local/share}/opencode/auth.json"
-# 项目自定义模型目录（2026-09-01）：deepseek-v4-pro 声明 supports_search_tool=false，
-# 使 zhipu-web MCP（webSearchPrime/webReader）直接注入会话；原生 hosted search
-# 由 provider 能力独立控制，不受影响，仍作兜底。勿改回全局目录。
-MODEL_CATALOG="/home/ypk/fin-core/.codex/models.json"
+CODEX_GLM_AUTH_FILE="/home/ypk/fin-data/codex-routes/codex-glm/auth.json"
+# 模型目录：复用问询链 codex-glm 路由的目录（glm-5.3 带 instructions_template
+# 与 effort 枚举 low/high/max，2026-09-04 验证）。
+MODEL_CATALOG="/home/ypk/fin-data/codex-routes/codex-glm/models.json"
 CODEX_BINARY="$(command -v codex || true)"
 JQ_BINARY="$(command -v jq || true)"
 
@@ -19,11 +18,11 @@ if [[ -z "$JQ_BINARY" || ! -x "$JQ_BINARY" ]]; then
     printf 'codex-open: jq is unavailable\n' >&2
     exit 78
 fi
-if [[ -L "$AUTH_FILE" || ! -f "$AUTH_FILE" ]]; then
-    printf 'codex-open: OpenCode Go credential file is unavailable\n' >&2
+if [[ -L "$CODEX_GLM_AUTH_FILE" || ! -f "$CODEX_GLM_AUTH_FILE" ]]; then
+    printf 'codex-open: codex-glm credential file is unavailable\n' >&2
     exit 78
 fi
-if [[ "$(stat -c '%u:%a:%h' "$AUTH_FILE")" != "$(id -u):600:1" ]]; then
+if [[ "$(stat -c '%u:%a:%h' "$CODEX_GLM_AUTH_FILE")" != "$(id -u):600:1" ]]; then
     printf 'codex-open: credential file must be owner-only\n' >&2
     exit 78
 fi
@@ -32,14 +31,14 @@ if [[ ! -r "$MODEL_CATALOG" ]]; then
     exit 78
 fi
 
-OPENCODE_GO_KEY_VALUE="$($JQ_BINARY -er \
-    '.["opencode-go"] | select(.type == "api") | .key | strings | select(length > 0)' \
-    "$AUTH_FILE")" || {
-    printf 'codex-open: OpenCode Go credential is invalid\n' >&2
+CODEX_GLM_KEY_VALUE="$($JQ_BINARY -er \
+    '.glm_api_key | strings | select(length > 0)' \
+    "$CODEX_GLM_AUTH_FILE")" || {
+    printf 'codex-open: codex-glm credential is invalid\n' >&2
     exit 78
 }
-export OPENCODE_GO_API_KEY="$OPENCODE_GO_KEY_VALUE"
-unset OPENCODE_GO_KEY_VALUE
+export CODEX_GLM_API_KEY="$CODEX_GLM_KEY_VALUE"
+unset CODEX_GLM_KEY_VALUE
 
 # 非 TTY 调用方（agent 会话/管道）没有交互式 TUI，缺 exec 子命令会直接
 # "Error: stdin is not a terminal" 退出——自动补 exec，人在终端手跑不受影响。
@@ -68,14 +67,14 @@ fi
 cd "$WORKSPACE"
 run_codex() {
     exec "$CODEX_BINARY" \
-        -c model_provider=opencode_go \
-        -c 'model_providers.opencode_go.name=OpenCode Go' \
-        -c model_providers.opencode_go.base_url=https://opencode.ai/zen/go/v1 \
-        -c model_providers.opencode_go.env_key=OPENCODE_GO_API_KEY \
-        -c model_providers.opencode_go.wire_api=responses \
+        -c model_provider=codex_glm_review \
+        -c 'model_providers.codex_glm_review.name=GLM Review' \
+        -c model_providers.codex_glm_review.base_url=https://open.bigmodel.cn/api/v1 \
+        -c model_providers.codex_glm_review.env_key=CODEX_GLM_API_KEY \
+        -c model_providers.codex_glm_review.wire_api=responses \
         -c "model_catalog_json=${MODEL_CATALOG}" \
         -c model_reasoning_effort=max \
-        -m deepseek-v4-pro \
+        -m glm-5.3 \
         --sandbox read-only \
         "$@"
 }

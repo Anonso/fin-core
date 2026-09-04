@@ -1,6 +1,6 @@
 ---
 name: switch-codex-open-provider
-description: Switch the CC reviewer entry scripts/codex_open.sh (codex-open) between known provider profiles — relay-19851117·gpt-5.6 and opencode-go·deepseek-v4-pro — covering credential file, model catalog entry, the ~/.local/bin/codex-open symlink check, owner-only backup, and the exec verification ladder. Use when the user asks to 换/切/改回 codex-open 的 provider/模型/API/key; not for FIN product Codex routes (use manage-fin-codex-routes) nor personal ~/.codex/config.toml profiles.
+description: Switch the CC reviewer entry scripts/codex_open.sh (codex-open) between known provider profiles — codex-glm·glm-5.3 and opencode-go·deepseek-v4-pro — covering credential file, model catalog entry, the ~/.local/bin/codex-open symlink check, owner-only backup, and the exec verification ladder. Use when the user asks to 换/切/改回 codex-open 的 provider/模型/API/key; not for FIN product Codex routes (use manage-fin-codex-routes) nor personal ~/.codex/config.toml profiles.
 ---
 
 # Codex-open provider 切换
@@ -24,41 +24,42 @@ ls -la ~/.local/bin/codex-open   # 必须是 symlink -> /home/ypk/fin-core/scrip
 
 ## 两个已验证 profile（只替换脚本中两段片段，勿动 TTY/exec 处理逻辑）
 
-### Profile A（2026-08-31 起，现役）：relay 19851117 · gpt-5.6
+### Profile A（2026-09-04 起，现役）：codex-glm · glm-5.3（官方 Responses 端点）
 
 凭据段：
 
 ```bash
-RELAY_AUTH_FILE="${XDG_DATA_HOME:-${HOME:?}/.local/share}/codex-open/auth.json"
+CODEX_GLM_AUTH_FILE="/home/ypk/fin-data/codex-routes/codex-glm/auth.json"
 # 检查：非 symlink、regular file、stat '%u:%a:%h' == "$(id -u):600:1"
-RELAY_KEY_VALUE="$($JQ_BINARY -er \
-    '.["relay-19851117"] | select(.type == "api") | .key | strings | select(length > 0)' \
-    "$RELAY_AUTH_FILE")" || { printf 'codex-open: relay credential is invalid\n' >&2; exit 78; }
-export RELAY_API_KEY="$RELAY_KEY_VALUE"
-unset RELAY_KEY_VALUE
+CODEX_GLM_KEY_VALUE="$($JQ_BINARY -er \
+    '.glm_api_key | strings | select(length > 0)' \
+    "$CODEX_GLM_AUTH_FILE")" || { printf 'codex-open: codex-glm credential is invalid\n' >&2; exit 78; }
+export CODEX_GLM_API_KEY="$CODEX_GLM_KEY_VALUE"
+unset CODEX_GLM_KEY_VALUE
 ```
 
 run_codex 段：
 
 ```bash
-    -c model_provider=relay_19851117 \
-    -c 'model_providers.relay_19851117.name=Relay 19851117' \
-    -c model_providers.relay_19851117.base_url=https://www.19851117.xyz/v1 \
-    -c model_providers.relay_19851117.env_key=RELAY_API_KEY \
-    -c model_providers.relay_19851117.wire_api=responses \
+    -c model_provider=codex_glm_review \
+    -c 'model_providers.codex_glm_review.name=GLM Review' \
+    -c model_providers.codex_glm_review.base_url=https://open.bigmodel.cn/api/v1 \
+    -c model_providers.codex_glm_review.env_key=CODEX_GLM_API_KEY \
+    -c model_providers.codex_glm_review.wire_api=responses \
     -c "model_catalog_json=${MODEL_CATALOG}" \
     -c model_reasoning_effort=max \
-    -m gpt-5.6 \
+    -m glm-5.3 \
 ```
 
-- 凭据文件：`~/.local/share/codex-open/auth.json`（0600，目录 0700），
-  条目名 `relay-19851117`。
-- 目录条目：`gpt-5.6` 已在 `~/.codex/models.json`（官方 ctx 1,050,000 /
-  max input 922,000 / effort 支持 none→max；prompt 模板沿用 deepseek 条目）。
-- 该端点 `gpt-5.6` 是 GPT-5.6 Sol 的别名；另有 `gpt-5.6-sol/-terra/-luna`
-  变体，换变体只改 `-m` 一行。
+- 凭据：复用问询链 codex-glm 路由的 auth（`~/fin-data/codex-routes/codex-glm/auth.json`，
+  0600，键 `glm_api_key`）——评审者与问询链同源同键，换 key 一处生效。
+- 模型目录：`/home/ypk/fin-data/codex-routes/codex-glm/models.json`（glm-5.3 带
+  instructions_template 与 effort 枚举 low/high/max；2026-09-04 验证阶梯三绿）。
+- 2026-09-04 由 opencode-go·deepseek-v4-pro 429 限流切入；relay-19851117·gpt-5.6
+  profile 已删（key 服务商侧 401 失效 + owner 裁定删除；备份在
+  `~/.local/share/codex-open-backup-20260904/`，其 auth.relay.json 仅供追溯）。
 
-### Profile B（2026-08-30 及以前）：OpenCode Go · deepseek-v4-pro
+### Profile B（2026-09-03 至 09-04 曾用；429 限流待恢复）：OpenCode Go · deepseek-v4-pro
 
 凭据段（读 opencode 的 auth.json，键仍在原位未删）：
 
