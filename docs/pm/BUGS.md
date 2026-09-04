@@ -966,7 +966,19 @@
 - 修复方向：①article_search 增加日期过滤（date=YYYY-MM-DD 或 from/to，
   命中即按时间序枚举当日条目——B1 最小形态）；②工具描述补覆盖面边界句
   （相关度检索 ≠ 覆盖枚举；用户提具体时刻/日期时按日期过滤枚举）。
-- 状态：开放（修复候选待 owner 拍板）。
+- 修复（09-04，owner 批准后施工）：①read_article_search 增枚举模式——
+  MCP 新可选参 date_from/date_to（YYYY-MM-DD，白名单+格式+from<=to 校验，
+  ProductionReadRequest 透传），任一存在即绕 TF-IDF 按日期范围全量枚举、
+  时间升序、mode=date_enumeration、超 50 条截断记 gap、空范围记
+  article_search_date_range_empty（区别于关键词 no_match，覆盖语义可见）；
+  ②工具描述补边界句（相关度检索≠覆盖枚举；用户提时刻/日期即用日期枚举；
+  不得以关键词缺席断言库覆盖面）。
+- 验收：单测 4 新增（关键词零交叠对照、范围排序、空范围 typed gap、坏格式
+  拒绝），read_capabilities+knowledge 68 绿；真 KB 复验 date=2026-09-04 枚举
+  当天 5 条升序，11:07 直播总结在列——同问句关键词模式漏之（对照钉死）。
+  薄 server 每会话自 HEAD 起，新参数下次问询自动可用。
+- 状态：已关闭（2026-09-04）。owner 终验 = 下次实弹「某时刻发布的文章」
+  能直接枚举命中；再现同类未命中则重开。
 - **index 残差收缩闭环（2026-09-04 13:4x，owner 授权处理）**：新证据
   `fin-data/backups/g-new-columns-20260901/index.json`（1225 条，距丢失 3 天）
   收窄不确定域——非快照 197 条中 93 条=09-01 后新增（保留）、104 条=5-7 月

@@ -92,3 +92,71 @@ def test_no_match_and_missing_index(tmp_path: Path) -> None:
     empty.mkdir()
     result = _read(empty, "封装")
     assert "article_search_index_unavailable" in result.data_gaps
+
+
+def test_date_enumeration_covers_keyword_misses(tmp_path: Path) -> None:
+    """BUG-029：枚举模式按日期全量返回——关键词零交叠的文章也列得出。"""
+
+    root = _kb(tmp_path)
+    reader = ArticleKeywordSearchReader(root)
+    # 关键词模式：问题与「黄金周报」内容零交叠 → 召回缺席。
+    keyword_result = reader.read(
+        ProductionReadRequest(
+            question="液冷 CDU 算力网 普通栏 最新",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+        )
+    )
+    keyword_ids = {h["article_id"] for h in keyword_result.value["hits"]}
+    assert "zsxq-2" not in keyword_ids
+
+    # 枚举模式：date_from=date_to=当日 → 当日全部条目、时间升序、mode 标注。
+    result = reader.read(
+        ProductionReadRequest(
+            question="8月15日发布的文章讲了什么",
+            date_from="2026-08-15",
+            date_to="2026-08-15",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+        )
+    )
+    assert result.data_gaps == ()
+    assert result.value["mode"] == "date_enumeration"
+    assert [h["article_id"] for h in result.value["hits"]] == ["zsxq-2"]
+
+
+def test_date_enumeration_range_and_ordering(tmp_path: Path) -> None:
+    root = _kb(tmp_path)
+    result = ArticleKeywordSearchReader(root).read(
+        ProductionReadRequest(
+            question="近半月消息序列",
+            date_from="2026-08-01",
+            date_to="2026-08-31",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+        )
+    )
+    assert [h["article_id"] for h in result.value["hits"]] == ["zsxq-1", "zsxq-2"]
+
+
+def test_date_enumeration_empty_range_is_typed_gap(tmp_path: Path) -> None:
+    root = _kb(tmp_path)
+    result = ArticleKeywordSearchReader(root).read(
+        ProductionReadRequest(
+            question="不存在的日期",
+            date_from="2027-01-01",
+            date_to="2027-01-31",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+        )
+    )
+    assert result.value["hits"] == []
+    assert result.data_gaps == ("article_search_date_range_empty",)
+
+
+def test_date_enumeration_rejects_malformed_bounds(tmp_path: Path) -> None:
+    root = _kb(tmp_path)
+    result = ArticleKeywordSearchReader(root).read(
+        ProductionReadRequest(
+            question="坏日期",
+            date_from="2026/08/01",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+        )
+    )
+    assert result.data_gaps == ("article_search_date_bounds_invalid",)

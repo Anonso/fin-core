@@ -43,6 +43,7 @@ sys.stdout = _StdoutGuard()
 import hashlib  # noqa: E402
 import json  # noqa: E402
 import logging  # noqa: E402
+import re  # noqa: E402
 from collections.abc import Mapping  # noqa: E402
 from dataclasses import dataclass  # noqa: E402
 from datetime import UTC, datetime, timedelta  # noqa: E402
@@ -198,7 +199,15 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "Search local ZSXQ articles by keyword (industry commentary, 板块, "
         "theme, company) across all columns and dates. Returns dated article "
         "references with a short excerpt — use it to find articles to read, "
-        "not as facts. SOURCE: local ZSXQ article library (reference layer, "
+        "not as facts. Optional date_from/date_to (YYYY-MM-DD) switch to "
+        "enumeration mode: ALL articles in the local index within the range, "
+        "chronological ascending — use it whenever the user references a "
+        "publish time/date ('今天11点07分发的') or asks for a message "
+        "sequence (近几日消息). Keyword mode is relevance search, NOT "
+        "coverage enumeration: a keyword miss means zero recall, never 'the "
+        "library only has X' — do not claim library coverage from keyword "
+        "results; enumerate by date instead. SOURCE: local ZSXQ article "
+        "library (reference layer, "
         "advisory_only); never present an article's AI summary as the "
         "teacher's own G opinion."
     ),
@@ -366,6 +375,8 @@ def _invoke_tool(
         "question",
         "instruments",
         "article_id",
+        "date_from",
+        "date_to",
         "as_of",
         "deadline_seconds",
         "session_hint",
@@ -390,6 +401,19 @@ def _invoke_tool(
         not isinstance(article_id, str) or not article_id.strip() or len(article_id) > 160
     ):
         raise InvalidParamsError("invalid_params: article_id invalid")
+
+    # BUG-029：read_article_search 枚举模式的日期边界（YYYY-MM-DD）。
+    date_from = payload.get("date_from")
+    date_to = payload.get("date_to")
+    for name, value in (("date_from", date_from), ("date_to", date_to)):
+        if value is not None and (
+            not isinstance(value, str)
+            or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is None
+            or datetime.fromisoformat(value).date().isoformat() != value
+        ):
+            raise InvalidParamsError(f"invalid_params: {name} must be YYYY-MM-DD")
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise InvalidParamsError("invalid_params: date_from must not exceed date_to")
 
     as_of: datetime | None = None
     raw_as_of = payload.get("as_of")
@@ -441,6 +465,8 @@ def _invoke_tool(
         question=question,
         instruments=tuple(str(item) for item in instruments),
         article_id=article_id,
+        date_from=date_from,
+        date_to=date_to,
         as_of=as_of,
         deadline_at=deadline_at,
     )

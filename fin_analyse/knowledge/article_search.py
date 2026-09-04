@@ -26,6 +26,18 @@ from fin_analyse.knowledge.store import KnowledgeStore
 #: 扩展词带来的尾部加槽上限（纯加法：直接命中一个不丢，最多多给 4 条）。
 _MAX_EXPANDED_EXTRA_HITS = 4
 
+#: 枚举模式单次上限（BUG-029）：按日期范围全量列出，超出截断并记 gap。
+_MAX_ENUMERATED_HITS = 50
+
+
+def _valid_date_bounds(date_from: str | None, date_to: str | None) -> bool:
+    import re as _re
+
+    pattern = _re.compile(r"\d{4}-\d{2}-\d{2}")
+    return (date_from is None or pattern.fullmatch(date_from)) and (
+        date_to is None or pattern.fullmatch(date_to)
+    )
+
 
 class ArticleKeywordSearchReader:
     """read_article_search：基于 TF-IDF 的本地文章检索。"""
@@ -84,6 +96,15 @@ class ArticleKeywordSearchReader:
                 value={"status": "EMPTY", "hits": []},
                 data_gaps=("article_search_index_unavailable",),
             )
+        date_from = getattr(request, "date_from", None)
+        date_to = getattr(request, "date_to", None)
+        if date_from is not None or date_to is not None:
+            if not _valid_date_bounds(date_from, date_to):
+                return ProductionReadResult(
+                    value={"status": "EMPTY", "hits": []},
+                    data_gaps=("article_search_date_bounds_invalid",),
+                )
+            return self._read_date_enumeration(request, date_from, date_to)
         # 查询双向扩展（黑话设计落点 4）：原问句查询不动（direct-substring
         # 命中路径不受影响）。扩展词各以单独查询跑再合并——实测（9/3）追加进
         # 同一查询会被标准词的海量直接命中稀释（「科创50 科学家50」仍进不了
@@ -144,4 +165,79 @@ class ArticleKeywordSearchReader:
         if expanded_terms:
             value["expanded_terms"] = expanded_terms
         gaps = () if hits else ("article_search_no_match",)
+        return ProductionReadResult(value=value, data_gaps=gaps)
+
+    def _read_date_enumeration(
+        self,
+        request: Any,
+        date_from: str | None,
+        date_to: str | None,
+    ) -> Any:
+        """BUG-029 枚举模式：日期范围内全量条目，时间升序，绕过 TF-IDF。
+
+        相关度检索回答不了「某时刻发布了什么」——关键词与目标内容零交叠时
+        检索为空，但那是召回缺席，不是库里没有。枚举模式给「按时刻找文章/
+        近几日消息序列」一个覆盖完整的口子：命中集 = 范围内全部本地条目。
+        """
+
+        from fin_analyse.read_capabilities.types import ProductionReadResult
+
+        store = getattr(self, "_store", None)
+        if store is None:
+            return ProductionReadResult(
+                value={"status": "EMPTY", "hits": []},
+                data_gaps=("article_search_index_unavailable",),
+            )
+        lower = date_from or "0000-00-00"
+        upper = date_to or "9999-99-99"
+        entries: list[tuple[str, Any]] = []
+        for doc in store.documents:
+            date_text = str(doc.metadata.get("date", ""))
+            day = date_text[:10]
+            if not day:
+                continue
+            if lower <= day <= upper:
+                entries.append((date_text, doc))
+        entries.sort(key=lambda item: item[0])
+        hits: list[dict[str, object]] = []
+        truncated = len(entries) > _MAX_ENUMERATED_HITS
+        for _, doc in entries[:_MAX_ENUMERATED_HITS]:
+            metadata = doc.metadata
+            tags = metadata.get("tags")
+            if isinstance(tags, str):
+                tags = [tags]
+            tags = [str(tag) for tag in (tags or []) if str(tag).strip()][:8]
+            entry: dict[str, object] = {
+                "article_id": str(metadata.get("id") or doc.document_id),
+                "title": str(doc.title)[:160],
+                "column": str(metadata.get("column", "")),
+                "date": str(metadata.get("date", ""))[:16],
+                "score": metadata.get("score"),
+                "tags": tags,
+                "source_classification": str(metadata.get("source_classification", "")),
+                "char_count": len(doc.content),
+                "excerpt": self._content_excerpt(doc.content, request.question),
+            }
+            if str(metadata.get("column", "")) in G_LAYER_COLUMNS:
+                jargon_notes = scan_jargon_notes(doc.content, limit=4)
+                if jargon_notes:
+                    entry["jargon_notes"] = jargon_notes
+            hits.append(entry)
+        value: dict[str, object] = {
+            "schema_version": "fin.article-search/v1",
+            "source_boundary": "zsxq_articles_local",
+            "source_kind": "external_reference",
+            "source_trust": "non_g",
+            "status": "READY",
+            "mode": "date_enumeration",
+            "date_from": date_from,
+            "date_to": date_to,
+            "query": request.question,
+            "hits": hits,
+        }
+        gaps: tuple[str, ...] = ()
+        if not hits:
+            gaps = ("article_search_date_range_empty",)
+        elif truncated:
+            gaps = ("article_search_date_range_truncated",)
         return ProductionReadResult(value=value, data_gaps=gaps)

@@ -47,6 +47,10 @@ class ProductionReadRequest:
     question: str
     instruments: tuple[str, ...] = ()
     article_id: str | None = None
+    # read_article_search 枚举模式（BUG-029）：YYYY-MM-DD，任一存在即按
+    # 日期范围全量枚举（时间升序），绕过 TF-IDF——「按时刻找文章」的口子。
+    date_from: str | None = None
+    date_to: str | None = None
     as_of: datetime | None = None
     deadline_at: datetime | None = field(default=None, repr=False, compare=False)
 
