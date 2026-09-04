@@ -1,6 +1,6 @@
 ---
 name: manage-zsxq-article-retirement
-description: 退役/换锚 shared KB 里的 ZSXQ 文章（删文章/下线文章/一篇换成另一篇/粉丝稿换 G 审核版）。覆盖引用闭包三件套（文章文件/index 行/标签墓碑）与认知主线换锚顺序——机验 span 锁定来源文件必须在盘，必须先重锚后删除。Not for capture 调度（见 manage-zsxq-capture）、抓取内容 bug、主线文档常规审校。
+description: 退役/换锚 shared KB 里的 ZSXQ 文章（删文章/下线文章/一篇换成另一篇/换版本/粉丝稿换 G 审核版）。覆盖引用闭包三件套（文章文件/index 行/标签墓碑）与认知主线换锚顺序——机验 span 锁定来源文件必须在盘，必须先重锚后删除。KB 文章域的任何新退役场景扩写本 skill，不新建。Not for capture 调度（见 manage-zsxq-capture）、抓取内容 bug、主线文档常规审校。
 ---
 
 # Manage ZSXQ Article Retirement（退役 · 换锚）
@@ -8,6 +8,22 @@ description: 退役/换锚 shared KB 里的 ZSXQ 文章（删文章/下线文章
 不变量与裁决史：删改决策看 `docs/DECISIONS.md`；主线标注契约由
 `scripts/verify_mainline_annotation.py` 与 `cognition_mainline_readmodel.py`
 的校验器机械执行，本 skill 只管操作程序。
+
+## 边界与扩展规则（新场景扩这里，不新建 skill）
+
+- **本 skill 管**：shared KB 内**任何** ZSXQ 文章的退役类操作——删除/
+  下线/换锚/换版本/多篇合并进一篇。操作对象是文章，不是文章类型。
+- **主干不变**：owner 授权 → 备份 → 闭包 grep → 主线重锚（被引用时）→
+  机验 → rebuild → 删除三件套 → 探针。场景差异**只**落在两处：
+  ①替代源性质判定（源表第 4 格子串）；②该文实际存在的闭包面
+  （deep-read 有无、timeline 有无、主线是否引用——grep 定 A/B 路线）。
+- **已知场景**：操作 A（无主线引用退役）、操作 B（换锚退役；0903
+  粉丝稿→G 审核版是**实弹参照，不是边界**）。
+- **第三种场景**（退役 G 亲笔稿、混合研报稿退役、多篇合并、非 ZSXQ
+  来源替代等）：**在本文档追加「操作 X」小节**，硬边界/闭包/探针/
+  进程残余各节直接复用，禁止另立姊妹 skill。
+- **另立 skill 的唯一条件**：操作对象离开「shared KB 文章」域
+  （portfolio 行、wiki 结构、capture 调度归各自 skill）。
 
 ## 硬边界（先于步骤）
 
@@ -43,7 +59,7 @@ description: 退役/换锚 shared KB 里的 ZSXQ 文章（删文章/下线文章
 2. 删除三件套：`rm` 文章文件 → index.json 原子移除该行 → 标签墓碑。
 3. 探针（见下）。
 
-## 操作 B：换锚退役（主线有引用，实弹：0903 直播总结粉丝稿→G 审核版）
+## 操作 B：换锚退役（主线有引用；实弹参照 0903 粉丝稿→G 审核版）
 
 1. 备份：文章文件 + index.json + **g-cognition-mainline.md 全量** + manifest。
 2. 主线换锚三处：
