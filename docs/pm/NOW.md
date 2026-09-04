@@ -58,7 +58,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 问询探针 = 一次真实提问，看 trace 三字段（`~/fin-data/trace/read-capability/calls.jsonl`：
 工具被调、`data_gaps` 空、`status` 正常）判「起了作用没」；效果好坏归打分/盲评，不混判。
 
-推进位标记（执行顺序，与状态六档无关；主线当前 = CLI 实弹三连验（BUG-005/012/002，手动 CLI 随用随验）；时间窗项放旁路·时间触发到点执行、不占主线位（owner 08-30 裁定）；完整顺序看待办队列）：
+推进位标记（执行顺序，与状态六档无关；主线当前 = 决策日志 v1 施工〔待办4，owner 09-04 已授权〕；owner 侧最近验收 = BUG-024 盘前读法实弹〔下个交易日 09-07 周一〕；时间窗项放旁路·时间触发到点执行、不占主线位〔owner 08-30 裁定〕；完整顺序看待办队列）：
 `【先决】【主线】【旁路·时间/使用/owner/随手】【随部署】`。
 
 问询面运行源：薄 server 与 Daily/ZSXQ 单元均由本仓起（单元绑 HEAD，
@@ -69,7 +69,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 能力 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| 顾问人格 | 全部问询的工具选择、证据纪律、输出格式 | 问询验收中 | 持仓类/老师体系类问题，验工具按规则被调；泛化体系题免提醒验个性化（如「小仓该不该更激进」，验答案自动带账户具体约束与刻度版本，owner 09-04 要求不依赖提醒；09-04 首枪过：泛化原题免提醒，自动带 4.3 万/12.6% 现仓/闲钱边界/35–50% 带+买腿先行（v5 装载即执行）） | consult-agent/CLAUDE.md；BUG-005/025/030（均已闭；030 真周五实弹复验 09-04）；BUG-031（档位口径统一+带冻结，09-04 施工：CC 腿探针 PASS，codex 腿待 finqa-x 恢复补验）|
+| 顾问人格 | 全部问询的工具选择、证据纪律、输出格式 | 问询验收中 | 持仓类/老师体系类问题，验工具按规则被调；泛化体系题免提醒验个性化（「小仓该不该更激进」类原题，验自动带账户约束/闲钱边界/刻度带与买腿顺序；09-04 首枪过，owner 要求常态化不依赖提醒） | consult-agent/CLAUDE.md；开放：BUG-024（施工全清，owner 09-07 盘前实弹终验）、BUG-031（CC 腿探针 PASS，codex 腿待 finqa-x 恢复补发）；已闭：005/025/030 |
 | 问询模型/路由 | 答案质量、成本、时延 | 在用 | 任意问询 | config/llm.yaml；D-018/019/021 |
 | 连续性/记忆 | 续问与跨会话上下文 | 在用（codex 客户端读不到 CC 记忆 = 已知边界） | 续问（六题 Q4） | consult-agent-workspace-design.md |
 | 外部检索 | 时事与星球外信息 | 在用 | 时事类问题，验引用可溯源 | consult-agent/.mcp.json |
@@ -93,45 +93,38 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 环节 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006/027 已闭（027 审计链 09-04 实弹 chain_ready=true） |
+| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006/027 已闭（027 审计链 09-04 实弹 chain_ready=true）；留验收档原因=Windows `cleanInlineArticleText` 对齐未落（NOW #19） |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
 | 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | [../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | G 准入/工作集 | G 注入新鲜度 | 在用（manifest 契约失配已消〔08-29 晚六题 g_context 零失配码〕；fresh pair 专项探针 09-02 ✅） | 老师体系问题，验 fresh pair | [../design/g-cognition.md](../design/g-cognition.md)；CC 收口 b2da8d9c |
-| 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（09-04 接口B read_shared_brain 上线〔12 只读工具，c1da3ea〕+件3 已 apply〔40 卡：38 卡带激活词+三新卡，施工门 14 发现 12 采纳，幂等复验过，三新卡实弹第一顺位点亮〕+压测验收门 PASS〔双腿 12/12+四维不退化，台账 state/analysis-mindset-stress-20260904*/〕；残余=finq 真实使用记账照常；BUG-030 日历盲点 09-04 措辞级修复+真周五实弹复验过已闭） | 方法论类问题，验 read_shared_brain 被调+卡命中+边界收紧 | [analysis-mindset-v1](../design/analysis-mindset-v1.md)；D-039；seed_methodology_qa.py（541368d8） |
+| 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（09-04 接口B read_shared_brain 上线〔12 只读工具，c1da3ea〕+件3 已 apply〔40 卡：38 卡带激活词+三新卡，施工门 14 发现 12 采纳，幂等复验过，三新卡实弹第一顺位点亮〕+压测验收门 PASS〔双腿 12/12+四维不退化，台账 state/analysis-mindset-stress-20260904*/〕；残余=finq 真实使用记账照常） | 方法论类问题，验 read_shared_brain 被调+卡命中+边界收紧 | [analysis-mindset-v1](../design/analysis-mindset-v1.md)；D-039；seed_methodology_qa.py（541368d8） |
 | 薄 server 装配 | 八工具可用性（七读一写，单缝失败隔离降级） | 在用 | 任一问询，验 gaps 可查 | read_capabilities/ |
 
 ### 其他产品面
 
 | 产品面 | 状态 | 验收手段 | 指针 |
 | --- | --- | --- | --- |
-| Daily 简报 | 问询验收中（四班 L1 实证已通；B1 盲评 7.67<9 不闭环，同条件 9=9 打平、差距全在带伤班次——带伤主因 BUG-015 冻结时钟已修，08-31 postmarket 班实弹 gaps=[]+行情+G 对表齐活；gap 记账哑已修 08-30；08-31 G 认知接为第四材料键〔设计门 8/8 采纳〕+ 两融项删除、不催更新；BUG-016/017 已部署，**09-01 09:35 morning 真实班 gaps=[]+正文带指数点位/成交额 → 首次真实正文确认通过**；**09-01 14:20/15:30 close+postmarket 推送因工作树脏被身份门拒、已放弃补发**；D-030 09-01 停推，复验并入 D-031 验证；盘前概览 gap 随 BUG-002 09-04 闭环消解〔盘前形态=设计内 PARTIAL〕） | 四班交付记录 + B1 盲评 | 【最后】BUG-016/017；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008 |
+| Daily 简报 | 问询验收中（**09-01 起 D-030 停推**，复验并入 D-031；带伤班次主因 BUG-015/016/017 已修并经 09-01 morning 真实班 gaps=[] 确认；盘前概览 gap 已随 BUG-002 09-04 闭环消解〔盘前形态=设计内 PARTIAL〕；更早施工叙事入 Git/BUGS） | 四班交付记录 + B1 盲评 | 【最后】D-031（最后9）；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008/015/016/017 |
 
 ## 待办队列（只放未决项）
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 0 | BUG-024 修复闭环 ✅ 施工全清（09-04）：v3 人格增补（线的取材下限+动作-持仓前置，备份 r9/r10）；材料层指数日线 lane 上线（96f8fcd，设计门外审 480s/1P1/4P2/4P3 全采纳；端到端探针+个股回归过）；owner 终验 = 下个交易日盘前读法实弹（线层现工具序列或诚实标注） | owner 实弹终验 |
-| 主线 | 1 | CLI 实弹三连验 ✅ 全清（09-04 收口）：BUG-005 G-first ✅（09-02 21:22）；3.2 fresh pair ✅（09-02 21:24）；BUG-012 ✅（09-03 19:36）；BUG-002 ✅（09-04 09:07 盘前实弹，整链拒未再现，PARTIAL+命名 gap=设计内形态，BUGS 已闭） | 完成，出队 |
-| 主线 | 2 | finq 使用日志：09-02/09-03 六条已回填（y=持仓分析、锐评参考探针；n=长电封测〔BUG-024：v2 点线面泛化已施工，线/面双探针验收达标〕、星球研报探针〔BUG-012 已闭〕、大盘〔BUG-002 已闭〕、宏观〔原因待补〕；--help 噪音行已清（09-04 存量条与 CC 误触条一并移除））；09-04 盘前读法一条已回填（BUG-024 样本#1：线层取材双重缺口，见 BUGS.md）；09-04 BUG-030 复验探针两条已回填（y；真周五同题复验，台账 bug030-calendar-fixprobe-20260904/）；剩余 3 条 n 原因各一句待 owner | 随用随记；原因补注待 owner |
-| 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 1629 条〔index 内全部 ≥6 可解析：5/13 起 178 篇老图/旧 OCR 已定向识图收口、存量代码↔名称错位已按名册清零〕、read_instrument_scores 时间线 + read_article_search 双查已接 thin server、G/reference 窗口分级落地；增量门槛 6.0 走 config/zsxq_capture.json〔D-036/037〕）；09-03 实弹 sync 过（8/29 长电 8.6/8.8 锚 + 7/7 参照）；首篇 [6,7) 或 <6 新帖边界样本待自然窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
-| 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 每日热点）已落 config/macro_brain_rules.json；macro_index 09-03 12:58 已生成（22 条：12 kept + 8 每日热点 + 2 新规则命中），reader 索引优先已生效；宏观问询实弹 ✅（09-03 19:2x read_macro_brain 被调 status ok/gaps=[]，答案融合星球宏观材料 + 外搜核验带时点） | 已交付；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
-| 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
-| 主线 | 3.3 | ZSXQ 评分时间线 v2（D-037）：门槛 ≥6（config/zsxq_capture.json）+ parser v2 + 回填 445 行 + published_at 排序 + CLAUDE 纪律已交付（6273ab8，09-03 12:58 实弹 sync 过，Windows 单侧无同步项）；首篇 [6,7) 边界样本待自然窗口 | 随自然窗口（预计数日内）；交接稿 [../design/instrument-score-timeline.md](../design/instrument-score-timeline.md) |
 | 主线 | 4 | 决策日志 v1 施工：设计门已闭环（v2=4edfdac，345s/10 发现/10 采纳），零代码；实现研究完毕、方案定型，[交接稿](decision-journal-handoff-20260904.md)（含两处设计修正：direct-runner 零碰 provider、CAS 降级 revision 记账），五任务序列在内 | owner 2026-09-04 晚已授权施工，新会话按交接稿执行 |
-| 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
-| 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |
+| 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+指数日线 lane 已施工全清（09-04，96f8fcd），剩 owner 实弹验「线层现工具序列或诚实标注」（详见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前 |
+| 旁路·owner | 2 | finq 使用日志：存量 3 条 n 原因各一句待补注；此后随用随记（已回填条目的闭因见 BUGS 各条与 git 史） | owner 随用 |
+| 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
-| 旁路·owner | 14 | 黑话译注下批消费方 ✅（09-03 晚：Daily `_render_g_context` 显式加译注段〔96 绿〕+ mainline 投影侧确定性附加〔不动 PIT 工件 schema，57 绿〕；推送侧实际生效仍待 D-031 恢复）；一期三落点已在用（a06db30） | 已交付；D-031 骨架稿 docs/design/d031-daily-consult-env.md 备好待 owner 恢复指示 |
-| 旁路·owner | 16 | 直播总结首例入档 ✅（09-04 晚 owner 按建议终审「全保留」：CU-0904-01/02/03 archive-only 入档，机验 PASS，readmodel gen47，S-0904B=SPOKEN_FAN_TRANSCRIBED，投影排除实证）。已知副作用：as_of 滚 09-05 → mainline 投影 PIT 空窗至今晚 24:00 自愈（g_context 其余面正常）。剩：明日批次勾 9/4 锐评（as_of 已滚，它从提名单隐去，从 index 直接勾） | 明日标注批次 |
+| 旁路·owner | 16 | 直播总结入档后继：明日标注批次勾 9/4 锐评（as_of 已滚、从提名单隐去，从 index 直接勾；BUG-028 边界修复后后续批次自动可见；首例 09-04 已入档收口，git 55722a8） | owner 明日标注批次 |
+| 旁路·owner | 18 | 主线效果盲评下轮增量：finq 并排记分 + 失败样本常驻（首轮 09-04 收口：主线腿双判者皆胜 CC +7.5 / J2 +5.0 per 200；预算决策按家规 11 不施工；台账 $STATE/fin-analyse/mainline-blind-eval-20260904/） | 随用随记积累后 |
+| 旁路·使用触发 | 21 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
 | 旁路·随手 | 15 | consult-agent README/人格工具计数过时：写「7 只读+1 写」，thin server 实为 12 工具；README 该行带「冻结契约」标注，改数需 owner 会签 | owner 会签后改 |
 | 旁路·时间（周末） | 17 | opencli v1.8.6→v1.8.7 升级（Windows 侧全局 npm，扩展 v1.0.23→v1.0.24 一并）；升级后 `opencli doctor` 核两 profile 连接 | owner 09-04 指示放周末 |
 | 旁路·随手 | 19 | Windows 侧 `cleanInlineArticleText` 与 WSL `_strip_disclaimer_line` 声明语义对齐（帖首/帖尾双形态；BUG-027 设计门发现6，detail 腿 browser.py 已确认方向一致不受影响） | 随手 |
-| 旁路·owner | 16 | G 主线生长管线 v1（D-038）：候选扫描（来源门+article_ref 去重，纯读不写 KB）→ CC 起草（摘录 span 机验+混合材料逐段归属）→ owner 扫批入档；含缺口 B 修复（标注 hash 独立触发 rebuild，不再等下次 ingest）+ 文件名去日期化 + 消费探针（投影附件带 unit_id 审计行）；动 durable state，开工前短设计稿（规则5） | 已交付（09-04：五部件施工+实弹全过，含 reader 装配缺口修复；设计稿及裁决录/施工记录见 git 史 3332912 一带）首链已走通（09-04：13 篇 18 单元入档 generation 44，探针投影+时间线可见）） |
-| 旁路·owner | 18 | 主线效果盲评（D-038）：首轮已出结果（09-04，双判者盲评解盲）：主线腿两判者皆胜（CC +7.5/200、J2 独立 +5.0/200，leg 级 13/16），增益集中在历史纵深（q5）与时点语义（q6）；预算淘汰未获伤害证据→放大预算/基线常驻按家规 11 不施工；台账 \$STATE/fin-analyse/mainline-blind-eval-20260904/（含 run1 作废留证） | 首轮收口；下轮增量=finq 并排+失败样本常驻（随用随记） |
-| 旁路·使用触发 | 19 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
 | 旁路·时间（10-04） | 20 | BUG-031 档位口径复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）；finqa-x 恢复后补发 codex 腿探针（探针题与判据在 BUGS 条目；台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/） | 10-04 满月或样本先到；finqa-x 恢复即补发 |
+| 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
 
