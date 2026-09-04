@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -261,9 +262,15 @@ class TestGenerator:
         model = generate_cognition_mainline_readmodel(ANNOTATION_DOC)
         assert model["schema_version"] == "fin.cognition-mainline-readmodel/v1"
         assert model["generation"] == 1
-        assert len(model["sources"]) == 19
-        assert len(model["units"]) == 26
-        assert len(model["evolution"]) == 4
+        expected_sources, expected_units = _doc_expected_counts()
+        assert len(model["sources"]) == expected_sources
+        assert len(model["units"]) == expected_units
+        # 演化节点数随入档增长（不再钉死常数）；节点引用必须落在单元集合内。
+        unit_ids = {unit["unit_id"] for unit in model["units"]}
+        assert model["evolution"]
+        assert all(
+            set(node.get("unit_refs", [])) <= unit_ids for node in model["evolution"]
+        )
         # 整份通过 validator（无损往返）
         validated = validate_cognition_mainline_readmodel(model)
         assert validated["content_hash"] == model["content_hash"]
@@ -327,7 +334,7 @@ class TestGenerator:
         )
 
         model = generate_cognition_mainline_readmodel(ANNOTATION_DOC)
-        assert len(model["sources"]) == 19
+        assert len(model["sources"]) == _doc_expected_counts()[0]
         for source in model["sources"]:
             ref = source["article_ref"]
             assert "`" not in ref and "*" not in ref, f"wrapped article_ref leaked: {ref!r}"
@@ -620,7 +627,7 @@ class TestReader:
         assert out.failure_code is None
         assert out.generation == payload["generation"]
         assert out.content_hash == payload["content_hash"]
-        assert len(out.payload["units"]) == 26
+        assert len(out.payload["units"]) == _doc_expected_counts()[1]
 
     def test_missing_failure(self, tmp_path) -> None:
         from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
@@ -695,6 +702,30 @@ def _generated() -> dict:
     return generate_cognition_mainline_readmodel(ANNOTATION_DOC)
 
 
+def _doc_expected_counts() -> tuple[int, int]:
+    """从批注文档独立解析来源/单元总数——owner 入档增长时断言随文档走，不钉死常数。"""
+    doc_text = Path(ANNOTATION_DOC).read_text(encoding="utf-8")
+    return (
+        len(re.findall(r"^\| S-", doc_text, flags=re.MULTILINE)),
+        len(re.findall(r"^### CU-", doc_text, flags=re.MULTILINE)),
+    )
+
+
+def _artifact_available_from(payload: dict):
+    """PIT revision gate 通过下界 = available_at/processed_at 较晚者。
+
+    测试 as_of 一律从 payload 自身推导，不再硬编码日期——artifact 随入档
+    重生成（available_at 前移）时，硬编码历史 as_of 会整批落进
+    ``g_cognition_pit_artifact_not_available``（2026-09-04 七连红根因）。
+    """
+    from datetime import datetime
+
+    return max(
+        datetime.fromisoformat(payload["available_at"]),
+        datetime.fromisoformat(payload["processed_at"]),
+    )
+
+
 class TestProjector:
     """Pure G projection: PIT selector, G_ORIGINAL only, whole-unit eviction."""
 
@@ -708,7 +739,7 @@ class TestProjector:
         payload = _generated()
         out = project_cognition_mainline(
             payload,
-            as_of=datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8))),
+            as_of=_artifact_available_from(payload),
             working_set_identity=payload["pit_working_set_identity"],
         )
         # 预算驱逐 gap 允许；PIT/identity gap 不允许。
@@ -731,7 +762,7 @@ class TestProjector:
         )
 
         payload = _generated()
-        as_of = datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8)))
+        as_of = _artifact_available_from(payload)
         first = project_cognition_mainline(
             payload, as_of=as_of, working_set_identity=payload["pit_working_set_identity"]
         )
@@ -748,10 +779,10 @@ class TestProjector:
         )
 
         payload = _generated()
-        # 早于 artifact.available_at（2026-08-19T12:47）→ 纯 typed gap，不倒灌。
+        # 早于 artifact 可用时刻 → 纯 typed gap，不倒灌（as_of 从 payload 推导）。
         out = project_cognition_mainline(
             payload,
-            as_of=datetime(2026, 8, 18, tzinfo=timezone(timedelta(hours=8))),
+            as_of=_artifact_available_from(payload) - timedelta(seconds=1),
             working_set_identity=payload["pit_working_set_identity"],
         )
         assert out.items == ()
@@ -767,7 +798,7 @@ class TestProjector:
         payload = _generated()
         out = project_cognition_mainline(
             payload,
-            as_of=datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8))),
+            as_of=_artifact_available_from(payload),
             working_set_identity="b" * 64,
         )
         assert out.items == ()
@@ -829,7 +860,7 @@ class TestProjector:
         payload = _generated()
         out = project_cognition_mainline(
             payload,
-            as_of=datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8))),
+            as_of=_artifact_available_from(payload),
             working_set_identity=payload["pit_working_set_identity"],
             budget_bytes=64,  # 极小预算 → 每个单元都超限 → 全部整单元驱逐
         )
@@ -848,14 +879,19 @@ class TestProjector:
         payload = _generated()
         out = project_cognition_mainline(
             payload,
-            as_of=datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8))),
+            as_of=_artifact_available_from(payload),
             working_set_identity=payload["pit_working_set_identity"],
         )
         publishes = [item["published_at"] for item in out.items]
-        # 默认 4096 预算必须包含最新适用节点（2026-08-19）的 G 单元。
-        assert any(publish.startswith("2026-08-19") for publish in publishes), publishes
-        # 不能再只得到 6 月旧单元。
-        assert any(not publish.startswith("2026-06") for publish in publishes), publishes
+        # 默认 4096 预算必须包含最新 G 单元（不能升序装填让 6 月旧单元挤掉尾部）。
+        source_nature = {s["source_id"]: s["source_nature"] for s in payload["sources"]}
+        g_publishes = [
+            unit["published_at"]
+            for unit in payload["units"]
+            if source_nature.get(unit["source_ref"], "").startswith("G_ORIGINAL")
+        ]
+        assert publishes, publishes
+        assert max(publishes) == max(g_publishes), publishes[-3:]
 
     def test_items_ordered_latest_first_deterministic(self) -> None:
         """预算选择稳定确定：items 按 published_at 最新优先（无 topics 时的预算策略）。"""
@@ -866,13 +902,13 @@ class TestProjector:
         )
 
         payload = _generated()
-        as_of = datetime(2026, 8, 20, tzinfo=timezone(timedelta(hours=8)))
         out = project_cognition_mainline(
             payload,
-            as_of=as_of,
+            as_of=_artifact_available_from(payload),
             working_set_identity=payload["pit_working_set_identity"],
         )
         publishes = [item["published_at"] for item in out.items]
+        assert publishes, publishes  # items 非空，防排序断言空转
         assert publishes == sorted(publishes, reverse=True)
 
     def test_bounded_budget_and_refs(self) -> None:
