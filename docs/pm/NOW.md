@@ -127,7 +127,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·随手 | 15 | consult-agent README/人格工具计数过时：写「7 只读+1 写」，thin server 实为 12 工具；README 该行带「冻结契约」标注，改数需 owner 会签 | owner 会签后改 |
 | 旁路·时间（周末） | 17 | opencli v1.8.6→v1.8.7 升级（Windows 侧全局 npm，扩展 v1.0.23→v1.0.24 一并）；升级后 `opencli doctor` 核两 profile 连接 | owner 09-04 指示放周末 |
 | 旁路·随手 | 19 | Windows 侧 `cleanInlineArticleText` 与 WSL `_strip_disclaimer_line` 声明语义对齐（帖首/帖尾双形态；BUG-027 设计门发现6，detail 腿 browser.py 已确认方向一致不受影响） | 随手 |
-| 旁路·owner | 16 | G 主线生长管线 v1（D-038）：候选扫描（来源门+article_ref 去重，纯读不写 KB）→ CC 起草（摘录 span 机验+混合材料逐段归属）→ owner 扫批入档；含缺口 B 修复（标注 hash 独立触发 rebuild，不再等下次 ingest）+ 文件名去日期化 + 消费探针（投影附件带 unit_id 审计行）；动 durable state，开工前短设计稿（规则5） | 已交付（09-04：五部件施工+实弹全过，含 reader 装配缺口修复；见[设计稿施工记录](../design/g-mainline-growth-v1.md)。首链已走通（09-04：13 篇 18 单元入档 generation 44，探针投影+时间线可见）） |
+| 旁路·owner | 16 | G 主线生长管线 v1（D-038）：候选扫描（来源门+article_ref 去重，纯读不写 KB）→ CC 起草（摘录 span 机验+混合材料逐段归属）→ owner 扫批入档；含缺口 B 修复（标注 hash 独立触发 rebuild，不再等下次 ingest）+ 文件名去日期化 + 消费探针（投影附件带 unit_id 审计行）；动 durable state，开工前短设计稿（规则5） | 已交付（09-04：五部件施工+实弹全过，含 reader 装配缺口修复；设计稿及裁决录/施工记录见 git 史 3332912 一带）首链已走通（09-04：13 篇 18 单元入档 generation 44，探针投影+时间线可见）） |
 | 旁路·owner | 18 | 主线效果盲评（D-038）：首轮已出结果（09-04，双判者盲评解盲）：主线腿两判者皆胜（CC +7.5/200、J2 独立 +5.0/200，leg 级 13/16），增益集中在历史纵深（q5）与时点语义（q6）；预算淘汰未获伤害证据→放大预算/基线常驻按家规 11 不施工；台账 \$STATE/fin-analyse/mainline-blind-eval-20260904/（含 run1 作废留证） | 首轮收口；下轮增量=finq 并排+失败样本常驻（随用随记） |
 | 旁路·使用触发 | 19 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
 
