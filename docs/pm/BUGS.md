@@ -814,3 +814,21 @@
   真实性」检查项；复验过则再闭，不过则升工具面（read_market_snapshot 支持美股
   指数，行情数字走本地接口、外搜降为佐证）。
 - 状态：**重新开放（修复已布，待复压测复验）**。
+
+## BUG-026 行情 fallback 的 opencli kline 标签页泄漏（Chrome 越用越多）
+
+- 发现：2026-09-04，owner 报 Chrome（Profile 3 / opencli 3f3qfa2j）堆积大量
+  push2his kline/get 标签页，用越久越多。
+- 根因：`eastmoney_http_transport._read_with_opencli` 的 finally 只做单次
+  `tab close`（3s 预算无重试）；WSL interop vsock 间歇 stall（本次诊断会话
+  实测复现 5 次 `UtilAcceptVsock accept4 110`）时 close 失败仅记 warning，
+  标签永久残留。实证：Chrome 会话快照含 14 个不同 secid 的 kline 残留、
+  Tabs_ 备份 08-14→08-30 累计 31 个，时间全部落在交易日盘中（UTC→盘中
+  09:59/10:05/13:33）；opencli session↔tab 注册表仅存 daemon 内存，重启后
+  残留对 `tab list` 不可见，现有 target-None 枚举路径也够不着。
+- 修复：传输层自兜底——每个 fallback 开新 tab 前入口 sweep（同 session
+  `tab list` 枚举 + 端点 host 匹配关闭，上限 3 个/请求、剩余预算 <6s 跳过、
+  异常静默）+ close 失败用独立短预算立即重试一次再 warning。泄漏上界
+  压到 1 个/请求且下一请求即回收。daemon 重启后的存量残留不可编程回收。
+- 状态：代码修复完成（2026-09-04，market 套件 293 绿含 5 新用例）；存量
+  14 个残留 tab 待 owner 在 Chrome 手动关闭。

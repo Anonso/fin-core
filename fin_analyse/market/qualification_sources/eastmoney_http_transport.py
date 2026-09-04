@@ -30,6 +30,13 @@ _SESSION = "fin-eastmoney-on-demand-v1"
 _PRIMARY_TIMEOUT_SECONDS = 2.0
 _CLOSE_RESERVE_SECONDS = 3.0
 _MIN_FALLBACK_SECONDS = 1.0
+# 入口残留 sweep：tab close 单次失败只记 warning，标签会残留在 Chrome 里。
+# opencli 的 session↔tab 注册表仅存于 daemon 内存，daemon 重启后残留连
+# ``tab list`` 都看不见，只能手动关。这里在开新 tab 前枚举同 session 内
+# 匹配端点 host 的残留并回收，把泄漏上界压到 1 个/请求；预算不足或任何
+# 异常都静默跳过，绝不拖垮本请求。
+_SWEEP_MAX_TABS = 3
+_SWEEP_MIN_REMAINING_SECONDS = 6.0
 _MAX_STDOUT_BYTES = ((EASTMONEY_DAILY_BAR_MAX_RAW_BYTES + 2) // 3) * 4 + 64 * 1024
 _TARGET_ID = re.compile(r"^[0-9A-Fa-f]{32}$")
 _OPENCLI_PATH = re.compile(r"^[A-Za-z]:\\.+\\npm\\opencli\.ps1$")
@@ -240,6 +247,12 @@ class _EastmoneyOnDemandTransportCore:
     ) -> _FallbackResponse:
         self._probe_interop(deadline=deadline)
         opencli_path, opencli_profile = self._resolve_opencli(deadline=deadline)
+        self._sweep_residual_tabs(
+            opencli_path=opencli_path,
+            opencli_profile=opencli_profile,
+            spec=spec,
+            deadline=deadline,
+        )
         target: str | None = None
         try:
             created = self._invoke_json(
@@ -286,22 +299,34 @@ class _EastmoneyOnDemandTransportCore:
             # close 失败不覆盖主错误但记录，避免标签累积残留。
             close_deadline = self._monotonic() + _CLOSE_RESERVE_SECONDS
             if target is not None:
-                try:
-                    closed = self._invoke_json(
-                        _opencli_browser_argv(
-                            opencli_path,
-                            "tab",
-                            "close",
-                            target,
-                            profile=opencli_profile,
-                        ),
-                        deadline=close_deadline,
-                        reserve_close=False,
-                    )
-                    if closed != {"closed": target}:
-                        raise _error("OPENCLI_CLOSE_INVALID")
-                except Exception:
-                    _logger.warning("opencli tab close failed (target=%s)", target)
+                for attempt in (0, 1):
+                    try:
+                        closed = self._invoke_json(
+                            _opencli_browser_argv(
+                                opencli_path,
+                                "tab",
+                                "close",
+                                target,
+                                profile=opencli_profile,
+                            ),
+                            deadline=(
+                                close_deadline
+                                if attempt == 0
+                                else self._monotonic() + _CLOSE_RESERVE_SECONDS
+                            ),
+                            reserve_close=False,
+                        )
+                        if closed != {"closed": target}:
+                            raise _error("OPENCLI_CLOSE_INVALID")
+                        break
+                    except Exception:
+                        # 首次失败重试一次（独立短预算）：spawn 瞬断或响应
+                        # 丢失时立即回收；仍失败才放弃，残留交给下一请求
+                        # 的入口 sweep。
+                        if attempt == 1:
+                            _logger.warning(
+                                "opencli tab close failed (target=%s)", target
+                            )
             else:
                 # tab new 响应超时但标签可能已打开——按 spec endpoint host
                 # 枚举并清理残留（quote 与日线端点统一覆盖）。
@@ -343,6 +368,69 @@ class _EastmoneyOnDemandTransportCore:
                                 raise _error("OPENCLI_CLOSE_INVALID")
                 except Exception:
                     _logger.warning("opencli residual tab cleanup failed")
+
+    def _sweep_residual_tabs(
+        self,
+        *,
+        opencli_path: str,
+        opencli_profile: str,
+        spec: EastmoneyHttpRequest,
+        deadline: float,
+    ) -> None:
+        """开新 tab 前回收本 session 内匹配端点 host 的残留 tab（尽力而为）。
+
+        残留来源是上一轮 close 失败（只记 warning）遗留的标签；同 session
+        的 ``tab list`` 仍可见即可回收，daemon 重启后的旧残留不可见，只能
+        手动清理。预算不足或任何异常都静默跳过，绝不影响本请求。
+        """
+        try:
+            if _remaining(deadline, self._monotonic) < _SWEEP_MIN_REMAINING_SECONDS:
+                return
+            listed = self._invoke_value(
+                _opencli_browser_argv(
+                    opencli_path,
+                    "tab",
+                    "list",
+                    profile=opencli_profile,
+                ),
+                deadline=deadline,
+                reserve_close=True,
+            )
+            if not isinstance(listed, list):
+                return
+            closed = 0
+            for tab in listed:
+                if closed >= _SWEEP_MAX_TABS:
+                    break
+                if _remaining(deadline, self._monotonic) < _SWEEP_MIN_REMAINING_SECONDS:
+                    break
+                if not isinstance(tab, Mapping):
+                    continue
+                tab_id = _target_from_inventory(tab)
+                url = tab.get("url")
+                if (
+                    tab_id is None
+                    or not isinstance(url, str)
+                    or not _matches_expected_host(url, spec)
+                ):
+                    continue
+                closed_payload = self._invoke_json(
+                    _opencli_browser_argv(
+                        opencli_path,
+                        "tab",
+                        "close",
+                        tab_id,
+                        profile=opencli_profile,
+                    ),
+                    deadline=deadline,
+                    reserve_close=True,
+                )
+                if closed_payload == {"closed": tab_id}:
+                    closed += 1
+            if closed:
+                _logger.info("opencli residual tab sweep closed %d tab(s)", closed)
+        except Exception:  # noqa: BLE001 — sweep 尽力而为，绝不覆盖主流程结果
+            _logger.warning("opencli residual tab sweep skipped", exc_info=True)
 
     def _resolve_opencli(self, *, deadline: float) -> tuple[str, str]:
         configured_profile = os.environ.get("FIN_OPENCLI_PROFILE") or None

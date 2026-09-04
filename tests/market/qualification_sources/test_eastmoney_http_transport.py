@@ -69,6 +69,7 @@ class _OpenCliRunner:
         payload: bytes = _RAW_PAYLOAD,
         profile: str | None = "windows-default",
         residual_url: str | None = None,
+        sweep_tabs: list[dict[str, str]] | None = None,
     ) -> None:
         self.failure = failure
         self.clock = clock
@@ -78,6 +79,8 @@ class _OpenCliRunner:
         self.timeouts: list[float] = []
         self.opened_url = ""
         self.residual_url = residual_url
+        self.sweep_tabs = sweep_tabs
+        self.saw_tab_new = False
 
     def __call__(
         self,
@@ -109,6 +112,7 @@ class _OpenCliRunner:
             )
         if "new" in call:
             self.opened_url = call[-1]
+            self.saw_tab_new = True
             if self.failure == "new_timeout":
                 raise subprocess.TimeoutExpired(call, timeout)
             page = "not-a-target" if self.failure == "target" else _TARGET
@@ -151,7 +155,15 @@ class _OpenCliRunner:
                 document["base64"] = None
             return _completed(call, stdout=json.dumps(document).encode())
         if "list" in call:
-            if self.failure == "new_timeout" and self.residual_url is not None:
+            if self.failure == "sweep_raise":
+                raise OSError("tab list spawn blip")
+            # new_timeout 的残留枚举只发生在 tab new 之后（入口 sweep 时
+            # 残留尚未"打开"，返回空表）。
+            if (
+                self.failure == "new_timeout"
+                and self.residual_url is not None
+                and self.saw_tab_new
+            ):
                 return _completed(
                     call,
                     stdout=json.dumps(
@@ -161,7 +173,9 @@ class _OpenCliRunner:
                         ]
                     ).encode(),
                 )
-            return _completed(call, stdout=json.dumps({"closed": _TARGET}).encode())
+            if self.sweep_tabs is not None:
+                return _completed(call, stdout=json.dumps(self.sweep_tabs).encode())
+            return _completed(call, stdout=b"[]")
         closed_target = call[-1] if "close" in call else _TARGET
         return _completed(
             call,
@@ -233,7 +247,8 @@ def test_request_exception_runs_one_exact_target_lifecycle() -> None:
 
     assert response.status_code == 200
     assert response.content == _RAW_PAYLOAD
-    assert len(runner.calls) == 6  # probe + resolve + tab new + open + eval + close
+    # probe + resolve + sweep(tab list) + tab new + open + eval + close
+    assert len(runner.calls) == 7
     assert runner.calls[0][-2:] == ("-Command", "exit 0")  # interop probe
     assert {call[0] for call in runner.calls} == {
         "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
@@ -246,15 +261,16 @@ def test_request_exception_runs_one_exact_target_lifecycle() -> None:
             "browser",
             "fin-eastmoney-on-demand-v1",
         )
-    assert runner.calls[2][-5:-1] == (
+    assert runner.calls[2][-2:] == ("tab", "list")  # 入口残留 sweep
+    assert runner.calls[3][-5:-1] == (
         "browser",
         "fin-eastmoney-on-demand-v1",
         "tab",
         "new",
     )
-    assert runner.calls[2][-1] == runner.opened_url
+    assert runner.calls[3][-1] == runner.opened_url
     assert runner.opened_url == _QUOTE_REQUEST.canonical_url
-    assert runner.calls[3][-4:] == (
+    assert runner.calls[4][-4:] == (
         "open",
         _QUOTE_REQUEST.canonical_url,
         "--tab",
@@ -269,7 +285,7 @@ def test_opencli_lifecycle_binds_one_resolved_profile() -> None:
     response = _transport(runner=runner).fetch(_QUOTE_REQUEST, timeout=8.0)
 
     assert response.content == _RAW_PAYLOAD
-    for call in runner.calls[2:]:
+    for call in runner.calls[3:]:
         file_index = call.index("-File")
         assert call[file_index + 2 : file_index + 6] == (
             "--profile",
@@ -289,7 +305,7 @@ def test_explicit_profile_pin_overrides_windows_default(monkeypatch) -> None:
 
     assert response.content == _RAW_PAYLOAD
     assert runner.calls[1][-1] == transport._RESOLVE_OPENCLI
-    for call in runner.calls[2:]:
+    for call in runner.calls[3:]:
         file_index = call.index("-File")
         assert call[file_index + 2 : file_index + 4] == (
             "--profile",
@@ -365,8 +381,8 @@ def test_invalid_navigation_or_document_still_closes_exact_target(
         _transport(runner=runner).fetch(_QUOTE_REQUEST, timeout=8.0)
 
     if failure == "target":
-        # probe + resolve + tab new + 残留枚举(tab list)
-        assert len(runner.calls) == 4
+        # probe + resolve + 入口 sweep(tab list) + tab new + 残留枚举(tab list)
+        assert len(runner.calls) == 5
     else:
         assert runner.calls[-1][-3:] == ("tab", "close", _TARGET)
 
@@ -386,7 +402,84 @@ def test_all_commands_share_one_deadline_and_reserve_close_budget() -> None:
     )
 
     # probe 用独立短预算 2.0s；close 用实测足够的独立 3.0s 预算。
+    # 预算紧张（剩余 < 6.0s）时入口 sweep 直接跳过——本请求优先。
     assert runner.timeouts == pytest.approx([2.0, 2.5, 2.0, 1.5, 1.0, 3.0])
+
+
+def test_entry_sweep_closes_matching_host_residuals_before_tab_new() -> None:
+    """残留 tab 缺口：入口 sweep 回收上一轮 close 失败遗留的同端点 tab。"""
+    clock = _Clock(value=100.0)
+    third = "C" * 32
+    runner = _OpenCliRunner(
+        clock=clock,
+        sweep_tabs=[
+            {
+                "page": _TARGET,
+                "url": "https://push2delay.eastmoney.com/api/qt/stock/get?secid=1.601899",
+            },
+            {"page": _SECOND_TARGET, "url": "https://wx.zsxq.com/group/15522441811252"},
+            {
+                "page": third,
+                "url": "https://push2delay.eastmoney.com/api/qt/stock/get?secid=0.002409",
+            },
+        ],
+    )
+
+    response = _transport(runner=runner, clock=clock).fetch(_QUOTE_REQUEST, timeout=10.0)
+
+    assert response.status_code == 200
+    assert runner.calls[2][-2:] == ("tab", "list")  # sweep 先枚举
+    assert runner.calls[3][-3:] == ("tab", "close", _TARGET)  # 再逐个关
+    assert runner.calls[4][-3:] == ("tab", "close", third)
+    assert runner.calls[5][-3:-1] == ("tab", "new")  # 然后才开本请求的 tab
+    close_targets = [call[-1] for call in runner.calls if "close" in call]
+    # 只关端点 host 的残留 + 本请求自己的 tab；zsxq tab 不动。
+    assert close_targets == [_TARGET, third, _TARGET]
+    assert all(target != _SECOND_TARGET for target in close_targets)
+
+
+def test_entry_sweep_caps_at_three_tabs_per_request() -> None:
+    """单次 sweep 最多回收 3 个——大积压分摊到多个请求，不挤占本请求预算。"""
+    clock = _Clock(value=100.0)
+    runner = _OpenCliRunner(
+        clock=clock,
+        sweep_tabs=[
+            {
+                "page": chr(ord("A") + index) * 32,
+                "url": "https://push2delay.eastmoney.com/api/qt/stock/get",
+            }
+            for index in range(5)
+        ],
+    )
+
+    response = _transport(runner=runner, clock=clock).fetch(_QUOTE_REQUEST, timeout=10.0)
+
+    assert response.status_code == 200
+    close_targets = [call[-1] for call in runner.calls if "close" in call]
+    # 只 sweep 关 A/B/C 三个，D/E 留给后续请求；最后一个 close 是本请求自己的 tab。
+    assert close_targets == ["A" * 32, "B" * 32, "C" * 32, _TARGET]
+
+
+def test_entry_sweep_failure_never_breaks_the_request() -> None:
+    """sweep 的 tab list 抛错（spawn 瞬断）只静默跳过，主请求照常完成。"""
+    runner = _OpenCliRunner(failure="sweep_raise")
+
+    response = _transport(runner=runner).fetch(_QUOTE_REQUEST, timeout=8.0)
+
+    assert response.status_code == 200
+    assert response.content == _RAW_PAYLOAD
+
+
+def test_close_failure_retries_once_with_fresh_budget_before_warning() -> None:
+    """close 首次失败用独立短预算立即重试一次；仍失败才放弃（warning）。"""
+    runner = _OpenCliRunner(failure="close")
+
+    response = _transport(runner=runner).fetch(_QUOTE_REQUEST, timeout=8.0)
+
+    assert response.status_code == 200  # close 失败不覆盖主请求结果
+    close_calls = [call for call in runner.calls if "close" in call]
+    assert len(close_calls) == 2
+    assert runner.timeouts[-2:] == pytest.approx([3.0, 3.0])
 
 
 def test_exhausted_fallback_budget_and_close_failure_both_fail_closed() -> None:
@@ -695,8 +788,9 @@ def test_daily_bar_tab_new_timeout_enumerates_and_closes_residual_by_endpoint_ho
     with pytest.raises(EastmoneyOnDemandTransportError, match="OPENCLI_COMMAND_FAILED"):
         _transport(runner=runner, clock=clock).fetch(_DAILY_REQUEST, timeout=8.0)
 
-    # probe + resolve + tab new(超时) + tab list(枚举) + 两个 residual close。
-    assert len(runner.calls) == 6
+    # probe + resolve + 入口 sweep(tab list) + tab new(超时) + tab list(枚举)
+    # + 两个 residual close。
+    assert len(runner.calls) == 7
     assert runner.calls[-3][-2:] == ("tab", "list")
     assert runner.calls[-2][-3:] == ("tab", "close", _TARGET)
     assert runner.calls[-1][-3:] == ("tab", "close", _SECOND_TARGET)
