@@ -30,6 +30,7 @@ knowledge-base/
 
 # --- runtime artifacts（与老仓同口径防护） ---
 .browser-profile/
+.playwright-mcp/
 .codegraph/
 *.log
 cron.log
