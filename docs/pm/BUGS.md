@@ -965,6 +965,21 @@
   （run 20260904T130016635）audit gaps=[]、denominator PROVEN、integrity
   PROVEN、chain_ready=true——自 20/20 全红到实弹转绿，BUG-027 全闭。
   Windows 侧 cleanInlineArticleText 对齐见 NOW #19（旁路·随手）。
+- **Windows 侧对齐闭环（2026-09-05 凌晨，NOW #19 出队）**：老仓
+  capture_zsxq_windows.cjs `cleanInlineArticleText` 由 indexOf 首现截断改
+  行首锚定+方向感知（帖尾保留之前/帖首保留之后/行中提及不剥，同 WSL
+  `_strip_disclaimer_line` 语义；多行声明只剥锚定行=同款已知限制）；其余
+  页脚标记（风险提示/扫码加入星球/查看更多优质内容）维持首现截断，管线
+  先剥导航壳再剥声明（页面 innerText 导航行在声明前，与 cursor 面结构
+  差异）。老仓 5c3f8d92：inline_backfill 16 用例绿（新增帖首/帖尾/行中/
+  能量评分/导航+帖首矩阵+帖首回填集成），全套 5933 绿+既有基线红 74
+  （stash 复验与本改动无关）。部署：Windows `capture-zsxq.cjs`=a8695178
+  （=commit 内哈希）+ run-capture-and-import.ps1 钉值（5c3f8d92/a8695178）
+  同步，node --check 过；task 六班时点/SID/action 实体核对过，
+  verify-task-xml 报 task_enabled_invalid=现役 task Settings 缺显式
+  `<Enabled>true</Enabled>`（Windows 规范化丢缺省、语义仍启用，疑 09-04
+  触发器重写所致；待 owner 白天重注册补元素后 verifier 复绿）。实弹：
+  08:45 班确认。
 
 ## BUG-028 mainline 候选扫描锚门滤掉复核日当天全部 G 层材料（2026-09-04 CC 立案，同日闭）
 
