@@ -156,5 +156,11 @@ flock :816-852、is_qa 覆盖实测 36/36 与 12/17、S-0730G/M 同文双段、�
   `summary.cognition_mainline_consumption` 落盘，问询探针三字段全过。
 - 扫描器实弹：1242 扫描 / 123 过 as_of / 16 提名 / 8 排除 ai_summary_reference
   / 99 闭集未命中；草稿 `~/.local/state/fin-analyse/mainline-candidates.md`。
-- 未竟半链：候选 → **owner 勾选** → CC 起草 → owner 终审入档的首次走通待
-  owner 勾选（管线唯一人工步）；自然 ingest 窗口将自动产增量草稿。
+- 首链已走通（2026-09-04）：候选 → owner 勾选（13/16，跳过 #9/#14/#15）→
+  CC 起草 18 单元（机验 PASS，span 逐字回指）→ owner 终审（附时间性提醒：
+  认知线依赖时间演进——落实为 16 单元深化表达带锚定/衰减语义、CU-0828-02
+  写入 8/28 预测→8/31 兑现的回放证据）→ 入档（家规4 pre-batch3 快照）→
+  rebuild generation 44（annotation_changed 独立触发，身份未变——缺口B生效
+  实证）→ 探针 5 单元投影含 4 个新批次单元，7/30→9/1→9/3 时间线可见。
+  短期预测单元全部带 forecast_window；PIT 门管「当时可得」，时效衰减靠
+  深化表达语义+渲染器时间行承载（owner 09-04 提醒落实）。
