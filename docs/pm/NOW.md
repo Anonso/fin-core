@@ -112,7 +112,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
 | 主线 | 1 | CLI 实弹三连验 ✅ 全清（09-04 收口）：BUG-005 G-first ✅（09-02 21:22）；3.2 fresh pair ✅（09-02 21:24）；BUG-012 ✅（09-03 19:36）；BUG-002 ✅（09-04 09:07 盘前实弹，整链拒未再现，PARTIAL+命名 gap=设计内形态，BUGS 已闭） | 完成，出队 |
-| 主线 | 2 | finq 使用日志：09-02/09-03 六条已回填（y=持仓分析、锐评参考探针；n=长电封测〔BUG-024：v2 点线面泛化已施工，线/面双探针验收达标〕、星球研报探针〔BUG-012 已闭〕、大盘〔BUG-002 开放〕、宏观〔原因待补〕；--help 噪音行待 owner 定去留）；剩余 3 条 n 原因各一句待 owner | 随用随记；原因补注待 owner |
+| 主线 | 2 | finq 使用日志：09-02/09-03 六条已回填（y=持仓分析、锐评参考探针；n=长电封测〔BUG-024：v2 点线面泛化已施工，线/面双探针验收达标〕、星球研报探针〔BUG-012 已闭〕、大盘〔BUG-002 已闭〕、宏观〔原因待补〕；--help 噪音行待 owner 定去留）；09-04 盘前读法一条已回填（BUG-024 样本#1：线层取材双重缺口，见 BUGS.md）；剩余 3 条 n 原因各一句待 owner | 随用随记；原因补注待 owner |
 | 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 1629 条〔index 内全部 ≥6 可解析：5/13 起 178 篇老图/旧 OCR 已定向识图收口、存量代码↔名称错位已按名册清零〕、read_instrument_scores 时间线 + read_article_search 双查已接 thin server、G/reference 窗口分级落地；增量门槛 6.0 走 config/zsxq_capture.json〔D-036/037〕）；09-03 实弹 sync 过（8/29 长电 8.6/8.8 锚 + 7/7 参照）；首篇 [6,7) 或 <6 新帖边界样本待自然窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
 | 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 每日热点）已落 config/macro_brain_rules.json；macro_index 09-03 12:58 已生成（22 条：12 kept + 8 每日热点 + 2 新规则命中），reader 索引优先已生效；宏观问询实弹 ✅（09-03 19:2x read_macro_brain 被调 status ok/gaps=[]，答案融合星球宏观材料 + 外搜核验带时点） | 已交付；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
 | 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
