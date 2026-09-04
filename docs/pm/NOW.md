@@ -19,7 +19,7 @@
 > 7. 推进位五词：`先决 / 主线 / 旁路（时间·使用·owner·随手）/ 随部署 / 最后`；
 >    主线同一时刻只推一项，完成即出队。
 >
-> 最后核对：2026-09-03（Asia/Shanghai）。
+> 最后核对：2026-09-04（Asia/Shanghai）。
 
 ## 生产声明
 
@@ -81,7 +81,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | --- | --- | --- | --- | --- |
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
-| read_market_snapshot | 标的行情 | 在用（08-31 EASTMONEY f48 浮点契约修复闭环：端到端探针两标的 READY gaps=()；容量半边 08-28 已修；BUG-022 已闭：09-01 22:33 真实 CLI 问询 002428 READY/gaps=[]/94.9） | 最新价，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011/022 已闭 |
+| read_market_snapshot | 标的行情 + 主指数日线（大盘线） | 在用（09-04 指数 lane 上线〔BUG-024 材料层，96f8fcd〕：主指数名称/限定符查询给日线+技术因子，端到端「科创50」READY/120 bars/零 gap；个股语义零变化；此前 08-31 EASTMONEY f48 修复与 BUG-022 已闭） | 名称查「科创50」日线，验 bars+gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011/022 已闭；git 96f8fcd |
 | read_market_overview | 大盘结构 | 在用（09-04 09:07 盘前实弹闭环：整链拒未再现，PARTIAL+7 命名 gap〔5 常驻良性+2 盘前源数据缺席=f3/f6 占位与广度，源属性〕；owner 会话 1c718317 答案诚实降级质量在线。08-31 定修+09-01 gate5 两次修复生效） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 已闭 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
 | read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 在用（BUG-012 全链闭环 09-03：残余三投影门外审裁决 A 定修，端到端 RPC status ok/gaps=[] 三字段全过、真实 CLI 触发实证；宏观叙事帖可注入，映射类证据归 read_external_evidence；残余一券商通道为已知限制 P2-8） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 已闭 |
@@ -111,6 +111,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
+| 主线 | 0 | BUG-024 修复闭环 ✅ 施工全清（09-04）：v3 人格增补（线的取材下限+动作-持仓前置，备份 r9/r10）；材料层指数日线 lane 上线（96f8fcd，设计门外审 480s/1P1/4P2/4P3 全采纳；端到端探针+个股回归过）；owner 终验 = 下个交易日盘前读法实弹（线层现工具序列或诚实标注） | owner 实弹终验 |
 | 主线 | 1 | CLI 实弹三连验 ✅ 全清（09-04 收口）：BUG-005 G-first ✅（09-02 21:22）；3.2 fresh pair ✅（09-02 21:24）；BUG-012 ✅（09-03 19:36）；BUG-002 ✅（09-04 09:07 盘前实弹，整链拒未再现，PARTIAL+命名 gap=设计内形态，BUGS 已闭） | 完成，出队 |
 | 主线 | 2 | finq 使用日志：09-02/09-03 六条已回填（y=持仓分析、锐评参考探针；n=长电封测〔BUG-024：v2 点线面泛化已施工，线/面双探针验收达标〕、星球研报探针〔BUG-012 已闭〕、大盘〔BUG-002 已闭〕、宏观〔原因待补〕；--help 噪音行已清（09-04 存量条与 CC 误触条一并移除））；09-04 盘前读法一条已回填（BUG-024 样本#1：线层取材双重缺口，见 BUGS.md）；剩余 3 条 n 原因各一句待 owner | 随用随记；原因补注待 owner |
 | 主线 | 3 | 标的评分维护列表 + ZSXQ 窗口分级：已交付（回填 1629 条〔index 内全部 ≥6 可解析：5/13 起 178 篇老图/旧 OCR 已定向识图收口、存量代码↔名称错位已按名册清零〕、read_instrument_scores 时间线 + read_article_search 双查已接 thin server、G/reference 窗口分级落地；增量门槛 6.0 走 config/zsxq_capture.json〔D-036/037〕）；09-03 实弹 sync 过（8/29 长电 8.6/8.8 锚 + 7/7 参照）；首篇 [6,7) 或 <6 新帖边界样本待自然窗口 | 排期见 [../design/instrument-score-registry.md](../design/instrument-score-registry.md) |
