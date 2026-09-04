@@ -88,6 +88,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | read_external_evidence | 官方记录/公告证据（OfficialRecordEvidence） | 在用（08-30 公告探针过：外搜带时点、持仓联动正确；现役面=外搜 MCP 辅助面） | 公告类问题，验工具被调 + gaps 空 | BUG-012 公告腿已闭 |
 | read_user_watchlist | 自选股清单（user context 注意力焦点，永非投资证据；含 provenance/tags） | 在用（08-29 接入；09-01 加标签/来源投影） | 「看下当前自选股」，验工具被调 + 空表诚实答空 | 短设计已按规则 5 归档（git 历史：read-user-watchlist-tool、watchlist-tags-and-owner-profile）；写通道=manage_user_watchlist.py |
 | update_user_watchlist | 自选股受限写（add/tag/remove；不得自动删除，remove 需用户明确指示；assistant 来源服务端强制；preview→apply 两段式） | 运行态（09-01 建；待真实问询使用） | 「把 XX 加入自选 / 给自选打标签 / 删掉 XX」 | 短设计已按规则 5 归档（git 历史：watchlist-tags-and-owner-profile） |
+| read_decision_journal + record_decision | 决策日志（owner 口述决策结构化留痕：buy/sell/plan/revert；复盘查事实不代 G-first；不催记录；revert IFF append-only 更正） | 运行态（09-04 建〔b72ddf5，13 只读+2 写〕；待真实问询使用） | 「当初为什么买 X」验工具被调 + 记录命中 + G 未被取代 | 设计稿随合入归档（git 史 decision-journal-v1 4edfdac）；外审台账 $STATE/fin-analyse/design-gate/decision-journal-v1-20260904{,-diff}/；D-041；数据=$STATE/fin-analyse/semantic-research-v1/decision-journal-v1/ |
 
 ### L3 供给链（决定上面缝的数据质量）
 
@@ -111,7 +112,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线 | 4 | 决策日志 v1 施工：设计门已闭环（v2=4edfdac，345s/10 发现/10 采纳），零代码；实现研究完毕、方案定型，[交接稿](decision-journal-handoff-20260904.md)（含两处设计修正：direct-runner 零碰 provider、CAS 降级 revision 记账），五任务序列在内 | owner 2026-09-04 晚已授权施工，新会话按交接稿执行 |
+| 旁路·owner | 4 | 决策日志 v1 收尾：施工全清（09-04 合入 b72ddf5：设计门 345s/10/10 + 施工外审 474s/7 发现/6 采纳、1 P2 同根裁决；231+全仓 3141 绿 + 实弹 18/18；人格规则 8 已增补）。剩 owner：复盘问询探针（「当初为什么买 X」，随真实使用，finq 记账）+ 会签两项（人格计数行已改 13 只读+2 写、README 冻结契约行未动） | owner 随用 / 会签 |
 | 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+指数日线 lane 已施工全清（09-04，96f8fcd），剩 owner 实弹验「线层现工具序列或诚实标注」（详见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前 |
 | 旁路·owner | 2 | finq 使用日志：存量 3 条 n 原因各一句待补注；此后随用随记（已回填条目的闭因见 BUGS 各条与 git 史） | owner 随用 |
 | 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
@@ -120,7 +121,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·owner | 16 | 直播总结入档后继：明日标注批次勾 9/4 锐评（as_of 已滚、从提名单隐去，从 index 直接勾；BUG-028 边界修复后后续批次自动可见；首例 09-04 已入档收口，git 55722a8） | owner 明日标注批次 |
 | 旁路·owner | 18 | 主线效果盲评下轮增量：finq 并排记分 + 失败样本常驻（首轮 09-04 收口：主线腿双判者皆胜 CC +7.5 / J2 +5.0 per 200；预算决策按家规 11 不施工；台账 $STATE/fin-analyse/mainline-blind-eval-20260904/） | 随用随记积累后 |
 | 旁路·使用触发 | 21 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
-| 旁路·随手 | 15 | consult-agent README/人格工具计数过时：写「7 只读+1 写」，thin server 实为 12 只读+1 写（09-04 按 HEAD server.py 点数）；README 该行带「冻结契约」标注，改数需 owner 会签 | owner 会签后改 |
+| 旁路·随手 | 15 | consult-agent 工具计数会签项：README 冻结契约行仍写「7 只读+1 写」（整行重写，外审 Q3-P2）；人格 CLAUDE.md 计数行 09-04 已随决策日志施工改为 13 只读+2 写（备份 backups/CLAUDE.md.20260904-pre-decision-journal.md）——两行均待 owner 会签 | owner 会签 |
 | 旁路·时间（周末） | 17 | opencli v1.8.6→v1.8.7 升级（Windows 侧全局 npm，扩展 v1.0.23→v1.0.24 一并）；升级后 `opencli doctor` 核两 profile 连接 | owner 09-04 指示放周末 |
 | 旁路·随手 | 19 | Windows 侧 `cleanInlineArticleText` 与 WSL `_strip_disclaimer_line` 声明语义对齐（帖首/帖尾双形态；BUG-027 设计门发现6，detail 腿 browser.py 已确认方向一致不受影响） | 随手 |
 | 旁路·时间（10-04） | 20 | BUG-031 档位口径复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）；finqa-x 恢复后补发 codex 腿探针（探针题与判据在 BUGS 条目；台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/） | 10-04 满月或样本先到；finqa-x 恢复即补发 |

@@ -428,3 +428,22 @@
   外部审视节；本门台账 ~/.local/state/fin-analyse/design-gate/
   design-gate-kit-20260904/（elapsed 310s·发现 1P1+4P2+2P3·采纳 7·
   驳回 0）；设计稿 design-gate-kit-v1 已按规则 5 归档删除。
+
+## D-041 · 2026-09-04 · 决策日志 v1：owner 口述决策结构化留痕（设计门+施工外审双闭环）
+- 功能面：decision_journal
+- 决策：薄 server 加两窄缝 read_decision_journal / record_decision（list/preview/apply；
+  token 单次 TTL 15min；source 服务端强制 owner_stated；revert IFF 三重钉死 append-only
+  更正；不催记录、日志供事实不代 G-first）。数据落
+  `$XDG_STATE_HOME/fin-analyse/semantic-research-v1/decision-journal-v1/`（与
+  user-watchlist-v1 同根）。
+- 为什么：复盘问询需要可检索的决策事实史（「当初为什么买 X」）；append-only+单飞写
+  是最小 durable 面；人格规则 8 与工具描述双通道钉「日志供事实、G 供框架、不互代」。
+- 否决了什么：后台自动抽取问询/决策（重建编排层+幻觉入库风险）；复盘报表面（家规 10
+  等使用证据）；store 层 CAS（append-only 无竞争面，降级 revision 记账——施工修正，
+  外审无异议）；provider 同名方法路线（改 direct service + custom handler，公共 read
+  契约零变化——施工修正）；设计稿字面路径 `$XDG_STATE_HOME/fin-analyse/
+  decision-journal-v1/`（与其自身「同根」约束矛盾，外审 P2-2 裁决取同根，实现为准）。
+- 状态：active（09-04 施工合入 b72ddf5：设计门 345s/10 发现/10 采纳；施工外审
+  474s/7 发现/6 采纳+1 裁决；231 + 全仓 3141 绿 + 隔离实弹 18/18）· 证据：台账
+  `~/.local/state/fin-analyse/design-gate/decision-journal-v1-20260904{,-diff}/`；
+  设计稿 git 史 4edfdac（合入即删）；NOW 板 B decision_journal 行。
