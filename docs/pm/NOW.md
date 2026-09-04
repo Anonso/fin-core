@@ -136,3 +136,4 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 1. release/gateway 运维判读：碰 release 树一律 `-B`（pyc 三来源污染）；gateway journal 近零日志是常态，判卡死先查 state.db 与官方历史。
 2. codex CLI 0.149.0 静默忽略带引号的 `-c` 值 → 401；手动入口 `-c` 必须写 TOML 裸值。
 3. fin-core 的 `fin_analyse` 是无 `__init__.py` 的 namespace 包：从**任何别的含同名包的 cwd**（旧例=旧仓）以 stdin 跑一次性诊断会整包 import 异源代码（旧逻辑+异源 `.env` 解键，结果看似正常实则错源）→ 诊断脚本一律文件模式跑 + 显式注入 `FIN_LLM_ENV_FILE=~/.config/fin-analyse/llm.env`（直指目标，**不经旧仓 `.env` 转引**；2026-09-03 老仓可删审计后旧仓随时可退役）。
+4. 共享 checkout 并行会话的 `git add -A`/`git add .` 会把**他人已暂存未提交**的文件扫进自己的提交（2026-09-04 实证：并行 docs 提交 673ad12 扫入决策日志施工主体 10 文件，提交叙事劈裂，裁决录后记留证）→ 本仓一律 `git add <显式路径>`；暂存后尽快提交不留过夜；发现 HEAD 漂移先 `git log` 对账再续写。
