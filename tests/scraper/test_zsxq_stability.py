@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from datetime import date, datetime
 
@@ -122,6 +123,95 @@ def test_partial_capture_cannot_count_as_a_successful_stability_chain(tmp_path) 
     assert audit["coverage"]["proven"] is True
     assert audit["chain"]["ready"] is False
     assert "zsxq_audit_capture_not_complete" in audit["data_gaps"]
+
+
+def _cursor_page_output(
+    topics: list[dict[str, object]], page_sha: str, end_time: str
+) -> dict[str, object]:
+    return {
+        "end_time": end_time,
+        "script_sha256": page_sha,
+        "output": json.dumps(
+            {
+                "schema_version": 4,
+                "http_status": 200,
+                "api_succeeded": True,
+                "api_code": None,
+                "topics": topics,
+            },
+            ensure_ascii=False,
+        ),
+    }
+
+
+def test_cross_page_boundary_overlap_dedupes_and_proves_chain(tmp_path) -> None:
+    """跨页边界重叠是 ZSXQ 时间窗翻页的正常形态：去重入 denominator，不否定覆盖。"""
+    now = datetime(2026, 7, 23, 16, 0, tzinfo=TZ)
+    payload = build_cursor_artifact_payload(now)
+    page0 = json.loads(payload["topic_cursor"][0]["output"])
+    boundary_topic = next(
+        topic for topic in page0["topics"] if topic["topic_id"] == "700000000000002"
+    )
+    new_topic = deepcopy(boundary_topic) | {
+        "topic_id": "700000000000004",
+        "legacy_topic_id": "4",
+    }
+    payload["topic_cursor"].append(
+        _cursor_page_output(
+            [boundary_topic, new_topic],
+            "d" * 64,
+            end_time=boundary_topic["create_time"],
+        )
+    )
+    payload["content_sha256"] = content_hash(payload)
+    artifact = load_capture_artifact(write_artifact(tmp_path, payload))
+
+    audit = build_capture_ingest_audit(
+        artifact,
+        ingest_status="succeeded",
+        completion_status="ready",
+        g_working_set=_ready_g_receipt(),
+        index_articles=[*_index_rows(), {"id": "zsxq-700000000000004", "topic_id": "700000000000004", "column": "星大派特刊", "source_family": "星大派", "content_type": "特刊", "source_usage": "systematic_framework", "priority_label": None}],
+    )
+
+    assert audit["integrity_status"] == "PROVEN"
+    assert audit["chain"]["ready"] is True
+    assert audit["coverage"]["proven"] is True
+    assert audit["denominator"]["status"] == "PROVEN"
+    assert audit["denominator"]["expected_teacher_item_count"] == 3
+    assert audit["data_gaps"] == []
+
+
+def test_within_page_duplicate_topic_page_is_rejected_as_invalid(tmp_path) -> None:
+    """单页内 topic_id 重复由 decoder 整页拒绝（cursor_page_invalid），覆盖不证明。"""
+    now = datetime(2026, 7, 23, 16, 0, tzinfo=TZ)
+    payload = build_cursor_artifact_payload(now)
+    page0 = json.loads(payload["topic_cursor"][0]["output"])
+    duplicated = next(
+        topic for topic in page0["topics"] if topic["topic_id"] == "700000000000002"
+    )
+    payload["topic_cursor"].append(
+        _cursor_page_output(
+            [duplicated, deepcopy(duplicated)],
+            "d" * 64,
+            end_time=str(duplicated["create_time"]),
+        )
+    )
+    payload["content_sha256"] = content_hash(payload)
+    artifact = load_capture_artifact(write_artifact(tmp_path, payload))
+
+    audit = build_capture_ingest_audit(
+        artifact,
+        ingest_status="succeeded",
+        completion_status="ready",
+        g_working_set=_ready_g_receipt(),
+        index_articles=_index_rows(),
+    )
+
+    assert "zsxq_audit_cursor_page_invalid" in audit["data_gaps"]
+    assert "zsxq_audit_cursor_coverage_unproven" in audit["data_gaps"]
+    assert audit["coverage"]["proven"] is False
+    assert audit["integrity_status"] == "UNKNOWN"
 
 
 def test_campaign_requires_exactly_three_distinct_authoritative_trading_days(tmp_path) -> None:

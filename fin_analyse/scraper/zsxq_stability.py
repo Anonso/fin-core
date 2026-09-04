@@ -455,7 +455,13 @@ def assess_three_trading_day_campaign(
 
 
 def _expected_teacher_topic_ids(artifact: CaptureArtifact) -> tuple[list[str], list[str]]:
-    """Return exact native teacher UIDs inside the artifact observation window."""
+    """Return exact native teacher UIDs inside the artifact observation window.
+
+    跨页 topic_id 重叠是 ZSXQ 时间窗翻页的边界重叠（相邻两页共享边界帖；
+    2026-09-04 实测：2 页 60 条恰好 1 个跨页重复，旧判定因此让 20/20 轮
+    全部 chain_ready=false）——按集合语义去重即可。单页内重复由
+    ``_decode_topic_cursor_page`` 拒绝（cursor_page_invalid），不在此重复设防。
+    """
 
     if not artifact.cursor_pages:
         return [], ["zsxq_audit_expected_teacher_denominator_unavailable"]
@@ -473,7 +479,6 @@ def _expected_teacher_topic_ids(artifact: CaptureArtifact) -> tuple[list[str], l
             if not topic.is_teacher_source:
                 continue
             if topic.topic_id in seen:
-                _append_gap(gaps, "zsxq_audit_cursor_topic_duplicate")
                 continue
             seen.add(topic.topic_id)
             expected.append(topic.topic_id)

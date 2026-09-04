@@ -93,7 +93,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 环节 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006 已闭 |
+| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006 已闭；BUG-027 开放（审计链，根因1已修） |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
 | 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | [../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
@@ -123,6 +123,8 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
 | 旁路·owner | 14 | 黑话译注下批消费方 ✅（09-03 晚：Daily `_render_g_context` 显式加译注段〔96 绿〕+ mainline 投影侧确定性附加〔不动 PIT 工件 schema，57 绿〕；推送侧实际生效仍待 D-031 恢复）；一期三落点已在用（a06db30） | 已交付；D-031 骨架稿 docs/design/d031-daily-consult-env.md 备好待 owner 恢复指示 |
 | 旁路·随手 | 15 | consult-agent README/人格工具计数过时：写「7 只读+1 写」，thin server 实为 12 工具；README 该行带「冻结契约」标注，改数需 owner 会签 | owner 会签后改 |
+| 旁路·时间（周末） | 17 | opencli v1.8.6→v1.8.7 升级（Windows 侧全局 npm，扩展 v1.0.23→v1.0.24 一并）；升级后 `opencli doctor` 核两 profile 连接 | owner 09-04 指示放周末 |
+| 旁路·owner | 18 | 审计分母合同裁决（BUG-027 根因2）：「锅师」每日 Q&A 系列在 cursor 分母 34 中占 14 且不入 index——拍板「应存未存（修采集）」还是「分母排除/降级该类（改 audit 契约）」 | owner 裁决后施工 |
 | 旁路·owner | 16 | G 主线生长管线 v1（D-038）：候选扫描（来源门+article_ref 去重，纯读不写 KB）→ CC 起草（摘录 span 机验+混合材料逐段归属）→ owner 扫批入档；含缺口 B 修复（标注 hash 独立触发 rebuild，不再等下次 ingest）+ 文件名去日期化 + 消费探针（投影附件带 unit_id 审计行）；动 durable state，开工前短设计稿（规则5） | 已交付（09-04：五部件施工+实弹全过，含 reader 装配缺口修复；见[设计稿施工记录](../design/g-mainline-growth-v1.md)。首链已走通（09-04：13 篇 18 单元入档 generation 44，探针投影+时间线可见）） |
 | 旁路·owner | 18 | 主线效果盲评（D-038）：同一问题集 有/无主线投影 对照盲评，回答「主线对答案有没有可测差异」+「7.2x 预算淘汰是否伤答案」；复用 consult 盲评 pilot 方法（finqa-codex 单 harness 双腿、c=真实 state/x=state 拷贝去 readmodel）；rubric 增「时点纪律」维（owner 09-04 时间性提醒） | 已立项开工（09-04，owner 按推荐处理）；预算放大/基线常驻两决策挂等盲评证据 |
 | 旁路·owner | 20 | 分析思维注入 v2 收口：件3 apply 待 owner 确认 preview（`~/.local/state/fin-analyse/analysis-mindset-item3-previews/`，幂等脚本备好）；apply 后真实验证探针 + finq 记账；BUG-026（日历盲点）修复随下轮窗口 | owner 确认 preview 后 |

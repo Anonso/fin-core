@@ -849,3 +849,23 @@
   初始化时注入 today/weekday 上下文（harness 侧，需另行评估）。
 - 状态：**开放**（归因观察证据，不联动 llm.yaml 路由；修复随下轮人格/工具
   施工窗口）。
+
+## BUG-027 capture_audit 审计链 20/20 轮 chain_ready=false（覆盖判定错位 + Q&A 分母缺口）
+
+- 发现：2026-09-04，owner 令排查。近 3 天 20/20 条 ingest 摘要全带
+  chain_ready=false + [zsxq_audit_cursor_topic_duplicate, coverage_unproven]，
+  denominator/integrity 恒 UNKNOWN——审计信号失效（alarm fatigue）。
+- 根因1（已修）：`zsxq_stability._expected_teacher_topic_ids` 把跨页 topic_id
+  重叠判为完整性事故——实为 ZSXQ 时间窗翻页的边界重叠（09-04 实测 2 页 60 条
+  恰 1 个跨页重复）；且单页内重复本就由 `_decode_topic_cursor_page` 整页拒绝
+  （cursor_page_invalid），该 gap 对真实损坏永远够不着、只对良性重叠开火。
+  修复：跨页按集合语义去重，删除错位 gap（validator 分支保留，兼容历史
+  receipt 重放）。
+- 根因2（开放，待 owner 裁决分母合同）：修复后用 09-04 真实 artifact 离线
+  复算——覆盖腿 proven（boundary=cutoff，2 页），分母腿仍 UNKNOWN：窗口内
+  34 个 cursor teacher 主题中 14 个不在 index，全部为「锅师」每日 Q&A 知识
+  科普系列（同模板免责声明、answered，09-01→09-02）。DOM 保存枚举与 cursor
+  分母系统性分歧：要么该 Q&A 系列应存未存（采集缺口），要么分母合同应排除
+  /降级该类（audit 契约改），需 owner 拍板其一。
+- 状态：根因1 代码修复完成（09-04，scraper 套件 627 绿 + 2 新用例）；根因2
+  待裁决后施工。
