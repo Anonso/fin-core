@@ -123,6 +123,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
 | 旁路·owner | 14 | 黑话译注下批消费方 ✅（09-03 晚：Daily `_render_g_context` 显式加译注段〔96 绿〕+ mainline 投影侧确定性附加〔不动 PIT 工件 schema，57 绿〕；推送侧实际生效仍待 D-031 恢复）；一期三落点已在用（a06db30） | 已交付；D-031 骨架稿 docs/design/d031-daily-consult-env.md 备好待 owner 恢复指示 |
+| 旁路·owner | 16 | 直播总结首例入档（SPOKEN_FAN_TRANSCRIBED 第四档，0b3992c 已生效+人格 r11）：起草草案在 `~/fin-data/handoffs/20260904-spoken-grade-draft.md`（canonical 标记/as_of 滚动/三候选单元），owner 下批标注终审 | owner 下批标注时 |
 | 旁路·随手 | 15 | consult-agent README/人格工具计数过时：写「7 只读+1 写」，thin server 实为 12 工具；README 该行带「冻结契约」标注，改数需 owner 会签 | owner 会签后改 |
 | 旁路·时间（周末） | 17 | opencli v1.8.6→v1.8.7 升级（Windows 侧全局 npm，扩展 v1.0.23→v1.0.24 一并）；升级后 `opencli doctor` 核两 profile 连接 | owner 09-04 指示放周末 |
 | 旁路·随手 | 19 | Windows 侧 `cleanInlineArticleText` 与 WSL `_strip_disclaimer_line` 声明语义对齐（帖首/帖尾双形态；BUG-027 设计门发现6，detail 腿 browser.py 已确认方向一致不受影响） | 随手 |
