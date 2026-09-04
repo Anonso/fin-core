@@ -454,3 +454,4 @@
 - 为什么：8 天 344 提交 vs 9 条记账使用，建造/使用失衡；使用当仲裁法院不当船长——owner 成本反驳成立面吸收（n=9 不导航），但本周 5 条 n 生成了整周路线图，信息在事故不在体量；合成评审有循环盲区（BUG-024 样本#1 全合成门 pass，实弹才暴露「形状达标、取材不达标」）。
 - 否决了什么：提高使用量换数据（owner 时间税，09-05 讨论否）；存量 n 回填（append-only provenance，外审 P1）；finq 校验机械化（留证据门，家规11）；全量机制化/自动提醒（push 税）。
 - 状态：active · 证据：设计稿 git 史 usage-loop-rebalance（台账 `$STATE/fin-analyse/design-gate/usage-loop-rebalance-20260905/` 含 verdicts.md）；owner 09-04~05 两轮讨论；施工=persona r13 披露段+NOW 五处+BUGS BUG-031 补记+GLOSSARY 阶段行。
+- 追记（2026-09-05）：⑤ C4 已获 owner 口述确认（原话「按优势面路由」），落 usage-profile「口述补充（2026-09-05 · 使用路由按优势面）」节；NOW 板B 路由行挂确认来源。
