@@ -125,7 +125,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·owner | 14 | 黑话译注下批消费方 ✅（09-03 晚：Daily `_render_g_context` 显式加译注段〔96 绿〕+ mainline 投影侧确定性附加〔不动 PIT 工件 schema，57 绿〕；推送侧实际生效仍待 D-031 恢复）；一期三落点已在用（a06db30） | 已交付；D-031 骨架稿 docs/design/d031-daily-consult-env.md 备好待 owner 恢复指示 |
 | 旁路·随手 | 15 | consult-agent README/人格工具计数过时：写「7 只读+1 写」，thin server 实为 12 工具；README 该行带「冻结契约」标注，改数需 owner 会签 | owner 会签后改 |
 | 旁路·时间（周末） | 17 | opencli v1.8.6→v1.8.7 升级（Windows 侧全局 npm，扩展 v1.0.23→v1.0.24 一并）；升级后 `opencli doctor` 核两 profile 连接 | owner 09-04 指示放周末 |
-| 旁路·owner | 18 | 审计分母合同裁决（BUG-027 根因2）：「锅师」每日 Q&A 系列在 cursor 分母 34 中占 14 且不入 index——拍板「应存未存（修采集）」还是「分母排除/降级该类（改 audit 契约）」 | owner 裁决后施工 |
+| 旁路·随手 | 19 | Windows 侧 `cleanInlineArticleText` 与 WSL `_strip_disclaimer_line` 声明语义对齐（帖首/帖尾双形态；BUG-027 设计门发现6，detail 腿 browser.py 已确认方向一致不受影响）；另：index 恢复残差 ~175 条孤儿条目（KB/.index-recovery-20260904/MANIFEST）待 owner 定收缩与否 | 随手；收缩决策待 owner |
 | 旁路·owner | 16 | G 主线生长管线 v1（D-038）：候选扫描（来源门+article_ref 去重，纯读不写 KB）→ CC 起草（摘录 span 机验+混合材料逐段归属）→ owner 扫批入档；含缺口 B 修复（标注 hash 独立触发 rebuild，不再等下次 ingest）+ 文件名去日期化 + 消费探针（投影附件带 unit_id 审计行）；动 durable state，开工前短设计稿（规则5） | 已交付（09-04：五部件施工+实弹全过，含 reader 装配缺口修复；见[设计稿施工记录](../design/g-mainline-growth-v1.md)。首链已走通（09-04：13 篇 18 单元入档 generation 44，探针投影+时间线可见）） |
 | 旁路·owner | 18 | 主线效果盲评（D-038）：同一问题集 有/无主线投影 对照盲评，回答「主线对答案有没有可测差异」+「7.2x 预算淘汰是否伤答案」；复用 consult 盲评 pilot 方法（finqa-codex 单 harness 双腿、c=真实 state/x=state 拷贝去 readmodel）；rubric 增「时点纪律」维（owner 09-04 时间性提醒） | 已立项开工（09-04，owner 按推荐处理）；预算放大/基线常驻两决策挂等盲评证据 |
 | 旁路·owner | 20 | 分析思维注入 v2 收口：件3 apply 待 owner 确认 preview（`~/.local/state/fin-analyse/analysis-mindset-item3-previews/`，幂等脚本备好）；apply 后真实验证探针 + finq 记账；BUG-026（日历盲点）修复随下轮窗口 | owner 确认 preview 后 |

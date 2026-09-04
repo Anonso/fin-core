@@ -112,6 +112,115 @@ def test_cursor_post_strips_disclaimer_footer():
     assert post["incomplete"] is False
 
 
+_DISCLAIMER_HEAD = (
+    "免责声明：锅师和助理们不是财务顾问，请注意风险，本文仅是知识科普和信息分享，"
+    "做不到精准，都具有概率性，助理生成内容可能有幻觉，请各位慎重参考，不构成任何"
+    "投资建议，不与您的后续的操作产生任何因果关系！！！本声明适用于本账号所有历史、"
+    "当前及未来发布内容。继续阅读、关注或互动即视为已阅读并同意本声明。"
+)
+
+
+def test_cursor_post_recovers_head_disclaimer_body():
+    """帖首免责声明（09-01 起账号新格式）保留其后实质正文，title 兜底取内容首行。"""
+    now = datetime.now(TZ).replace(microsecond=123000)
+    raw = _topic(
+        "55521154148181214",
+        now,
+        topic_type="q&a",
+        content_text=(
+            f"{_DISCLAIMER_HEAD}\n"
+            "\n"
+            "Q4华为Atlas 950超节点进入官方上市窗口，叠加9月17日至19日上海全连接大会，"
+            "国产替代算力链跟踪价值提升。"
+        ),
+    )
+    page = subject._decode_topic_cursor_page(_raw_page(raw))
+    assert page is not None
+
+    post = CdpBridgeScraper()._post_from_topic_cursor_item(page.topics[0])
+    assert post is not None
+    assert "免责声明" not in post["content"]
+    assert "Q4华为Atlas 950超节点进入官方上市窗口" in post["content"]
+    assert "Q4华为Atlas 950" in post["title"]
+
+
+def test_cursor_post_head_disclaimer_after_score_line_still_recovers():
+    """评分行前置头部变体：评分行不算实质内容，不误判帖尾（设计门裁决4）。"""
+    now = datetime.now(TZ).replace(microsecond=123000)
+    raw = _topic(
+        "55521154148181215",
+        now,
+        topic_type="q&a",
+        content_text=(
+            "能量评分 9.1 分\n"
+            f"{_DISCLAIMER_HEAD}\n"
+            "正文实质内容关于国产算力产业链的节奏判断。"
+        ),
+    )
+    page = subject._decode_topic_cursor_page(_raw_page(raw))
+    assert page is not None
+
+    post = CdpBridgeScraper()._post_from_topic_cursor_item(page.topics[0])
+    assert post is not None
+    assert "正文实质内容关于国产算力产业链" in post["content"]
+    assert "免责声明" not in post["content"]
+
+
+def test_cursor_post_pure_disclaimer_topic_still_dropped():
+    """纯声明帖剥离后为空，维持诚实丢弃。"""
+    now = datetime.now(TZ).replace(microsecond=123000)
+    raw = _topic(
+        "55521154148181216",
+        now,
+        topic_type="q&a",
+        content_text=_DISCLAIMER_HEAD,
+    )
+    page = subject._decode_topic_cursor_page(_raw_page(raw))
+    assert page is not None
+
+    assert CdpBridgeScraper()._post_from_topic_cursor_item(page.topics[0]) is None
+
+
+def test_cursor_post_mid_text_disclaimer_mention_not_stripped():
+    """正文中段「免责声明」字样提及不剥——行首锚定（设计门裁决3）。"""
+    now = datetime.now(TZ).replace(microsecond=123000)
+    raw = _topic(
+        "55521154148181217",
+        now,
+        title="星大派锐评：示例",
+        content_text=(
+            "前段讨论风险提示的边界。\n"
+            "本文不构成投资建议，免责声明相关争议见群规。\n"
+            "后续实质内容继续跟踪产业链验证进度。"
+        ),
+    )
+    page = subject._decode_topic_cursor_page(_raw_page(raw))
+    assert page is not None
+
+    post = CdpBridgeScraper()._post_from_topic_cursor_item(page.topics[0])
+    assert post is not None
+    assert "免责声明相关争议见群规" in post["content"]
+    assert "后续实质内容继续跟踪产业链验证进度" in post["content"]
+
+
+def test_cursor_post_inline_tail_disclaimer_not_stripped():
+    """行尾内联声明（非行首）不剥——行首锚定语义钉死。"""
+    now = datetime.now(TZ).replace(microsecond=123000)
+    raw = _topic(
+        "55521154148181218",
+        now,
+        title="星大派锐评：示例",
+        content_text="正文段落，结尾附了一句 免责声明：仅供参考。",
+    )
+    page = subject._decode_topic_cursor_page(_raw_page(raw))
+    assert page is not None
+
+    post = CdpBridgeScraper()._post_from_topic_cursor_item(page.topics[0])
+    assert post is not None
+    assert "正文段落" in post["content"]
+    assert "仅供参考" in post["content"]
+
+
 def test_topic_cursor_page_decoder_rejects_ambiguous_or_malformed_payloads():
     duplicate_key = (
         '{"schema_version":1,"http_status":200,"api_succeeded":true,'

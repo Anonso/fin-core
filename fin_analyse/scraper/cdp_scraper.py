@@ -646,6 +646,41 @@ def _is_login_surface_text(text: str) -> bool:
     return "登录" in text and "扫码" in text
 
 
+_DISCLAIMER_LINE_PREFIX = "免责声明"
+_SCORE_LINE_PREFIX = "能量评分"
+
+
+def _strip_disclaimer_line(content: str) -> str:
+    """剥账号免责声明行；声明在尾保留之前、在首保留之后（BUG-027）。
+
+    行首锚定（与 parser.py `line.startswith("免责声明")` 既有语义一致），
+    正文中段/行尾内联提及不剥。声明前是否为「实质内容」排除免责声明行与
+    能量评分行——评分行前置的头部变体不会把纯评分误判成帖尾声明之前的
+    正文。剥离后为空即纯声明帖，诚实丢弃。声明跨多行时只剥锚定行，续行
+    会漏入正文（无实证，已知限制）。
+    """
+    lines = content.splitlines()
+    index = next(
+        (
+            i
+            for i, line in enumerate(lines)
+            if line.lstrip().startswith(_DISCLAIMER_LINE_PREFIX)
+        ),
+        None,
+    )
+    if index is None:
+        return content.rstrip()
+    before_substantive = any(
+        line.strip()
+        and not line.lstrip().startswith(_DISCLAIMER_LINE_PREFIX)
+        and not line.lstrip().startswith(_SCORE_LINE_PREFIX)
+        for line in lines[:index]
+    )
+    if before_substantive:
+        return "\n".join(lines[:index]).rstrip()
+    return "\n".join(lines[index + 1 :]).strip()
+
+
 def _is_group_timeline_content_insufficient(result: ScrapeResult) -> bool:
     """Return True when group scan did not capture a usable ZSXQ timeline."""
     # A date-only page is commonly a different ZSXQ surface (digests/archive)
@@ -1879,8 +1914,7 @@ class CdpBridgeScraper:
             topic.content_text,
         )
         content = re.sub(r"<[^>]+>", "", content).strip()
-        # 免责声明是账号固定页脚，不入正文（与 Windows cleanInlineArticleText 同语义）。
-        content = content.split("免责声明", 1)[0].rstrip()
+        content = _strip_disclaimer_line(content)
         title = topic.title.strip()
         if not title:
             title = next(

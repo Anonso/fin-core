@@ -902,3 +902,23 @@
   /降级该类（audit 契约改），需 owner 拍板其一。
 - 状态：根因1 代码修复完成（09-04，scraper 套件 627 绿 + 2 新用例）；根因2
   待裁决后施工。
+- **根因2 定性修正 + 定修落地（2026-09-04 午后，设计门后施工）**：设计门前补诊断推翻
+  「分母合同」假设——真因是 `_post_from_topic_cursor_item` 声明剥离
+  `content.split("免责声明", 1)[0]` 只适配帖尾声明；09-01 起账号把声明挪到帖首，
+  正文被剥成空串→title 兜底失败→`return None` 静默吞帖（14 篇有实质内容的教师
+  Q&A，评分 7.8/7.6/7.5…为主，非灌水）。修复=行级、行首锚定、方向感知剥离
+  （`_strip_disclaimer_line`；实质内容判定排除声明/能量评分行）。设计门
+  （codex-open·deepseek-v4-pro·max，557s，6 发现全采纳：回补窗口算术改一次性
+  定向重放、恢复腿前置条件声明、行首锚定、实质内容定义、多行声明改已知限制、
+  注释/NOW 同步）。验收：**离线复算 34/34 PROVEN、chain_ready=true**；
+  14/14 定向重放回补入库。
+- **施工事故与恢复（同日，CC 全责）**：一次性重放用裸构造 `CdpBridgeScraper()`
+  调 `_save_article`，其 `_index` 不自盘加载→首次 `_save_index()` 把 index.json
+  （1243 条）覆盖为 14 条。恢复：articles/*.md frontmatter 全量重建（1418 条，
+  含 08-29 prune 备份兜底 10 条 + 6 个历史模板 bug 文件容错解析），备份与
+  manifest 在 `KB/.index-recovery-20260904/`。校验：审计 34/34 PROVEN、
+  评分时间线 1629/1629 全命中；已知残差 = 比丢失前多 ~175 条（磁盘有文件但
+  无法证明在丢失 index 内，read_article_search 可见面扩大，owner 可裁收缩）。
+  教训：生产 durable store 写路径复用前必须先读其加载/落盘语义，禁裸构造。
+- 状态：根因1+2 均已修（scraper 套件绿），审计链闭环（离线复算）；真实下轮
+  ingest 实弹确认 + Windows 侧 cleanInlineArticleText 对齐挂 NOW 旁路。
