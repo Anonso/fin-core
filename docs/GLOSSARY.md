@@ -78,7 +78,7 @@
 | **NOW.md / DECISIONS.md** | 唯一当前状态与执行队列 / 决策史；共享追加目标，按各自文件头协议维护。 | [NOW](pm/NOW.md)、[DECISIONS](DECISIONS.md) |
 | **rebaseline-20260827** | 方向权威（§0.5 为当前版本）：CLI-first、Daily 脱钩、实验预注册、容器判决 ③b。 | [rebaseline](pm/rebaseline-20260827.md) |
 | **容器判决 ③b** | 新代码住 `~/fin-core`（新 git 历史）、数据住 `~/fin-data`、旧仓冻结不删。 | [rebaseline §0.5.6](pm/rebaseline-20260827.md) |
-| **阶段（P0–P5）** | rebaseline §6 刻度 + D-020 时序调整：P0 止血 → P1 CLI 首链（薄 server/consult-agent）→ W2 手术 → 外部项目吸收 → W3-4 深化 → D3 终态验收（最后）→ P5 条件开放。 | [rebaseline §6](pm/rebaseline-20260827.md)、[D-020](DECISIONS.md) |
+| **阶段（P0–P5）** | rebaseline §6 刻度 + D-020 时序调整（D3 门语义经 D-043 重定义）：P0 止血 → P1 CLI 首链（薄 server/consult-agent）→ W2 手术 → 外部项目吸收 → W3-4 深化 → D3 终态验收（pull-only 三天门，最后）→ P4' 纯使用 → P5 条件开放。 | [rebaseline §6](pm/rebaseline-20260827.md)、[D-020](DECISIONS.md)、[D-043](DECISIONS.md) |
 | **设计门** | 外部审视三触发之一（CC/ZCode 同担）：核心设计稿动代码前一次盲评（规则 5 那类，非核心豁免）。 | [AGENTS.md](../AGENTS.md) 外部审视节 |
 | **外援触发** | 外部审视三触发之一（CC/ZCode 同担）：同一问题 ≥2 次修复未果时加第二意见模型（当前 codex-glm·glm-5.3），前两次双模并行校准独立发现占比再定转正。 | [AGENTS.md](../AGENTS.md) 外部审视节 |
 | **keep-set 闭包** | 薄 server + Daily + ZSXQ + 深化四入口的 import 闭包并集；新仓移植与归档的准入线。 | [rebaseline §0.5.6](pm/rebaseline-20260827.md) |

@@ -47,7 +47,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 盘点+举证机制已闭环（09-03：五候选范围盘点、首轮盲评 118=118 零污染）；**吸收 0 项**——四候选挂观察名单等失效样本触发（finq n 即举证入库），过闸才施工；A2 typed 数据源未开 | [research/2026-09-03](research/2026-09-03-external-analysis-absorption-scope.md)、[盲评 pilot](research/2026-09-03-consult-blind-eval-pilot.md) |
 | W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点已恢复（D-028 解除，9a0320f） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
-| D3 三天真实使用门 | ⏳ 建设完成后一次性执行；供数 = finq usage.jsonl | D-020 |
+| D3 三天真实使用门 | ⏳ 触发已到：决策日志收口（09-04）或 09-07 先到者开跑——pull-only 正常使用三天、只数事故；PASS=日 ≥1 记账+无整链不可用过夜+第 3 日 owner 判「明天还用吗=是」；期间主线建造静默（只修实弹暴露项） | D-043（取代 D-020 门语义）；供数 = finq usage.jsonl |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步）；P5 路线已定候选方案 A：Hermes 直接当问询 agent（D-032） | rebaseline §6；D-032 |
 
 ## 板 B · 能力地图（影响问询结果的每个接线点）
@@ -58,8 +58,12 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 问询探针 = 一次真实提问，看 trace 三字段（`~/fin-data/trace/read-capability/calls.jsonl`：
 工具被调、`data_gaps` 空、`status` 正常）判「起了作用没」；效果好坏归打分/盲评，不混判。
 
-推进位标记（执行顺序，与状态六档无关；主线当前 = 决策日志 v1 施工〔待办4，owner 09-04 已授权〕；owner 侧最近验收 = BUG-024 盘前读法实弹〔下个交易日 09-07 周一〕；时间窗项放旁路·时间触发到点执行、不占主线位〔owner 08-30 裁定〕；完整顺序看待办队列）：
+推进位标记（执行顺序，与状态六档无关；主线当前 = D3 三天真实使用门（D-043，触发已到，建造静默期）；owner 侧最近验收 = BUG-024 盘前读法实弹〔下个交易日 09-07 周一〕；时间窗项放旁路·时间触发到点执行、不占主线位〔owner 08-30 裁定〕；完整顺序看待办队列）：
 `【先决】【主线】【旁路·时间/使用/owner/随手】【随部署】`。
+
+使用路由（D-043/C4，owner 约定）：凡需本地持久上下文或工具序列的题（G 覆盖/持仓/
+评分/时间线/黑话/大盘行情/当日参考/方法论卡）走 FIN；纯外部时事可直连 Agent；
+运行态/问询验收中能力不接真实工作流（六档=使用价目表）。
 
 问询面运行源：薄 server 与 Daily/ZSXQ 单元均由本仓起（单元绑 HEAD，
 **本仓提交即须重渲染单元**，见 migration-manifest 运维铁律）——问询面
@@ -114,7 +118,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | --- | --- | --- | --- |
 | 旁路·owner | 4 | 决策日志 v1 收尾：施工全清（09-04 合入 b72ddf5：设计门 345s/10/10 + 施工外审 474s/7 发现/6 采纳、1 P2 同根裁决；231+全仓 3141 绿 + 实弹 18/18；人格规则 8 已增补）。会签两项 ✅（09-05 owner 签：人格计数行 13+2 追认、README 冻结行整行重写并注记会签）。剩 owner：复盘问询探针（「当初为什么买 X」，随真实使用，finq 记账） | owner 随用 |
 | 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+指数日线 lane 已施工全清（09-04，96f8fcd），剩 owner 实弹验「线层现工具序列或诚实标注」（详见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前 |
-| 旁路·owner | 2 | finq 使用日志：存量 3 条 n 原因各一句待补注；此后随用随记（已回填条目的闭因见 BUGS 各条与 git 史） | owner 随用 |
+| 旁路·owner | 2 | finq 记账（D-043/C3）：y 记一字、n 必须一句原因（owner 纪律，不加校验）；存量 3 条历史缺口接受（不回填 append-only 台账），自 D3 起新账强制 | owner 随用 |
 | 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
@@ -123,7 +127,8 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·使用触发 | 21 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
 | 旁路·时间（周末） | 17 | opencli v1.8.6→v1.8.7 升级（Windows 侧全局 npm，扩展 v1.0.23→v1.0.24 一并）；升级后 `opencli doctor` 核两 profile 连接 | owner 09-04 指示放周末 |
 | 旁路·随手 | 19 | Windows 侧 `cleanInlineArticleText` 与 WSL `_strip_disclaimer_line` 声明语义对齐（帖首/帖尾双形态；BUG-027 设计门发现6，detail 腿 browser.py 已确认方向一致不受影响） | 随手 |
-| 旁路·时间（10-04） | 20 | BUG-031 档位口径复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）；finqa-x 恢复后补发 codex 腿探针（探针题与判据在 BUGS 条目；台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/） | 10-04 满月或样本先到；finqa-x 恢复即补发 |
+| 旁路·时间（10-04） | 20 | BUG-031 档位口径复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）；finqa-x 恢复后补发 codex 腿探针（探针题与判据在 BUGS 条目；台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/）；双验闭环当日按序撤单腿披露行（BUGS BUG-031 撤行顺序） | 10-04 满月或样本先到；finqa-x 恢复即补发 |
+| 旁路·owner | 22 | meta 设施家规10 自审（D-043/C5）：决策日志 v1、run-design-gate、switch-codex-open-provider、manage-zsxq-capture、manage-zsxq-article-retirement、book-shared-brain-learning、外部审视链（codex_open.sh+双 profile）——无真实使用记录者入休眠候选清单 | 2026-09-18 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
