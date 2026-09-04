@@ -1,6 +1,7 @@
 # 分析思维注入 v1（知识库B接口B + 人格行为门槛 + 第二批书卡）· 短设计
 
-**日期**: 2026-09-03 · **状态**: 设计门已审，22/22 发现裁决落稿（v2）
+**日期**: 2026-09-03 · **状态**: 件1/件2/件4 已施工并过验收门（2026-09-04，双腿 12/12+不退化全过）；件3 已 apply（施工门 14 发现 12 采纳）
+**件3 施工门记录**: 2026-09-04 codex-open·deepseek-v4-pro·max·read-only（durable state 写入前），packet=apply脚本+三新卡+35卡回填全文；elapsed ≈1097s；发现 14（0P1/3P2/11P3），采纳 12+部分 1+不修 1（裁决明细台账 state/analysis-mindset-item3-gate/adjudication.md）；apply 已执行并幂等复验，三新卡实弹第一顺位点亮。
 **上游证据**: [问询盲评 pilot](../pm/research/2026-09-03-consult-blind-eval-pilot.md)（rubric 四维不含深度/稳定性；codex 腿执行合同偏薄）；owner finqa-x 追问翻案口述证据；`runtime/shared_brain/items.jsonl` 现状盘点（37 卡仅 2 点亮）
 **设计门记录**: 2026-09-03 codex-open·deepseek-v4-pro·max·read-only，packet=冻结稿 515e56f+固定四问；elapsed ≈1020s / 98.6k tokens；发现 1×P1+8×P2+13×P3=22，采纳 22/22（其中 2 处按评审替代方案简化：弃问题类型分类器、rubric 改双轴）；产物 `$CLAUDE_JOB_DIR/tmp/design-gate-out.md`（会话临时件，裁决要点已并入本稿）。
 

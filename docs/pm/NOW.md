@@ -98,7 +98,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
 | 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | [../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | G 准入/工作集 | G 注入新鲜度 | 问询验收中（深化第一刀后的 manifest 契约失配已消——08-29 晚六题 g_context 零失配码；fresh pair 专项探针待跑） | 老师体系问题，验 fresh pair | [../design/g-cognition.md](../design/g-cognition.md)；CC 收口 b2da8d9c |
-| 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（09-04 接口B read_shared_brain 上线〔12 只读工具，c1da3ea〕：激活词主级点亮探针过〔高PE/A股预期定价卡排第一、牙齿字段齐全〕、压测验收门 PASS〔双腿 12/12+四维不退化，台账 state/analysis-mindset-stress-20260904*/〕；件3 回填+三新卡 preview 停 owner 确认门） | 方法论类问题，验 read_shared_brain 被调+卡命中+边界收紧 | [analysis-mindset-v1](../design/analysis-mindset-v1.md)；D-039；seed_methodology_qa.py（541368d8） |
+| 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（09-04 接口B read_shared_brain 上线〔12 只读工具，c1da3ea〕+件3 已 apply〔40 卡：38 卡带激活词+三新卡，施工门 14 发现 12 采纳，幂等复验过，三新卡实弹第一顺位点亮〕+压测验收门 PASS〔双腿 12/12+四维不退化，台账 state/analysis-mindset-stress-20260904*/〕；残余=BUG-026 修复随下轮窗口、finq 真实使用记账照常） | 方法论类问题，验 read_shared_brain 被调+卡命中+边界收紧 | [analysis-mindset-v1](../design/analysis-mindset-v1.md)；D-039；seed_methodology_qa.py（541368d8） |
 | 薄 server 装配 | 八工具可用性（七读一写，单缝失败隔离降级） | 在用 | 任一问询，验 gaps 可查 | read_capabilities/ |
 
 ### 其他产品面
@@ -128,7 +128,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·随手 | 19 | Windows 侧 `cleanInlineArticleText` 与 WSL `_strip_disclaimer_line` 声明语义对齐（帖首/帖尾双形态；BUG-027 设计门发现6，detail 腿 browser.py 已确认方向一致不受影响）；另：index 恢复残差 ~175 条孤儿条目（KB/.index-recovery-20260904/MANIFEST）待 owner 定收缩与否 | 随手；收缩决策待 owner |
 | 旁路·owner | 16 | G 主线生长管线 v1（D-038）：候选扫描（来源门+article_ref 去重，纯读不写 KB）→ CC 起草（摘录 span 机验+混合材料逐段归属）→ owner 扫批入档；含缺口 B 修复（标注 hash 独立触发 rebuild，不再等下次 ingest）+ 文件名去日期化 + 消费探针（投影附件带 unit_id 审计行）；动 durable state，开工前短设计稿（规则5） | 已交付（09-04：五部件施工+实弹全过，含 reader 装配缺口修复；见[设计稿施工记录](../design/g-mainline-growth-v1.md)。首链已走通（09-04：13 篇 18 单元入档 generation 44，探针投影+时间线可见）） |
 | 旁路·owner | 18 | 主线效果盲评（D-038）：同一问题集 有/无主线投影 对照盲评，回答「主线对答案有没有可测差异」+「7.2x 预算淘汰是否伤答案」；复用 consult 盲评 pilot 方法（finqa-codex 单 harness 双腿、c=真实 state/x=state 拷贝去 readmodel）；rubric 增「时点纪律」维（owner 09-04 时间性提醒） | 已立项开工（09-04，owner 按推荐处理）；预算放大/基线常驻两决策挂等盲评证据 |
-| 旁路·owner | 20 | 分析思维注入 v2 收口：件3 apply 待 owner 确认 preview（`~/.local/state/fin-analyse/analysis-mindset-item3-previews/`，幂等脚本备好）；apply 后真实验证探针 + finq 记账；BUG-026（日历盲点）修复随下轮窗口 | owner 确认 preview 后 |
 | 旁路·使用触发 | 19 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
