@@ -429,7 +429,7 @@
   design-gate-kit-20260904/（elapsed 310s·发现 1P1+4P2+2P3·采纳 7·
   驳回 0）；设计稿 design-gate-kit-v1 已按规则 5 归档删除。
 
-## D-041 · 2026-09-04 · 决策日志 v1：owner 口述决策结构化留痕（设计门+施工外审双闭环）
+## D-042 · 2026-09-04 · 决策日志 v1：owner 口述决策结构化留痕（设计门+施工外审双闭环）
 - 功能面：decision_journal
 - 决策：薄 server 加两窄缝 read_decision_journal / record_decision（list/preview/apply；
   token 单次 TTL 15min；source 服务端强制 owner_stated；revert IFF 三重钉死 append-only
