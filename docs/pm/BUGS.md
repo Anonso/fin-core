@@ -922,3 +922,7 @@
   教训：生产 durable store 写路径复用前必须先读其加载/落盘语义，禁裸构造。
 - 状态：根因1+2 均已修（scraper 套件绿），审计链闭环（离线复算）；真实下轮
   ingest 实弹确认 + Windows 侧 cleanInlineArticleText 对齐挂 NOW 旁路。
+- **实弹闭环（2026-09-04 13:0x，13:00 班次）**：poller 新代码真实 ingest
+  （run 20260904T130016635）audit gaps=[]、denominator PROVEN、integrity
+  PROVEN、chain_ready=true——自 20/20 全红到实弹转绿，BUG-027 全闭。
+  Windows 侧 cleanInlineArticleText 对齐见 NOW #19（旁路·随手）。
