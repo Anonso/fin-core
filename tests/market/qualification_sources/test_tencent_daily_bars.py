@@ -183,3 +183,34 @@ def test_on_demand_reader_uses_live_evidence_origin() -> None:
     reader = _build_on_demand_tencent_daily_bar_reader(timeout_seconds=8.0)
     assert reader.evidence_origin is ObservationEvidenceOrigin.LIVE_CAPTURE
     assert "live" in reader.provider_version
+
+
+def test_reader_parses_index_rows_under_day_key() -> None:
+    """指数行无复权概念，腾讯把日线放 `day` 键（实测 sh000688）；形状与个股一致。"""
+
+    index_rows = [
+        ["2026-07-27", "1649.280", "1653.560", "1675.820", "1640.620", "6975365.000"],
+        ["2026-07-28", "1651.880", "1602.340", "1651.960", "1575.280", "8601909.000"],
+        ["2026-07-29", "1584.520", "1604.590", "1622.200", "1564.770", "7171351.000"],
+    ]
+    payload = json.dumps(
+        {"code": 0, "msg": "", "data": {"sh000688": {"day": index_rows}}},
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+    def http_get(url: str, *, params: dict[str, str], timeout: float) -> _Response:
+        assert "sh000688" in url
+        return _Response(payload)
+
+    reader = TencentDailyBarReader(http_get=http_get)  # type: ignore[arg-type]
+    series = reader.read(
+        QualifiedDailyBarReadRequest(
+            symbol="000688.SH",
+            trade_date=date(2026, 8, 2),
+            decision_cutoff_at=datetime(2026, 8, 1, 2, 0, tzinfo=UTC),
+            minimum_completed_bars=2,
+        )
+    )
+    assert series.symbol == "000688"
+    assert [bar.close for bar in series.completed_bars] == [1653.56, 1602.34, 1604.59]
+    assert series.completed_bars[0].volume == 6975365.0

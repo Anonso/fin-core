@@ -260,7 +260,7 @@ def _parse_bars(raw_payload: bytes, *, scope: _ReadScope) -> list[Any]:
     stock = data.get(f"{scope.venue}{scope.symbol}")
     if not isinstance(stock, dict):
         raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_PAYLOAD_INVALID")
-    rows = stock.get("qfqday")
+    rows = stock.get("qfqday") or stock.get("day")
     if not isinstance(rows, list) or not rows:
         raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_PAYLOAD_INVALID")
     bars: list[Any] = []

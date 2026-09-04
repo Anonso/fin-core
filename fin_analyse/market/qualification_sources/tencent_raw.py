@@ -203,8 +203,8 @@ class TencentRawQualificationSource(_ImmutableSourceConfiguration):
             source_event_at=_source_event_at(fields[_SOURCE_EVENT_TIME_INDEX]),
             price=_optional_positive_decimal("last price", fields[_LAST_PRICE_INDEX]),
             trading_status=TradingStatus.UNKNOWN,
-            upper_limit_price=_optional_positive_decimal("upper limit", fields[_UPPER_LIMIT_INDEX]),
-            lower_limit_price=_optional_positive_decimal("lower limit", fields[_LOWER_LIMIT_INDEX]),
+            upper_limit_price=_optional_limit_price("upper limit", fields[_UPPER_LIMIT_INDEX]),
+            lower_limit_price=_optional_limit_price("lower limit", fields[_LOWER_LIMIT_INDEX]),
         )
 
 
@@ -283,6 +283,14 @@ def _optional_positive_decimal(field_name: str, value: str) -> str | None:
     if not any(character != "0" and character != "." for character in value):
         raise ValueError(f"Tencent {field_name} is not positive")
     return value
+
+
+def _optional_limit_price(field_name: str, value: str) -> str | None:
+    # 指数行涨跌停位为 "-1" 哨兵（实测 sh000688/sh600519 同 88 字段对照）：
+    # 指数无涨跌停是语义事实，按缺失处理而非坏数据；价格位校验不受此影响。
+    if value in {"", "-1", "0"}:
+        return None
+    return _optional_positive_decimal(field_name, value)
 
 
 def _utc_now() -> datetime:

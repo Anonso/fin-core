@@ -152,7 +152,10 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "read_market_snapshot": (
         "Read on-demand tactical market context for up to 5 A-share instruments "
-        "(quotes, daily bars, technicals). May fetch from public market sources "
+        "(quotes, daily bars, technicals). Major indices are supported by exact "
+        "Chinese name or qualified symbol (上证指数/深成指/创业板指/科创50/深证综指, "
+        "000688.SH etc.) and return index daily bars + technicals; bare six-digit "
+        "codes resolve to equities only. May fetch from public market sources "
         "when cached artifacts are missing. A data gap or empty return means "
         "DATA UNAVAILABLE — never state it as 'no such data exists in the "
         "world'; say the tool returned nothing and give conditional guidance."

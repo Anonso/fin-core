@@ -471,3 +471,30 @@ def _observe_raw(
             collector_clock_offset_ms=10,
         )
     )
+
+
+def test_index_limit_sentinel_parses_as_absent() -> None:
+    """指数行涨跌停位为 -1 哨兵（实测 sh000688 对 sh600519）：解析为缺失而非坏数据。"""
+
+    fields = [""] * 49
+    fields[1] = "科创50"
+    fields[2] = "000688"
+    fields[3] = "1604.00"
+    fields[30] = "20260904105509"
+    fields[47] = "-1"
+    fields[48] = "-1"
+    payload = f'v_sh000688="{ "~".join(fields) }";\n'.encode("gb18030")
+
+    source = TencentRawQualificationSource(
+        http_get=lambda *args, **kwargs: _Response(payload),  # type: ignore[arg-type]
+        clock=lambda: datetime(2026, 9, 4, 2, 55, 10, tzinfo=UTC),
+        monotonic_ns=lambda: 0,
+        evidence_origin=ObservationEvidenceOrigin.TEST_ONLY,
+    )
+    capture = source.capture(QualificationSample(symbol="000688", venue="sh"))
+
+    assert capture.data_gaps == ()
+    assert capture.price == "1604.00"
+    assert capture.upper_limit_price is None
+    assert capture.lower_limit_price is None
+    assert capture.venue == "sh"

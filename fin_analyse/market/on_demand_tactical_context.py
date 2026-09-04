@@ -22,6 +22,7 @@ from typing import Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
 from fin_analyse.common.execution_control import BoundedExecutor, ExecutorCapacityError
+from fin_analyse.market.index_symbols import MAJOR_INDEX_SYMBOLS as _MAJOR_INDEX_SYMBOLS
 from fin_analyse.market.data_qualification import (
     ObservationEvidenceOrigin,
     QualificationSample,
@@ -152,7 +153,14 @@ class _UnavailableDailyBarReader:
 
 
 class _FallbackDailyBarReader:
-    """Eastmoney qfq bars first, Tencent qfq bars when the primary fails."""
+    """Eastmoney qfq bars first, Tencent qfq bars when the primary fails.
+
+    Major indices bypass the chain entirely (tencent only): eastmoney's index
+    secid serves empty payloads and its opencli fallback is minute-scale,
+    which would burn the request deadline before the tencent attempt runs.
+    Bypass means bypass — a tencent failure propagates, it does not fall back
+    to eastmoney (snapshot-index-support §2.4).
+    """
 
     def __init__(
         self,
@@ -164,6 +172,8 @@ class _FallbackDailyBarReader:
         self._fallback = fallback
 
     def read(self, request: QualifiedDailyBarReadRequest) -> QualifiedDailyBarSeries:
+        if request.symbol in _MAJOR_INDEX_SYMBOLS:
+            return self._fallback.read(request)
         try:
             return self._primary.read(request)
         except Exception:

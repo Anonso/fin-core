@@ -54,6 +54,7 @@ from fin_analyse.market.current_overview import (
     AshareMarketOverviewResult,
 )
 from fin_analyse.market.instrument_directory import verified_a_share_equity_venue
+from fin_analyse.market.index_symbols import split_index_aliases
 from fin_analyse.market.on_demand_tactical_context import (
     OnDemandTacticalContext,
     OnDemandTacticalContextReader,
@@ -423,11 +424,19 @@ class ProductionReadCapabilityProvider:
             selected = instruments[:_MAX_ON_DEMAND_MARKET_INSTRUMENTS]
             if len(instruments) > len(selected):
                 _extend_gaps(gaps, ("market_snapshot_instruments_truncated",))
-            symbols, names, identity_gaps = _resolve_on_demand_instruments(
-                selected,
-                resolver=self._instrument_identity,
+            # 指数别名 lane 只挂本入口（snapshot-index-support §2.1）：命中项
+            # 直接产出指数符号并从 equity 列表剔除，共享解析器保持纯个股，
+            # margin/external 零外溢。
+            equity_targets, index_names, index_symbols = split_index_aliases(selected)
+            equity_symbols, equity_resolved_names, identity_gaps = (
+                _resolve_on_demand_instruments(
+                    equity_targets,
+                    resolver=self._instrument_identity,
+                )
             )
             _extend_gaps(gaps, identity_gaps)
+            symbols = (*index_symbols, *equity_symbols)
+            names = {**index_names, **equity_resolved_names}
             if not symbols:
                 return ProductionReadResult(
                     value=_on_demand_market_snapshot_value(None),

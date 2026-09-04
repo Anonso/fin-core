@@ -23,6 +23,7 @@ from pathlib import Path
 from time import monotonic_ns as _system_monotonic_ns
 from typing import Protocol
 
+from fin_analyse.market.index_symbols import MAJOR_INDEX_SYMBOLS
 from fin_analyse.market.providers.base import QuoteResult
 from fin_analyse.market.system_clock_evidence import (
     A_SHARE_CLOCK_MAX_OFFSET_MS,
@@ -1173,7 +1174,10 @@ def _evaluate_capture(
         if capture.trading_status is TradingStatus.UNKNOWN:
             gaps.append("trading_status_unknown")
         if capture.upper_limit_price is None or capture.lower_limit_price is None:
-            gaps.append("price_limits_missing")
+            # 主指数无涨跌停（腾讯行以 -1 哨兵表缺）：语义性缺失不报 gap
+            # （snapshot-index-support §2.3）；个股缺失语义不变。
+            if f"{capture.symbol}.{(capture.venue or sample.venue).upper()}" not in MAJOR_INDEX_SYMBOLS:
+                gaps.append("price_limits_missing")
         else:
             upper_limit = _positive_decimal(capture.upper_limit_price)
             lower_limit = _positive_decimal(capture.lower_limit_price)
