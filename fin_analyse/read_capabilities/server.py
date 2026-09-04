@@ -1,9 +1,10 @@
 """Read-capability thin stdio MCP server (design v2 · D1).
 
-Seven read tools over the FIN provider, no gateway, no envelope, no auth
-(single local principal — stdio is pulled up by the owner's own CLI).
-Any stray write to stdout would corrupt the JSON-RPC stream, so the guard
-below is installed at import time, before any other project import.
+Thirteen read tools and two bounded write tools over the FIN providers, no
+gateway, no envelope, no auth (single local principal — stdio is pulled up
+by the owner's own CLI).  Any stray write to stdout would corrupt the
+JSON-RPC stream, so the guard below is installed at import time, before any
+other project import.
 
 Module path is a frozen contract: ``python -m fin_analyse.read_capabilities.server``.
 """
@@ -97,8 +98,17 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "read_macro_brain": 20.0,
     "read_shared_brain": 15.0,
     "read_user_watchlist": 10.0,
+    "read_decision_journal": 10.0,
     "update_user_watchlist": 10.0,
+    "record_decision": 10.0,
 }
+# Tools served by custom handlers (bounded write seams + the journal read,
+# whose params live outside the generic ProductionReadRequest whitelist).
+# They stay in the deadline table as the single tool registry but are
+# skipped by the generic registration loop below.
+_CUSTOM_HANDLED_TOOLS = frozenset(
+    {"update_user_watchlist", "read_decision_journal", "record_decision"}
+)
 _MAX_DEADLINE_SECONDS = 300.0
 _MAX_SESSION_HINT_CHARS = 128
 _MAX_QUESTION_CHARS = 8_192  # mirrors ProductionReadRequest
@@ -269,6 +279,40 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "headless/one-shot sessions only preview, never apply. One operation "
         "= {action: add|tag|remove, ref: six-digit code or exact canonical "
         "name, tags: [..]} (remove takes no tags)."
+    ),
+    "read_decision_journal": (
+        "Read the owner-stated decision journal (决策日志): past buy/sell/plan/"
+        "revert records with decision date, symbol, rationale, note, and "
+        "revert pointers. Filters: symbol (six-digit code or canonical name, "
+        "normalized server-side), date_from/date_to (YYYY-MM-DD), "
+        "decision_type (buy|sell|plan|revert), limit (default 50, max 200); "
+        "sorted newest first. Reverted records stay visible, marked with "
+        "reverted_by. For review/replay questions (当初为什么买 X / 复盘一下) "
+        "call this FIRST for the factual history; for any analysis/opinion "
+        "judgment the read_g_context HARD RULE still applies — the journal "
+        "supplies facts, G supplies the framework; neither replaces the "
+        "other. Quote records verbatim rather than paraphrasing. An empty "
+        "journal means no decisions recorded yet — say that plainly, it is "
+        "not an error. Read-only; new records go through record_decision."
+    ),
+    "record_decision": (
+        "Record one owner-stated investment decision in the decision journal: "
+        "list, preview, or apply. Actions: action=list (recent records, "
+        "read-only mirror), action=preview (structure a decision the user "
+        "just stated: decision_type buy|sell|plan|revert, optional symbol "
+        "(six-digit code or canonical name), decision_date YYYY-MM-DD "
+        "(defaults to today Asia/Shanghai), rationale REQUIRED (the why, "
+        "<=2000 chars), optional note <=500 chars; revert also requires "
+        "revert_of = an existing, not-yet-reverted decision_id), and "
+        "action=apply (ONLY the candidate token returned by preview; TTL 15 "
+        "min, single use). source is always owner_stated, forced "
+        "server-side. preview is zero-write and returns a confirmation "
+        "phrase containing every substantive field; apply appends only "
+        "after the user explicitly confirms that exact phrase. ONLY record "
+        "decisions the user actually stated; NEVER invent, embellish, or "
+        "proactively remind/nag the user to record decisions (one unconfirmed "
+        "proposal is never followed up); in headless/one-shot sessions only "
+        "preview, never apply."
     ),
 }
 
@@ -683,8 +727,255 @@ def _make_watchlist_handler():
     return _handler
 
 
+def _is_iso_date(value: object) -> bool:
+    if not isinstance(value, str) or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is None:
+        return False
+    try:
+        return datetime.fromisoformat(value).date().isoformat() == value
+    except ValueError:
+        return False
+
+
+def _validate_journal_limit(limit: object) -> int:
+    if limit is None:
+        return 50
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 200:
+        raise InvalidParamsError("invalid_params: limit must be an integer in [1, 200]")
+    return limit
+
+
+def _make_decision_journal_read_handler():
+    """Bounded read tool over the decision journal (custom params, zero contract change)."""
+
+    def _handler(
+        question: str = "",
+        symbol: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        decision_type: str | None = None,
+        limit: int | None = None,
+        session_hint: str = "",
+    ) -> dict[str, object]:
+        """Read the owner decision journal; see the tool description."""
+        wiring, trace = _tool_session()
+        payload: dict[str, object] = {"question": question, "session_hint": session_hint}
+        if symbol is not None:
+            payload["symbol"] = symbol
+        if date_from is not None:
+            payload["date_from"] = date_from
+        if date_to is not None:
+            payload["date_to"] = date_to
+        if decision_type is not None:
+            payload["decision_type"] = decision_type
+        if limit is not None:
+            payload["limit"] = limit
+        service = wiring.decision_journal
+        started = monotonic()
+        if service is None:
+            gaps = ("decision_journal_unavailable",)
+            trace.record(
+                tool="read_decision_journal",
+                question=question,
+                args=payload,
+                status="unavailable",
+                data_gaps=gaps,
+                latency_ms=0,
+                session_hint=session_hint,
+                as_of=None,
+            )
+            return {"value": {}, "data_gaps": list(gaps)}
+        if symbol is not None and (
+            not isinstance(symbol, str) or not symbol.strip() or len(symbol) > 64
+        ):
+            raise InvalidParamsError(
+                "invalid_params: symbol must be a non-empty string (<=64 chars)"
+            )
+        for name, value in (("date_from", date_from), ("date_to", date_to)):
+            if value is not None and not _is_iso_date(value):
+                raise InvalidParamsError(f"invalid_params: {name} must be YYYY-MM-DD")
+        if date_from is not None and date_to is not None and date_from > date_to:
+            raise InvalidParamsError("invalid_params: date_from must not exceed date_to")
+        if decision_type is not None and decision_type not in ("buy", "sell", "plan", "revert"):
+            raise InvalidParamsError(
+                "invalid_params: decision_type must be buy|sell|plan|revert"
+            )
+        checked_limit = _validate_journal_limit(limit)
+        try:
+            result = service.query(
+                symbol=symbol,
+                date_from=date_from,
+                date_to=date_to,
+                decision_type=decision_type,
+                limit=checked_limit,
+            )
+        except Exception:
+            gaps = ("decision_journal_read_failed",)
+            trace.record(
+                tool="read_decision_journal",
+                question=question,
+                args=payload,
+                status="failed",
+                data_gaps=gaps,
+                latency_ms=int((monotonic() - started) * 1000),
+                session_hint=session_hint,
+                as_of=None,
+            )
+            return {"value": {}, "data_gaps": list(gaps)}
+        trace.record(
+            tool="read_decision_journal",
+            question=question,
+            args=payload,
+            status="ok",
+            data_gaps=(),
+            latency_ms=int((monotonic() - started) * 1000),
+            session_hint=session_hint,
+            as_of=None,
+        )
+        return {"value": result, "data_gaps": []}
+
+    _handler.__name__ = "read_decision_journal"
+    _handler.__doc__ = _TOOL_DESCRIPTIONS["read_decision_journal"]
+    return _handler
+
+
+def _make_record_decision_handler():
+    """Bounded write tool over the decision journal: list/preview/apply (design §工具面)."""
+
+    def _handler(
+        action: str,
+        decision_type: str | None = None,
+        symbol: str | None = None,
+        decision_date: str | None = None,
+        rationale: str | None = None,
+        note: str | None = None,
+        revert_of: str | None = None,
+        token: str | None = None,
+        limit: int | None = None,
+        question: str = "",
+        session_hint: str = "",
+    ) -> dict[str, object]:
+        """Record/list owner-stated decisions; see the tool description."""
+        wiring, trace = _tool_session()
+        payload: dict[str, object] = {"action": action, "session_hint": session_hint}
+        for key, value in (
+            ("decision_type", decision_type),
+            ("symbol", symbol),
+            ("decision_date", decision_date),
+            ("rationale", rationale),
+            ("note", note),
+            ("revert_of", revert_of),
+            ("token", token),
+            ("limit", limit),
+        ):
+            if value is not None:
+                payload[key] = value
+        service = wiring.decision_journal
+        started = monotonic()
+        if service is None:
+            trace.record(
+                tool="record_decision",
+                question=question,
+                args=payload,
+                status="unavailable",
+                data_gaps=("decision_journal_write_unavailable",),
+                latency_ms=0,
+                session_hint=session_hint,
+                as_of=None,
+            )
+            return {
+                "value": {
+                    "status": "UNAVAILABLE",
+                    "reason_codes": ["decision_journal_write_unavailable"],
+                },
+                "data_gaps": ["decision_journal_write_unavailable"],
+            }
+        if action not in ("list", "preview", "apply"):
+            raise InvalidParamsError("invalid_params: action must be list|preview|apply")
+        try:
+            if action == "list":
+                if any(
+                    value is not None
+                    for value in (
+                        decision_type,
+                        symbol,
+                        decision_date,
+                        rationale,
+                        note,
+                        revert_of,
+                        token,
+                    )
+                ):
+                    raise InvalidParamsError(
+                        "invalid_params: list takes only limit"
+                    )
+                result = service.list(limit=_validate_journal_limit(limit))
+            elif action == "preview":
+                if token is not None:
+                    raise InvalidParamsError(
+                        "invalid_params: preview takes no token"
+                    )
+                result = service.preview(
+                    decision_type=decision_type,
+                    symbol=symbol,
+                    decision_date=decision_date,
+                    rationale=rationale,
+                    note=note,
+                    revert_of=revert_of,
+                )
+            else:
+                if any(
+                    value is not None
+                    for value in (
+                        decision_type,
+                        symbol,
+                        decision_date,
+                        rationale,
+                        note,
+                        revert_of,
+                        limit,
+                    )
+                ):
+                    raise InvalidParamsError(
+                        "invalid_params: apply takes only token"
+                    )
+                if not isinstance(token, str) or not token:
+                    raise InvalidParamsError(
+                        "invalid_params: apply requires token"
+                    )
+                result = service.apply(token)
+        except InvalidParamsError:
+            raise
+        except Exception:
+            result = {
+                "status": "REJECTED",
+                "reason_codes": ["decision_journal_write_failed"],
+            }
+        latency_ms = int((monotonic() - started) * 1000)
+        rejected = result.get("status") == "REJECTED"
+        gaps = (
+            tuple(str(code) for code in result.get("reason_codes", ()))
+            if rejected
+            else ()
+        )
+        trace.record(
+            tool="record_decision",
+            question=question,
+            args=payload,
+            status="gaps" if rejected else "ok",
+            data_gaps=gaps,
+            latency_ms=latency_ms,
+            session_hint=session_hint,
+            as_of=None,
+        )
+        return {"value": result, "data_gaps": list(gaps)}
+
+    _handler.__name__ = "record_decision"
+    _handler.__doc__ = _TOOL_DESCRIPTIONS["record_decision"]
+    return _handler
+
+
 for _tool_name in _TOOL_DEADLINE_SECONDS:
-    if _tool_name == "update_user_watchlist":
+    if _tool_name in _CUSTOM_HANDLED_TOOLS:
         continue
     mcp.tool(
         name=_tool_name,
@@ -697,6 +988,18 @@ mcp.tool(
     description=_TOOL_DESCRIPTIONS["update_user_watchlist"],
     annotations=_WRITE_ANNOTATIONS,
 )(_make_watchlist_handler())
+
+mcp.tool(
+    name="read_decision_journal",
+    description=_TOOL_DESCRIPTIONS["read_decision_journal"],
+    annotations=_READ_ANNOTATIONS,
+)(_make_decision_journal_read_handler())
+
+mcp.tool(
+    name="record_decision",
+    description=_TOOL_DESCRIPTIONS["record_decision"],
+    annotations=_WRITE_ANNOTATIONS,
+)(_make_record_decision_handler())
 
 
 def run(runner=None) -> None:

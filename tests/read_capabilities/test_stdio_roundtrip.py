@@ -127,6 +127,7 @@ class TestStdioRoundTrip:
             "read_actual_portfolio",
             "read_article",
             "read_article_search",
+            "read_decision_journal",
             "read_g_context",
             "read_instrument_scores",
             "read_macro_brain",
@@ -136,6 +137,7 @@ class TestStdioRoundTrip:
             "read_ready_evidence",
             "read_shared_brain",
             "read_user_watchlist",
+            "record_decision",
             "update_user_watchlist",
         ]
         call_result = responses[3]["result"]

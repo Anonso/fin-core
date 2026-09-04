@@ -134,6 +134,23 @@ class TestConstruction:
         wiring = build_reader_wiring(kb_root, environ=isolated_env)
         assert wiring.watchlist_write is None
 
+    def test_decision_journal_service_wired_when_state_available(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        _provision_watchlist_state(tmp_path)
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        assert wiring.decision_journal is not None
+        result = wiring.decision_journal.list()
+        assert result["status"] == "LISTED"
+        assert result["count"] == 0
+        assert "never investment evidence" in result["semantics"]
+
+    def test_decision_journal_service_absent_when_state_missing(
+        self, kb_root: Path, isolated_env: dict[str, str]
+    ) -> None:
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        assert wiring.decision_journal is None
+
     def test_market_overview_failure_degrades_to_registered_tool(
         self, kb_root: Path, isolated_env: dict[str, str], monkeypatch: pytest.MonkeyPatch
     ) -> None:

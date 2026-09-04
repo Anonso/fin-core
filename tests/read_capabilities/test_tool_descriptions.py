@@ -68,7 +68,9 @@ def test_all_tools_described() -> None:
         "read_instrument_scores",
         "read_ready_evidence",
         "read_user_watchlist",
+        "read_decision_journal",
         "update_user_watchlist",
+        "record_decision",
     }
 
 
@@ -86,3 +88,27 @@ def test_update_user_watchlist_description_bounds_writes() -> None:
     assert "NEVER delete" in text
     assert "explicit" in text
     assert "Never apply without the user's explicit confirmation" in text
+
+
+def test_read_decision_journal_description_pins_review_semantics() -> None:
+    text = _TOOL_DESCRIPTIONS["read_decision_journal"]
+    # 空表诚实答空（沿 read_user_watchlist 措辞先例）。
+    assert "not an error" in text
+    # 日志供事实、G 供框架：不得让日志取代 G-first 反证链（外审 Q4-P2）。
+    assert "read_g_context" in text
+    assert "HARD RULE" in text
+    # 被更正记录不隐藏。
+    assert "reverted_by" in text
+
+
+def test_record_decision_description_pins_confirmation_bound() -> None:
+    text = _TOOL_DESCRIPTIONS["record_decision"]
+    assert "preview" in text
+    assert "apply" in text
+    assert "owner_stated" in text
+    assert "single use" in text
+    # 不催记录（anti-nag 纪律）。
+    assert "NEVER" in text
+    assert "nag" in text
+    # headless/one-shot 只 preview 不 apply。
+    assert "headless/one-shot" in text

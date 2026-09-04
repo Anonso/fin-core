@@ -1,11 +1,12 @@
 """Reader wiring for the read-capability thin server.
 
-Only what the seven v1 read tools need is constructed here.  The G reader is
-built by the provider's ``__init__`` from ``kb_root`` (its default
-construction path); this module never rebuilds it.  Each reader failure is
-kept individually: a missing knowledge root fails closed (startup error),
-while a single reader that cannot construct degrades to a permanently
-``*_unavailable`` tool (design §6 two-level asymmetry, recorded on stderr).
+Only what the read tools and the two bounded write seams need is
+constructed here.  The G reader is built by the provider's ``__init__``
+from ``kb_root`` (its default construction path); this module never
+rebuilds it.  Each reader failure is kept individually: a missing knowledge
+root fails closed (startup error), while a single reader that cannot
+construct degrades to a permanently ``*_unavailable`` tool (design §6
+two-level asymmetry, recorded on stderr).
 """
 
 from __future__ import annotations
@@ -34,6 +35,13 @@ from fin_analyse.market.on_demand_tactical_context import (
     build_default_on_demand_tactical_context,
 )
 from fin_analyse.portfolio.actual_advisory import ActualAdvisoryPortfolioStore
+from fin_analyse.portfolio.decision_journal import DecisionJournalError
+from fin_analyse.portfolio.decision_journal_state import (
+    require_production_decision_journal_state,
+)
+from fin_analyse.portfolio.decision_journal_write_service import (
+    DecisionJournalWriteService,
+)
 from fin_analyse.portfolio.user_watchlist import UserWatchlistError
 from fin_analyse.portfolio.watchlist_state import require_production_watchlist_state
 from fin_analyse.portfolio.watchlist_write_service import WatchlistWriteService
@@ -73,6 +81,7 @@ class ReaderWiring:
     runners: dict[str, ReadToolRunner]
     unavailable_tools: tuple[tuple[str, str], ...]  # (tool, reason code)
     watchlist_write: WatchlistWriteService | None = None
+    decision_journal: DecisionJournalWriteService | None = None
 
     def tool_names(self) -> tuple[str, ...]:
         return tuple(self.runners)
@@ -88,7 +97,7 @@ def build_reader_wiring(
     environ: dict[str, str] | None = None,
     clock=None,
 ) -> ReaderWiring:
-    """Wire the seven v1 read tools from a validated knowledge root.
+    """Wire the read tools and bounded write seams from a validated knowledge root.
 
     ``knowledge_base_root`` must already be validated (fail-closed happens in
     the server preflight, mirroring ``mcp_server``).  Reader-level failures
@@ -166,6 +175,33 @@ def build_reader_wiring(
             )
         except (OSError, ValueError, KnowledgeRootConfigurationError) as exc:
             _stderr_note(f"watchlist_write construction failed: {type(exc).__name__}")
+
+    # 决策日志推导独立 fail-closed（identity 缺失/坏权限只降级本缝，绝不阻断
+    # server 启动；镜像上方 watchlist 块形态）。store 是同一 state 根下另一目录。
+    decision_journal: DecisionJournalWriteService | None = None
+    try:
+        _, journal_principal, journal_store = require_production_decision_journal_state(
+            environ=environment,
+        )
+        journal_directory = RuntimeAshareInstrumentDirectory(
+            path=Path(knowledge_base_root) / "runtime" / "a_share_name_map.json"
+        )
+        decision_journal = DecisionJournalWriteService(
+            store=journal_store,
+            resolver=AShareConsultationInstrumentIdentityResolver(
+                directory=journal_directory
+            ),
+            principal_id=journal_principal,
+            clock=effective_clock,
+        )
+    except (
+        OSError,
+        ValueError,
+        KnowledgeRootConfigurationError,
+        DecisionJournalError,
+        PrincipalBindingError,
+    ) as exc:
+        _stderr_note(f"decision_journal construction failed: {type(exc).__name__}")
 
     unavailable: list[tuple[str, str]] = []
 
@@ -269,4 +305,5 @@ def build_reader_wiring(
         runners=runners,
         unavailable_tools=tuple(unavailable),
         watchlist_write=watchlist_write,
+        decision_journal=decision_journal,
     )
