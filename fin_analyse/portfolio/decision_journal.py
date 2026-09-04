@@ -34,8 +34,6 @@ _DECISION_TYPES = frozenset({"buy", "sell", "plan", "revert"})
 _MAX_RATIONALE_CHARS = 2000
 _MAX_NOTE_CHARS = 500
 _MAX_QUERY_LIMIT = 200
-# 空态显式 revision：与 `_bump_revision` 的 `r0` 基线一致（镜像 user_watchlist）。
-_EMPTY_REVISION = "r0"
 _ID_ATTEMPTS = 3
 # 镜像 fin_analyse.portfolio.user_watchlist._PRINCIPAL_ID_PATTERN；
 # 保持同步（binding 层产出必然通过；此处是 store 侧纵深防御）。
@@ -256,6 +254,10 @@ class DecisionJournalStore:
     def _read_connection(self) -> sqlite3.Connection | None:
         if not self._db_path.is_file():
             return None
+        # 读路径同样 fail-closed（外审 P2）：坏权限/symlink/multi-link 的既有库
+        # 不许被静默读出，typed 拒绝；空态（库不存在）保持合法。
+        self._require_owner_dir(self._db_path.parent)
+        self._require_owner_file(self._db_path)
         return sqlite3.connect(f"{self._db_path.resolve().as_uri()}?mode=ro", uri=True)
 
     def _current_revision(self, cursor: sqlite3.Cursor) -> str | None:
@@ -446,8 +448,12 @@ class DecisionJournalStore:
                 records=(), revision="", as_of=datetime.now(UTC).isoformat()
             )
         try:
+            # 同一读事务：records 与 revision 取同一 WAL 快照（外审 P3），
+            # 并发 append 不会出现旧 records 配新 revision。
+            connection.execute("BEGIN")
             rows = connection.execute(sql, params).fetchall()
             revision = _read_revision(connection)
+            connection.commit()
             return DecisionJournalRead(
                 records=tuple(_record_from_row(row) for row in rows),
                 revision=revision,
@@ -479,9 +485,6 @@ class DecisionJournalStore:
             )
         finally:
             connection.close()
-
-
-_MAX_QUERY_LIMIT = 200
 
 
 def _read_revision(connection: sqlite3.Connection) -> str:

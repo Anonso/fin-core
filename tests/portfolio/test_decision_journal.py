@@ -239,6 +239,32 @@ def test_id_collision_retry_and_exhaustion(
     assert len(store.query().records) == 2
 
 
+def test_read_path_fails_closed_on_bad_permissions(tmp_path: Path) -> None:
+    """外审 P2：读路径同样 owner-only fail-closed（空态仍合法）。"""
+    store = _store(tmp_path)
+    assert store.query().records == ()  # 空态：库不存在，合法。
+    _append(store)
+    os.chmod(store._db_path, 0o644)  # noqa: SLF001
+    try:
+        with pytest.raises(DecisionJournalStateError):
+            store.query()
+        with pytest.raises(DecisionJournalStateError):
+            store.get("DJ-2026-09-01-0000")
+        with pytest.raises(DecisionJournalStateError):
+            store.audit_events()
+    finally:
+        os.chmod(store._db_path, 0o600)
+    assert len(store.query().records) == 1  # 复原后照常可读
+
+    os.symlink(store._db_path, store._db_path.with_suffix(".link"))  # noqa: SLF001
+    link_store = DecisionJournalStore(
+        root=tmp_path, principal_id="finp_test"
+    )
+    link_store._db_path = store._db_path.with_suffix(".link")  # noqa: SLF001
+    with pytest.raises(DecisionJournalStateError):
+        link_store.query()
+
+
 def test_revision_and_audit_grow(tmp_path: Path) -> None:
     store = _store(tmp_path)
     first = _append(store)

@@ -67,6 +67,7 @@ from fin_analyse.read_capabilities.types import (  # noqa: E402
     ProductionReadRequest,
     ProductionReadResult,
 )
+from fin_analyse.portfolio.decision_journal import DecisionJournalError  # noqa: E402
 from fin_analyse.read_capabilities.wiring import (  # noqa: E402
     ReaderWiring,
     build_reader_wiring,
@@ -283,24 +284,26 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     "read_decision_journal": (
         "Read the owner-stated decision journal (决策日志): past buy/sell/plan/"
         "revert records with decision date, symbol, rationale, note, and "
-        "revert pointers. Filters: symbol (six-digit code or canonical name, "
-        "normalized server-side), date_from/date_to (YYYY-MM-DD), "
-        "decision_type (buy|sell|plan|revert), limit (default 50, max 200); "
-        "sorted newest first. Reverted records stay visible, marked with "
-        "reverted_by. For review/replay questions (当初为什么买 X / 复盘一下) "
-        "call this FIRST for the factual history; for any analysis/opinion "
-        "judgment the read_g_context HARD RULE still applies — the journal "
-        "supplies facts, G supplies the framework; neither replaces the "
-        "other. Quote records verbatim rather than paraphrasing. An empty "
-        "journal means no decisions recorded yet — say that plainly, it is "
-        "not an error. Read-only; new records go through record_decision."
+        "revert pointers. Filters: symbol (six-digit code, canonical form "
+        "like 600519.SH, or canonical name — normalized server-side), "
+        "date_from/date_to (YYYY-MM-DD), decision_type (buy|sell|plan|revert), "
+        "limit (default 50, max 200); sorted newest first. Reverted records "
+        "stay visible, marked with reverted_by. For review/replay questions "
+        "(当初为什么买 X / 复盘一下) call this FIRST for the factual history; "
+        "for any analysis/opinion judgment the read_g_context HARD RULE "
+        "still applies — the journal supplies facts, G supplies the "
+        "framework; neither replaces the other. Quote records verbatim "
+        "rather than paraphrasing. An empty journal means no decisions "
+        "recorded yet — say that plainly, it is not an error. Read-only; "
+        "new records go through record_decision."
     ),
     "record_decision": (
         "Record one owner-stated investment decision in the decision journal: "
-        "list, preview, or apply. Actions: action=list (recent records, "
-        "read-only mirror), action=preview (structure a decision the user "
-        "just stated: decision_type buy|sell|plan|revert, optional symbol "
-        "(six-digit code or canonical name), decision_date YYYY-MM-DD "
+        "list, preview, or apply. Actions: action=list (read-only mirror of "
+        "recent records; accepts the same optional filters as "
+        "read_decision_journal), action=preview (structure a decision the "
+        "user just stated: decision_type buy|sell|plan|revert, optional "
+        "symbol (six-digit code or canonical name), decision_date YYYY-MM-DD "
         "(defaults to today Asia/Shanghai), rationale REQUIRED (the why, "
         "<=2000 chars), optional note <=500 chars; revert also requires "
         "revert_of = an existing, not-yet-reverted decision_id), and "
@@ -808,6 +811,24 @@ def _make_decision_journal_read_handler():
                 decision_type=decision_type,
                 limit=checked_limit,
             )
+        except DecisionJournalError as error:
+            # 过滤参数语义性拒绝（如 symbol 无法归一，外审 P1）：
+            # 给 agent 可改写的 reason code，而不是吞成 read_failed。
+            gaps = (str(error),)
+            trace.record(
+                tool="read_decision_journal",
+                question=question,
+                args=payload,
+                status="gaps",
+                data_gaps=gaps,
+                latency_ms=int((monotonic() - started) * 1000),
+                session_hint=session_hint,
+                as_of=None,
+            )
+            return {
+                "value": {"status": "REJECTED", "reason_codes": [str(error)]},
+                "data_gaps": list(gaps),
+            }
         except Exception:
             gaps = ("decision_journal_read_failed",)
             trace.record(
@@ -846,6 +867,8 @@ def _make_record_decision_handler():
         decision_type: str | None = None,
         symbol: str | None = None,
         decision_date: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
         rationale: str | None = None,
         note: str | None = None,
         revert_of: str | None = None,
@@ -861,6 +884,8 @@ def _make_record_decision_handler():
             ("decision_type", decision_type),
             ("symbol", symbol),
             ("decision_date", decision_date),
+            ("date_from", date_from),
+            ("date_to", date_to),
             ("rationale", rationale),
             ("note", note),
             ("revert_of", revert_of),
@@ -891,28 +916,51 @@ def _make_record_decision_handler():
             }
         if action not in ("list", "preview", "apply"):
             raise InvalidParamsError("invalid_params: action must be list|preview|apply")
+        if decision_type is not None and action == "list" and decision_type not in (
+            "buy",
+            "sell",
+            "plan",
+            "revert",
+        ):
+            raise InvalidParamsError(
+                "invalid_params: decision_type must be buy|sell|plan|revert"
+            )
         try:
             if action == "list":
-                if any(
-                    value is not None
-                    for value in (
-                        decision_type,
-                        symbol,
-                        decision_date,
-                        rationale,
-                        note,
-                        revert_of,
-                        token,
+                if token is not None:
+                    raise InvalidParamsError(
+                        "invalid_params: list takes filters/limit, not token"
                     )
+                if symbol is not None and (
+                    not isinstance(symbol, str) or not symbol.strip() or len(symbol) > 64
                 ):
                     raise InvalidParamsError(
-                        "invalid_params: list takes only limit"
+                        "invalid_params: symbol must be a non-empty string (<=64 chars)"
                     )
-                result = service.list(limit=_validate_journal_limit(limit))
+                for name, value in (("date_from", date_from), ("date_to", date_to)):
+                    if value is not None and not _is_iso_date(value):
+                        raise InvalidParamsError(
+                            f"invalid_params: {name} must be YYYY-MM-DD"
+                        )
+                if date_from is not None and date_to is not None and date_from > date_to:
+                    raise InvalidParamsError(
+                        "invalid_params: date_from must not exceed date_to"
+                    )
+                result = service.list(
+                    symbol=symbol,
+                    date_from=date_from,
+                    date_to=date_to,
+                    decision_type=decision_type,
+                    limit=_validate_journal_limit(limit),
+                )
             elif action == "preview":
                 if token is not None:
                     raise InvalidParamsError(
                         "invalid_params: preview takes no token"
+                    )
+                if limit is not None or date_from is not None or date_to is not None:
+                    raise InvalidParamsError(
+                        "invalid_params: preview takes no limit/date filters"
                     )
                 result = service.preview(
                     decision_type=decision_type,
@@ -929,6 +977,8 @@ def _make_record_decision_handler():
                         decision_type,
                         symbol,
                         decision_date,
+                        date_from,
+                        date_to,
                         rationale,
                         note,
                         revert_of,
@@ -945,6 +995,9 @@ def _make_record_decision_handler():
                 result = service.apply(token)
         except InvalidParamsError:
             raise
+        except DecisionJournalError as error:
+            # 过滤参数语义性拒绝（如 symbol 无法归一）：透传 reason code。
+            result = {"status": "REJECTED", "reason_codes": [str(error)]}
         except Exception:
             result = {
                 "status": "REJECTED",

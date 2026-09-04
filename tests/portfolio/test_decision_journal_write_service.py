@@ -9,7 +9,10 @@ import pytest
 
 from fin_analyse.guo_teacher_research.semantic_contract import InstrumentRef
 from fin_analyse.consultation.instrument_identity import ConsultationInstrumentIdentity
-from fin_analyse.portfolio.decision_journal import DecisionJournalStore
+from fin_analyse.portfolio.decision_journal import (
+    DecisionJournalError,
+    DecisionJournalStore,
+)
 from fin_analyse.portfolio.decision_journal_write_service import (
     DecisionJournalWriteService,
 )
@@ -19,8 +22,10 @@ class _FakeResolver:
     def __init__(self) -> None:
         self._by_ref = {
             "600519": "600519.SH",
+            "600519.SH": "600519.SH",
             "贵州茅台": "600519.SH",
             "600259": "600259.SH",
+            "600259.SH": "600259.SH",
         }
 
     def resolve_many(
@@ -245,6 +250,39 @@ def test_apply_commit_failure_fails_closed(tmp_path: Path) -> None:
     service._store = real_store  # type: ignore[assignment]  # noqa: SLF001
     assert service.apply(token)["status"] == "REJECTED"
     assert service.list()["count"] == 0
+
+
+def test_query_filter_symbol_normalizes_like_write_side(tmp_path: Path) -> None:
+    """外审 P1：查询侧 symbol 与写入同规归一，杜绝字面 miss。"""
+    service = _service(tmp_path)
+    token = _preview(service)["candidate_token"]
+    assert service.apply(token)["status"] == "APPLIED"
+
+    by_code = service.query(symbol="600519")  # 裸代码命中 canonical 记录
+    assert by_code["count"] == 1
+    by_name = service.query(symbol="贵州茅台")  # canonical 名称命中
+    assert by_name["count"] == 1
+    with pytest.raises(DecisionJournalError) as excinfo:
+        service.query(symbol="不存在的票")
+    assert "decision_journal_symbol_unresolved" in str(excinfo.value)
+
+
+def test_list_accepts_filters(tmp_path: Path) -> None:
+    """外审 P2：list 零写镜像带过滤（设计「最近 N 条 + 过滤」）。"""
+    service = _service(tmp_path)
+    for overrides in (
+        {"symbol": "600519", "rationale": "低吸"},
+        {"decision_type": "plan", "symbol": None, "rationale": "降仓位"},
+    ):
+        token = _preview(service, **overrides)["candidate_token"]
+        assert service.apply(token)["status"] == "APPLIED"
+    listed = service.list(symbol="600519.SH")
+    assert listed["count"] == 1
+    assert listed["records"][0]["decision_type"] == "buy"
+    by_type = service.list(decision_type="plan")
+    assert by_type["count"] == 1
+    everything = service.list()
+    assert everything["count"] == 2
 
 
 def test_query_filters_and_semantics(tmp_path: Path) -> None:

@@ -18,6 +18,7 @@ stored verbatim).  ``query`` is the zero-write read shared by
 
 from __future__ import annotations
 
+import re
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -36,6 +37,8 @@ from fin_analyse.portfolio.decision_journal import (
 
 _TOKEN_TTL_SECONDS = 15 * 60
 _CST = ZoneInfo("Asia/Shanghai")
+# canonical 代码形态（600519.SH）视同代码走 ticker 路径——从记录复制回查应命中。
+_CANONICAL_SYMBOL_RE = re.compile(r"^\d{6}\.(?:SH|SZ|BJ)$")
 _SEMANTICS = (
     "owner-stated decision history: factual record for review questions, "
     "user context — never investment evidence; reverted records stay "
@@ -105,9 +108,23 @@ class DecisionJournalWriteService:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._tokens = LocalDecisionPreviewTokenManager()
 
-    def list(self, *, limit: int = 50) -> dict[str, object]:
-        """Zero-write mirror of read_decision_journal (session-side对账)."""
-        return self.query(limit=limit)
+    def list(
+        self,
+        *,
+        symbol: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        decision_type: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, object]:
+        """Zero-write mirror of read_decision_journal（含过滤，供会话内对账）."""
+        return self.query(
+            symbol=symbol,
+            date_from=date_from,
+            date_to=date_to,
+            decision_type=decision_type,
+            limit=limit,
+        )
 
     def query(
         self,
@@ -118,8 +135,11 @@ class DecisionJournalWriteService:
         decision_type: str | None = None,
         limit: int = 50,
     ) -> dict[str, object]:
+        # 过滤 symbol 与写入同规：入库前经 resolver 归一，查询侧同样归一
+        # （外审 P1——否则 600519.SH 记录用 600519/名称查会字面 miss）。
+        resolved_symbol = self._resolve_symbol(symbol) if symbol else None
         read = self._store.query(
-            symbol=symbol,
+            symbol=resolved_symbol,
             date_from=date_from,
             date_to=date_to,
             decision_type=decision_type,
@@ -214,9 +234,11 @@ class DecisionJournalWriteService:
         return now.astimezone(_CST).date().isoformat()
 
     def _resolve_symbol(self, ref: str) -> str:
-        # 与 watchlist ref 规则同款：纯数字按代码、否则按 canonical 名称。
+        # 与 watchlist ref 规则同款：代码（裸 6 位或 canonical 形态）走 ticker、
+        # 否则按 canonical 名称。
+        is_code = ref.isdigit() or _CANONICAL_SYMBOL_RE.fullmatch(ref) is not None
         identities = self._resolver.resolve_many(
-            (InstrumentRef(ticker=ref) if ref.isdigit() else InstrumentRef(name=ref),)
+            (InstrumentRef(ticker=ref) if is_code else InstrumentRef(name=ref),)
         )
         identity = identities[0] if identities else None
         if identity is None or identity.market_symbol is None:
