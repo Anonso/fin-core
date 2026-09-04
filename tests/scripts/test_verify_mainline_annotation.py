@@ -286,3 +286,26 @@ def test_source_nature_disclaimer_is_not_an_excerpt_claim(
     assert code == 0, out
     assert "source-nature disclaimer" in out
     assert "RESULT: PASS" in out
+
+
+def test_spoken_unit_without_node_row_is_info_only(monkeypatch, tmp_path: Path) -> None:
+    """SPOKEN_FAN_TRANSCRIBED 单元无 evolution 行 = info 不计失败（archive-only：
+    投影按档位排除，永不进 read_g_context——设计 g-spoken-transcribed-grade v2）。"""
+
+    kb = _write_kb(tmp_path, {"s-0001.md": "直播口播转述片段。"})
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(
+        annotation,
+        as_of="2026-01-06",
+        sources=[("S-0001", "2026-01-05 10:00", "spoken_fan_transcribed；直播口播·粉丝AI转述，降权入档。")],
+        time_rows=[("CU-0105-L01", "2026-01-05 10:00")],
+        units=[_unit("CU-0105-L01", "S-0001", "2026-01-05", "直播口播转述片段。")],
+        evolution_rows=[("2026-01-01 基线", "无", "`baseline`", "（无新增单元）")],
+    )
+
+    code, out = _run(monkeypatch, tmp_path, annotation, kb)
+
+    assert code == 0, out
+    assert "info unit CU-0105-L01" in out
+    assert "SPOKEN_FAN_TRANSCRIBED" in out
+    assert "RESULT: PASS" in out

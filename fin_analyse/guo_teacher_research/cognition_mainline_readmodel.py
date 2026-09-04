@@ -47,6 +47,9 @@ SOURCE_NATURES = frozenset(
         "G_ORIGINAL",
         "MIXED_PUBLISHED_REPORT",
         "AI_ASSISTED_CONTENT_MIXED",
+        # 老师口播·粉丝转述（直播总结）：archive-only——入 durable readmodel，
+        # projector 不投影（设计 g-spoken-transcribed-grade v2，外审 Q1-P1）。
+        "SPOKEN_FAN_TRANSCRIBED",
     }
 )
 CHANGE_TYPES = frozenset({"baseline", "no_change", "increment", "reframe"})
@@ -77,6 +80,7 @@ class _CognitionSource(BaseModel):
         "G_ORIGINAL",
         "MIXED_PUBLISHED_REPORT",
         "AI_ASSISTED_CONTENT_MIXED",
+        "SPOKEN_FAN_TRANSCRIBED",
     ]
 
     @field_validator("published_at")
@@ -421,6 +425,10 @@ def _parse_sources(text: str) -> list[dict[str, Any]]:
             nature = "MIXED_PUBLISHED_REPORT"
         elif "AI-assisted/content-mixed" in usage:
             nature = "AI_ASSISTED_CONTENT_MIXED"
+        elif "spoken_fan_transcribed" in usage:
+            # canonical 标记唯一入口（来源表）：无标记一律回落 G_ORIGINAL，
+            # 新档只有显式标记才进——防静默升格（外审 Q2-P1a）。
+            nature = "SPOKEN_FAN_TRANSCRIBED"
         else:
             nature = "G_ORIGINAL"
         rows.append(
