@@ -154,7 +154,7 @@
 - 决策：家规"复评/设计门/外援"收敛为一段"外部审视"——评审者固定 scripts/codex_open.sh --sandbox read-only（当前 codex-open · deepseek-v4-pro · max，换 provider/模型/强度只改该脚本，家规不写死）；三触发、每触发一次：核心设计稿动代码前=设计门（规则 5 那类，非核心豁免）；吓人 diff 合入前（按规则 5 核心判据）；同一问题 ≥2 次修复未果=外援（加第二意见 codex-glm·glm-5.3，前两次双模并行校准独立发现占比再定转正）。每次评审冻结 packet（设计稿或 diff+提交清单+固定四问），评审只产发现、裁决归 writer 逐条落稿，裁决记录附 elapsed_seconds；评审侧不用长驻会话，靠 packet 固定前缀吃 provider 缓存，仅外援出现一次真实漏上下文事故才许引入 resume 会话；第一层 /review 保持 CC 本模自检。
 - 为什么：外部评审已事实统一 DS Pro max（设计门 12/12/17 发现全裁决闭环）；"双模型并行最优"造成每次门临时决策成本、违反规则 6；长驻会话破坏盲评且上下文膨胀——Daily 门 12416/12467 prompt 命中缓存证明固定前缀已零状态拿到复用收益，vision 门 318.7s 给出时长基线。
 - 否决了什么：每节点配不同模型（四套规格、无证据支持）；评审侧长驻会话；glm-5.3 无实证直接转正；在 packet 与家规里写死 provider/模型名。
-- 状态：active · 证据：AGENTS.md 外部审视节；scripts/codex_open.sh（--sandbox read-only，2 测试绿）；docs/GLOSSARY.md；旧 review-failover hook 链与 binding-era Stop 权限 gate 已备份并删除（~/fin-backups/external-review-cleanup-20260828/，留存写守卫 3 测试绿）。
+- 状态：active（→ 2026-09-04 设计门/外部审视归属扩展至 ZCode 会话，见 D-040） · 证据：AGENTS.md 外部审视节；scripts/codex_open.sh（--sandbox read-only，2 测试绿）；docs/GLOSSARY.md；旧 review-failover hook 链与 binding-era Stop 权限 gate 已备份并删除（~/fin-backups/external-review-cleanup-20260828/，留存写守卫 3 测试绿）。
 
 ## D-022 · 2026-08-28 · 普通栏撤出 G 准入与深化资格 `[回填]`
 - 决策：`classify_g_source` 删除「普通」映射——G 准入与深化资格整体撤销（单缝联动同时收回）；普通栏内容留 reference lane 检索，不进 G 认知库；已生成的 58 篇普通栏产物留库惰性。
@@ -187,7 +187,7 @@
 - 为什么：owner 明确「codex-open 不需要设计门，不需要外部 agent 审计，全部是
   自己完成，只有 CC 才有设计门/审计门」。
 - 否决了什么：继续把外部审视三触发无条件套在 codex-open 会话（打断其自主完成）。
-- 状态：active · 证据：AGENTS.md 审查机制归属；docs/GLOSSARY.md；本条目落盘即 commit。
+- 状态：active（→ 2026-09-04 D-040 将设计门/外部审视扩展至 ZCode；本条 codex-open 豁免部分仍 active） · 证据：AGENTS.md 审查机制归属；docs/GLOSSARY.md；本条目落盘即 commit。
 
 ## D-028 · 2026-08-31 · B2 二轮复盲评闭环 + GLM 额度耗尽暂时关闭（owner 拍板）
 - 决策：深化二轮复盲评（同协议新 seed，14 样本、四评审无上下文、三维 1-10）
@@ -393,3 +393,19 @@
   回填+三新卡 preview 停 owner 确认门；复压测验收跑批中）· 证据：
   docs/design/analysis-mindset-v1.md（设计门 22/22，8930b22）；baseline
   台账 `~/.local/state/fin-analyse/analysis-mindset-stress-20260904/`。
+
+## D-040 · 2026-09-04 · 设计门/外部审视扩展至 ZCode，CC/ZCode 同担（owner 拍板）
+- 决策：设计门与外部 agent 审计从 CC 专属（D-027）扩展为 CC 与 ZCode
+  会话同等执行；三触发、packet 固定四问、裁决归执行会话落稿、升级防线
+  全套不变；/review 复评同为 CC/ZCode 按需动词。codex-open 豁免不变
+  （D-027 对 codex-open 部分继续 active）。
+- 为什么：owner「ZCode 工作流做成与 CC 一样（有设计门）」；评审独立性
+  来自外部模型+read-only sandbox+盲评 packet，不来自调用者客户端；
+  codex_open.sh 本为非 TTY agent 会话设计，扩展零代码零新设施。
+- 否决了什么：维持 ZCode 无门自完成（D-027 在 ZCode 侧的类推适用）；
+  为 ZCode 另建第二套评审脚本/设施（违反 D-023 单一脚本收敛）。
+- 状态：active · 证据：AGENTS.md 共享合同头行+审查机制归属；GLOSSARY
+  外部审视/设计门/外援触发/家规 v2.1 行与 CLAUDE.md 入口行同步；冒烟
+  过门=本合同改动 diff（155s·发现 3 条·采纳 3 条·126990 tokens：
+  P1 决策链漏 D-040 与 D-023/D-027 指针、P2 GLOSSARY 家规行、
+  P3 CLAUDE.md 入口行，均已落本条 commit）。

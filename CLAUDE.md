@@ -2,7 +2,7 @@
 
 @AGENTS.md
 
-根目录 `AGENTS.md` 通过上述 import 在每个 Claude Code 会话启动时自动加载；它是 CC/codex/opencode 共享工程合同，详见 `docs/DECISIONS.md`。
+根目录 `AGENTS.md` 通过上述 import 在每个 Claude Code 会话启动时自动加载；它是 CC/ZCode/codex/opencode 共享工程合同，详见 `docs/DECISIONS.md`。
 
 开始非简单任务前读 `docs/pm/NOW.md`（唯一当前状态与执行队列）；方向权威是 `docs/pm/rebaseline-20260827.md`。
 理解系统先读 `docs/architecture/system-overview.md`（主链一页纸）与 `docs/GLOSSARY.md`（术语指路）。
