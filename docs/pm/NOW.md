@@ -118,6 +118,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 主线 | 3.1 | 宏观统一接口 A：read_macro_brain 已注册；owner 校准 v0（12 普通保留 + 每日热点）已落 config/macro_brain_rules.json；macro_index 09-03 12:58 已生成（22 条：12 kept + 8 每日热点 + 2 新规则命中），reader 索引优先已生效；宏观问询实弹 ✅（09-03 19:2x read_macro_brain 被调 status ok/gaps=[]，答案融合星球宏观材料 + 外搜核验带时点） | 已交付；设计 [../design/macro-brain-interface-a.md](../design/macro-brain-interface-a.md) |
 | 主线 | 3.2 | G 工作集 manifest：已修 READY + sources_changed 清（0186462）；剩余 fresh pair 专项探针 | 随主线1 真实问询 |
 | 主线 | 3.3 | ZSXQ 评分时间线 v2（D-037）：门槛 ≥6（config/zsxq_capture.json）+ parser v2 + 回填 445 行 + published_at 排序 + CLAUDE 纪律已交付（6273ab8，09-03 12:58 实弹 sync 过，Windows 单侧无同步项）；首篇 [6,7) 边界样本待自然窗口 | 随自然窗口（预计数日内）；交接稿 [../design/instrument-score-timeline.md](../design/instrument-score-timeline.md) |
+| 主线 | 4 | 决策日志 v1 施工：设计门已闭环（v2=4edfdac，345s/10 发现/10 采纳），零代码；实现研究完毕、方案定型，[交接稿](decision-journal-handoff-20260904.md)（含两处设计修正：direct-runner 零碰 provider、CAS 降级 revision 记账），五任务序列在内 | owner 2026-09-04 晚已授权施工，新会话按交接稿执行 |
 | 最后 | 8 | BUG-016/017 盘后 Daily 复验：D-030 停推后窗口失效，并入 D-031 验证 | D-031 实施时 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI） | owner 指示恢复推送后 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
