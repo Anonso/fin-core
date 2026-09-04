@@ -6,7 +6,11 @@ the only write is the candidate draft markdown under ``$XDG_STATE_HOME``
 blocks ingest — the consume wrapper owns the typed audit line and exception
 isolation.
 
-Selection: index entries whose ``date`` is later than the annotation ``as_of``
+Selection: index entries whose ``date`` is on or after the annotation
+``as_of`` day (boundary day included — BUG-028: review batches run in the
+morning while G columns publish intraday, so an anchor rolled to the review
+day would permanently drop same-day material; archived same-day articles are
+routed to the same-article section by the unit closure, not re-nominated)
 (index carries ``date``, not ``published_at`` — gate fact check 2026-09-03),
 classified through :func:`classify_g_source` with the same provenance
 parameters the G Working Set uses (``teacher_original=True``,
@@ -171,7 +175,7 @@ def _render_draft(
         "",
         "## 统计",
         "",
-        f"- index 扫描：{scanned}；as_of 后：{after_as_of}；"
+        f"- index 扫描：{scanned}；as_of 当日及之后：{after_as_of}；"
         f"排除 ai_summary_reference：{excluded_usage}；闭集未命中：{not_eligible}；"
         f"日期不可解析：{malformed_dates}。",
         f"- 同文已入档（潜在新增段落候选）：{len(same_articles)}；"
@@ -277,7 +281,10 @@ def scan_mainline_candidates(
         if entry_date is None:
             stats["malformed_dates"] += 1
             continue
-        if entry_date <= as_of:
+        # BUG-028：边界日（date == as_of）不过锚门，走正常分流——复核批次在早盘、
+        # 锐评在盘中发，锚滚到复核日会把当天 G 层材料永久滤出提名；同日已入档
+        # 的由同文闭包判进 same_articles，不会重复提名为新候选。
+        if entry_date < as_of:
             continue
         stats["after_as_of"] += 1
         decision = classify_g_source(

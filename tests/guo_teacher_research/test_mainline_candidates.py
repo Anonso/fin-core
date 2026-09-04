@@ -256,3 +256,65 @@ def test_draft_paths_without_traversal_escape_state_root(tmp_path: Path) -> None
     assert draft.parent == state_root / "fin-analyse"
     assert draft.name == "mainline-candidates.md"
     assert os.path.commonpath([str(draft), str(state_root)]) == str(state_root)
+
+
+def test_scan_includes_boundary_day_with_closure_routing(tmp_path: Path) -> None:
+    """BUG-028：as_of 当日（复核日）材料不再被锚门永久滤掉。
+
+    复核批次在早盘、G 栏目盘中发布：锚滚到复核日后，当天材料若按
+    ``date <= as_of`` 滤除将永不再提名。边界日条目走正常分流——
+    未入档→候选；已入档（同文闭包）→同文新增段落候选；锚前旧文仍滤。
+    """
+
+    kb_root = tmp_path / "knowledge-base"
+    (kb_root / "articles").mkdir(parents=True)
+    annotation = tmp_path / "annotation.md"
+    _write_annotation(annotation)
+    readmodel_root = _publish_readmodel(tmp_path, annotation)
+    index = [
+        {
+            "column": "星大派锐评",
+            "date": "2026-01-02 11:50",
+            "title": "边界日新锐评",
+            "path": str(kb_root / "articles" / "b1.md"),
+        },
+        {
+            "column": "星大派锐评",
+            "date": "2026-01-02 12:30",
+            "title": "边界日同文已入档",
+            "path": str(kb_root / "articles" / "x.md"),
+        },
+        {
+            "column": "星大派每日热点",
+            "date": "2026-01-02 08:32",
+            "title": "边界日热点",
+            "path": str(kb_root / "articles" / "h.md"),
+        },
+        {
+            "column": "星大派锐评",
+            "date": "2026-01-01 10:00",
+            "title": "锚前旧文仍滤",
+            "path": str(kb_root / "articles" / "old.md"),
+        },
+    ]
+    index_path = kb_root / "index.json"
+    index_path.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
+
+    result = scan_mainline_candidates(
+        annotation_path=annotation,
+        readmodel_root=readmodel_root,
+        index_path=index_path,
+        state_root=tmp_path / "state",
+    )
+
+    assert result.disposition == "SCANNED"
+    assert result.scanned == 4
+    assert result.after_as_of == 3  # 边界日 3 条进分流；锚前旧文不计
+    assert result.nominated == 1  # 边界日新锐评
+    assert result.same_article == 1  # 边界日同文 → CU-0001-01，不重复提名
+    assert result.excluded_usage == 1  # 边界日热点（ai_summary_reference）
+    text = Path(str(result.draft_path)).read_text(encoding="utf-8")
+    assert "边界日新锐评" in text
+    assert "边界日同文已入档" in text and "CU-0001-01" in text
+    assert "锚前旧文仍滤" not in text
+    assert "边界日热点" not in text
