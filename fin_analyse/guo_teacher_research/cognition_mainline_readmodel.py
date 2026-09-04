@@ -649,7 +649,10 @@ def generate_cognition_mainline_readmodel(
     if not text.strip():
         raise CognitionMainlineReadModelError("annotation document is empty")
     doc_sha256 = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    as_of_match = re.search(r"as_of=(\d{4}-\d{2}-\d{2})", text)
+    # as_of 支持「日期」或「日期 时间」：同日复核同日发布的文章时，
+    # date-only 会归零到 00:00，被 processed_at ≥ available_at 拒整份
+    # （BUG-028 提名含同日 → 归档侧必须同样放行同日时点）。
+    as_of_match = re.search(r"as_of=(\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?)", text)
     if as_of_match is None:
         raise CognitionMainlineReadModelError("annotation doc missing as_of")
     as_of = _parse_datetime(as_of_match.group(1))

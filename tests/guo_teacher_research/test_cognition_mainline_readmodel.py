@@ -1152,3 +1152,103 @@ def test_projection_without_jargon_has_no_notes_key() -> None:
     )
     assert len(out.items) == 1
     assert "jargon_notes" not in out.items[0]
+
+
+def test_as_of_supports_time_for_same_day_archival(tmp_path: Path) -> None:
+    """同日复核同日发布：as_of 带时间即可通过 processed_at ≥ available_at。"""
+    import json
+
+    from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
+        generate_cognition_mainline_readmodel,
+    )
+
+    doc = tmp_path / "annotation.md"
+    doc.write_text(
+        "as_of=2026-01-02 14:45\n"
+        "\n"
+        "## 来源与边界验证\n"
+        "\n"
+        "| 来源 ID | 发表时间 | 可回指原文 | 来源性质与本轮用途 |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| S-0001 | 2026-01-02 10:00 | `knowledge-base/articles/x.md` | G 原文；测试。 |\n"
+        "\n"
+        "## 时间语义索引\n"
+        "\n"
+        "| 认知单元 | published_at | observed_at | effective_period | forecast_window |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| CU-0102-01 | 2026-01-02 10:00 | unknown/not stated | 测试 | none stated |\n"
+        "\n"
+        "## 认知单元\n"
+        "\n"
+        "### CU-0102-01：同日单元\n"
+        "- 来源/时间：S-0001，2026-01-02。\n"
+        "- 认知模式：主 `当前观察`。\n"
+        "- G 原文：测试原文。\n"
+        "- 深化表达：测试深化。\n"
+        "- 验证：测试限制。\n"
+        "\n"
+        "### 主线变化证据\n"
+        "\n"
+        "| 节点 | 前序节点 | 变化类型 | 保持 | 新增 |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| 2026-01-02 测试 | 无 | baseline | 无前序可比较。 | CU-0102-01 |\n"
+        "\n"
+        "## 尾部 section\n",
+        encoding="utf-8",
+    )
+
+    payload = generate_cognition_mainline_readmodel(doc, generation=1)
+    # published 10:00 同日；as_of 14:45 → processed_at ≥ available_at 通过。
+    assert payload["as_of"] == "2026-01-02T14:45:00+08:00"
+
+    # 反例：as_of 时间早于同日发布仍整份拒绝（fail-closed 不变）。
+    doc.write_text(doc.read_text(encoding="utf-8").replace("14:45", "09:00"), encoding="utf-8")
+    try:
+        generate_cognition_mainline_readmodel(doc, generation=1)
+        raise AssertionError("expected rejection")
+    except Exception as exc:
+        assert "processed_at" in str(exc) or "earlier" in str(exc)
+
+
+def test_as_of_date_only_still_works(tmp_path: Path) -> None:
+    from fin_analyse.guo_teacher_research.cognition_mainline_readmodel import (
+        generate_cognition_mainline_readmodel,
+    )
+
+    doc = tmp_path / "annotation.md"
+    doc.write_text(
+        "as_of=2026-01-03\n"
+        "\n"
+        "## 来源与边界验证\n"
+        "\n"
+        "| 来源 ID | 发表时间 | 可回指原文 | 来源性质与本轮用途 |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| S-0001 | 2026-01-01 10:00 | `knowledge-base/articles/x.md` | G 原文；测试。 |\n"
+        "\n"
+        "## 时间语义索引\n"
+        "\n"
+        "| 认知单元 | published_at | observed_at | effective_period | forecast_window |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| CU-0001-01 | 2026-01-01 10:00 | unknown/not stated | 测试 | none stated |\n"
+        "\n"
+        "## 认知单元\n"
+        "\n"
+        "### CU-0001-01：测试单元\n"
+        "- 来源/时间：S-0001，2026-01-01。\n"
+        "- 认知模式：主 `当前观察`。\n"
+        "- G 原文：测试原文。\n"
+        "- 深化表达：测试深化。\n"
+        "- 验证：测试限制。\n"
+        "\n"
+        "### 主线变化证据\n"
+        "\n"
+        "| 节点 | 前序节点 | 变化类型 | 保持 | 新增 |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| 2026-01-01 测试 | 无 | baseline | 无前序可比较。 | CU-0001-01 |\n"
+        "\n"
+        "## 尾部 section\n",
+        encoding="utf-8",
+    )
+
+    payload = generate_cognition_mainline_readmodel(doc, generation=1)
+    assert payload["as_of"] == "2026-01-03T00:00:00+08:00"
