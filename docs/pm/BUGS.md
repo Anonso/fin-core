@@ -992,10 +992,11 @@
   已核：Settings/Enabled=true、6×触发器 Enabled=true、RunLevel）；重注册
   首次成功后后续被间歇性拒绝访问挡（非提权 token）。实体任务 CIM 复核
   全绿：State=Ready、Settings.Enabled=True、6 触发器 Enabled=True、
-  NextRun 12:20 不变——显式元素与缺省值行为等价，无功能残差；字节级
-  重登记如需可提权单行（**绝对路径**，勿依赖当前目录）：
-  `Register-ScheduledTask -TaskName FIN-ZSXQ-Incremental -Xml (Get-Content
-  -Raw C:\Users\22873\fin-zsxq-capture\backup-20260905\task-current.xml) -Force`。
+  NextRun 12:20 不变——显式元素与缺省值行为等价，无功能残差。**字节级
+  重登记已完成（2026-09-05 11:01，owner 提权执行绝对路径单行）**：注册库
+  `C:\Windows\System32\Tasks\FIN-ZSXQ-Incremental` 现 7×Enabled=true（1
+  Settings+6 触发器）+RunLevel=LeastPrivilege，**verify-task-xml 对注册库
+  本体 VERIFY_OK**（此前结构性不可能）；运行态 Ready、NextRun 12:20 不变。
 
 ## BUG-028 mainline 候选扫描锚门滤掉复核日当天全部 G 层材料（2026-09-04 CC 立案，同日闭）
 
