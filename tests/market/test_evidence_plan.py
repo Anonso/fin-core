@@ -21,10 +21,23 @@ def test_packaged_market_plan_freezes_current_production_topology() -> None:
         "tencent_daily",
     )
     assert tuple(driver.driver_id for driver in plan.intraday) == (
-        "tencent_intraday",
         "eastmoney_intraday",
     )
     assert plan.manifest_sha256
+
+
+def test_intraday_tencent_mkline_retired_by_owner_decision() -> None:
+    """BUG-039（owner 2026-09-05 拍板「摘除」）：腾讯 mkline 不提供复权，
+    与服务层 FORWARD_ADJUSTED_QFQ 资格化互斥——30m/60m 恒 UNKNOWN，
+    每标的白花 8s 预算后必丢，且 gap 不进顶层。
+
+    摘除后分时 lane 仅剩 eastmoney_intraday（push2his 恢复可达即自动出数）。
+    重新启用 tencent_mkline 前必须先做「非复权放行」资格化设计（使用触发）：
+    本测试翻红即强制把该设计带回台面，防无意识回归。
+    """
+    plan = load_market_evidence_plan()
+
+    assert all(driver.driver_id != "tencent_intraday" for driver in plan.intraday)
 
 
 def test_compiler_consumes_enable_and_timeout_without_dynamic_adapters() -> None:

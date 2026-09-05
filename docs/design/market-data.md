@@ -55,6 +55,11 @@
 - 连续竞价 quote max-age 15 秒；双源差异 `≤0.3%` READY、`>0.3%..1%` PARTIAL、`>1%` UNKNOWN（`on_demand_tactical_context.py:82-83`）；报价值始终取合格 primary，reference 只做交叉验证。
 - 单 reference 只能 PARTIAL/reference-only；非连续阶段允许有界最近参考价但强制 `reference_only`。
 - 30 分钟线按上午/下午 session 成对聚合 60 分钟，绝不跨午休或缺 bar 拼接；单 frame 失败不污染 quote/日线（目录条目）。
+  **2026-09-05 摘除（owner 拍板，BUG-039）**：腾讯 mkline 主源不提供复权、与服务层
+  FORWARD_ADJUSTED_QFQ 资格化互斥，30m/60m 生产恒 UNKNOWN——已从 manifest 停用
+  （`market_evidence_plan.v1.json`，测试 `test_intraday_tencent_mkline_retired_by_owner_decision`
+  钉住）。分时 lane 仅剩 eastmoney_intraday，push2his 恢复可达即自动出数；重启用腾讯 mkline
+  前须先做非复权放行的资格化设计（使用触发）。
 
 ### 概览 capture 窗口
 

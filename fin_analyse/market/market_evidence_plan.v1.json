@@ -28,7 +28,7 @@
     "intraday": [
       {
         "driver_id": "tencent_intraday",
-        "enabled": true,
+        "enabled": false,
         "timeout_seconds": 8.0
       },
       {
