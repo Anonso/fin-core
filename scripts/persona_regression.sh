@@ -2,6 +2,9 @@
 # 人格修订回归探针（persona-governance-v1 §2，设计门 a0d885d）
 # 用法：scripts/persona_regression.sh   （无参数；每次人格 r 修订后、收口前跑一轮）
 # 腿：cmd·deepseek-v4-flash（最弱腿=最严苛服从性测试；effort max）。
+#     腿定位（owner 2026-09-05 拍板）：flash 非生产、仅测试用——本探针 FAIL 须先
+#     分辨「flash 腿执行方差」（在案：财务双源标注不稳、首行元叙述泄漏，均不立案）
+#     与「人格回归」；生产腿=glm-5.3（CC）/deepseek-v4-pro（cmd），以其为准。
 #     版本钉见 codex_open.sh CMD_VERSION_PIN——两处须同步升版（互指注释）。
 # 必须在 consult-agent 工作区起腿（cwd=目录即身份；不在该 cwd 人格不加载=全题空转），
 # 本脚本自行 cd 并校验。隔离：答案/台账只落 $STATE（0700，不入 git、不入 finq）；
