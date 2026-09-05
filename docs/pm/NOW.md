@@ -100,7 +100,7 @@ glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路�
 | --- | --- | --- | --- | --- |
 | read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
-| read_market_snapshot | 标的行情 + 主指数日线（大盘线） | 在用（09-04 指数 lane 上线〔BUG-024 材料层，96f8fcd〕：主指数名称/限定符查询给日线+技术因子，端到端「科创50」READY/120 bars/零 gap；个股语义零变化；此前 08-31 EASTMONEY f48 修复与 BUG-022 已闭） | 名称查「科创50」日线，验 bars+gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011/022 已闭；git 96f8fcd |
+| read_market_snapshot | 标的行情 + 主指数日线（大盘线） | 在用（09-05 板块 lane 上线〔NOW #24，ff372bd〕：液冷/半导体/通信设备等中文名直查腾讯板块指数日线+技术因子——单源 limitation 常驻、无 30m/60m，端到端 READY/120 bars/零 gap+消费端探针答引板块序列带单源口径；09-04 主指数 lane〔96f8fcd〕与个股语义零变化；08-31 EASTMONEY f48 修复与 BUG-022 已闭） | 名称查「科创50」日线，验 bars+gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011/022 已闭；git 96f8fcd |
 | read_market_overview | 大盘结构 | 在用（09-04 09:07 盘前实弹闭环：整链拒未再现，PARTIAL+7 命名 gap〔5 常驻良性+2 盘前源数据缺席=f3/f6 占位与广度，源属性〕；owner 会话 1c718317 答案诚实降级质量在线。08-31 定修+09-01 gate5 两次修复生效） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 已闭 |
 | read_margin_evidence | 两融语义 | 在用（08-30 实弹闭环：全市场拥挤度语义生效，账户语义混淆清零） | 两融问题 | BUG-004 已闭 |
 | read_ready_evidence | 当天高相关本地参考材料注入（非 G、非公告） | 在用（BUG-012 全链闭环 09-03：残余三投影门外审裁决 A 定修，端到端 RPC status ok/gaps=[] 三字段全过、真实 CLI 触发实证；宏观叙事帖可注入，映射类证据归 read_external_evidence；残余一券商通道为已知限制 P2-8） | 当天老师相关提问，验工具被调 + 有料则注入 | BUG-012 已闭 |
@@ -131,12 +131,11 @@ glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路�
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线·准备 | 24 | **板块指数日线 lane**：细分板块（电子/半导体/通信设备/液冷等）日线序列工具——BUG-024 样本#1 实锤+人格 r15 边界条款，复用 96f8fcd 主指数 lane 修法；设计门→施工→persona_regression 回归 | 下一会话（准备期第一施工项，owner 09-05 认可） |
 | 主线·准备 | 25 | 知识脑 3 卡 seed：管理层/护城河/反向预期——persona-governance-v1 §4 已批；seed 前置三件（38 卡词面重叠检查/related_items 连边/幂等复验）+激活探针（正向 3+负向 2 含估值挤占） | 下一会话（清尾，半小时级） |
-| 主线·准备 | 26 | 人格 r17 逐行瘦身 407→约 390：只删 v2–v4 历史 bullet，4 行活规则原地保留，删前逐段 diff 验证 r15 备份（persona-governance-v1 §3）；施工后跑回归探针+owner 实弹复核 | 下一会话（清尾） |
+| 主线·准备 | 26 | 人格 r18 逐行瘦身 417→约 400（编号顺延：r16=路由判据入人格、r17=09-05 板块线源配套；内容同 persona-governance-v1 §3）：只删 v2–v4 历史 bullet，4 行活规则原地保留，删前逐段 diff 验证 r15 备份；施工后跑回归探针+owner 实弹复核 | 下一会话（清尾） |
 | 旁路·排后 | 27 | 分时/盘中数据（规模大源不稳）；消息时间线视图（先重读 2026-09-03-point-line-plane-survey 评估 B1 剩余价值） | 排后，准备期主两项完成后 |
 | 旁路·owner | 4 | 决策日志 v1 收尾：施工全清（09-04 合入 b72ddf5：设计门 345s/10/10 + 施工外审 474s/7 发现/6 采纳、1 P2 同根裁决；231+全仓 3141 绿 + 实弹 18/18；人格规则 8 已增补）。会签两项 ✅（09-05 owner 签：人格计数行 13+2 追认、README 冻结行整行重写并注记会签）。剩 owner：复盘问询探针（「当初为什么买 X」，随真实使用，finq 记账） | owner 随用 |
-| 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+指数日线 lane 已施工全清（09-04，96f8fcd），剩 owner 实弹验「线层现工具序列或诚实标注」（详见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前 |
+| 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+主指数日线 lane（09-04，96f8fcd）+细分板块 lane（09-05，ff372bd）均施工全清，剩 owner 实弹验「线层现工具序列或诚实标注」；09-07 收盘后另核板块 lane 当日 bar 即时性（评审 Q2-P2，见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前+盘后 |
 | 旁路·owner | 2 | finq 记账（D-043/C3）：y 记一字、n 必须一句原因（owner 纪律，不加校验）；存量 3 条历史缺口接受（不回填 append-only 台账），自 D3 起新账强制 | owner 随用 |
 | 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；09-05 核对：registry 1629 条、<7 共 43 条且最新为 08-29 6.8 均交付前——尚无新边界样本；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |

@@ -34,10 +34,10 @@ QUESTIONS=(
 # 预注册判据锚（每轮随台账落一份，评审 S1-P3）
 cat > "$STATE/checks.md" << 'EOF'
 # 回归判据锚（grep 级；FAIL/WARN 人工裁决）
-q1-fin      PASS: 单源标注词(单一来源|单一媒体口径|未核验)或多源词(双源|两源|多源) >=1
+q1-fin      PASS: 单源标注词(单一来源|单一媒体口径|未核验)或多源词(双源|两源|多源|独立来源|三方一致) >=1
 q2-situation PASS: (证伪|失效线) >=1
 q3-event    三态: 四选一词(价值事件|情绪波动|真因不明)命中=PASS；引G判定(老师|锐评|G 层|G层)=PASS(豁免)；皆无=FAIL
-q4-action   PASS: 位置档词(带上悬空|带下|带中|带上|右侧区) >=1 且 (失效线) >=1 且 (净资产|账户百) >=1
+q4-action   PASS: 位置档词(带上悬空|带下|带中|带上|右侧区) >=1 且 (失效线|降级线) >=1 且 (净资产|账户百|净值) >=1
 q5-portfolio PASS: (持仓|仓位) >=1 且 (把握|失效) >=1
 q6-negative WARN(八股化): (价值事件|情绪波动|真因不明|带上悬空|带下|失效线) 命中数 >0
 all-leak    预期FAIL跟踪位: CU-[0-9]=0 且 首行(材料齐了|数据齐了|分析完成)=0
@@ -71,7 +71,7 @@ verdict() { printf '%-14s %-12s %s\n' "$1" "$2" "$3" >> "$report"; }
 verdict ITEM RESULT DETAIL
 g() { grep -Ec "$1" "$STATE/$2" 2>/dev/null || true; }
 
-c=$(g "单一来源|单一媒体口径|未核验|双源|两源|多源" q1.md)
+c=$(g "单一来源|单一媒体口径|未核验|双源|两源|多源|独立来源|三方一致" q1.md)
 [[ "${c:-0}" -ge 1 ]] && verdict q1-fin PASS "标注/多源词=$c" || verdict q1-fin FAIL "无核验标注词"
 c=$(g "证伪|失效线" q2.md)
 [[ "${c:-0}" -ge 1 ]] && verdict q2-situation PASS "证伪/失效线=$c" || verdict q2-situation FAIL "无证伪/失效线"
@@ -80,7 +80,7 @@ g2=$(g "老师|锐评|G 层|G层" q3.md)
 if [[ "${c:-0}" -ge 1 ]]; then verdict q3-event PASS "四选一词=$c"
 elif [[ "${g2:-0}" -ge 1 ]]; then verdict q3-event "PASS(豁免)" "引G判定=$g2"
 else verdict q3-event FAIL "无四选一且无G判定"; fi
-c1=$(g "带外悬空|带上悬空|带下|带中|带上|右侧区|悬空" q4.md); c2=$(g "失效线" q4.md); c3=$(g "净资产|总资产|账户百" q4.md)
+c1=$(g "带外悬空|带上悬空|带下|带中|带上|右侧区|悬空" q4.md); c2=$(g "失效线|降级线" q4.md); c3=$(g "净资产|总资产|账户百|净值" q4.md)
 if [[ "${c1:-0}" -ge 1 && "${c2:-0}" -ge 1 && "${c3:-0}" -ge 1 ]]; then
   verdict q4-action PASS "位置档=$c1 失效线=$c2 账户%=$c3"
 else verdict q4-action FAIL "位置档=$c1 失效线=$c2 账户%=$c3"; fi
