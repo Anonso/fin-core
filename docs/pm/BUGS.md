@@ -1360,3 +1360,19 @@
   `dynamics/half_life.py` 未迁（备份档案）。它们与六仓无关（评估对象是内容/文章，
   不读平铺仓）——六仓零读方结论不变；将来建单元级时效读面无须考古，从现仓模块+
   工件起建即可（消费面先行的教训不变）。
+- **施工收口（2026-09-05 23:40，535a067，净 -387 行）**：六仓停写+cli
+  deep-read/refresh-clocks 退役+apprentice 纯计算化合入。验证=全仓 3235 绿+实弹探针
+  （真实腿 ensure_artifacts 一篇→full/compact fresh、payload clocks/units/suggestions
+  全在、六仓 sha256 前后零变化）。审计门：cmd·deepseek-v4-pro 733s / 2 发现 / 2 采纳 /
+  0 驳回（台账 `$STATE/fin-analyse/design-gate/bug047-six-store-write-stop-20260905/`）：
+  - P3（deepen.md 目录行过时）→ 采纳，随合入提交改；
+  - **P2（`scripts/backfill_instrument_scores.py:77-86` 读六仓 zsxq_sources——「零读方」
+    前提漏计手动脚本；且 D-044③ 增量接线设计 instrument-score-incremental-ingest.md
+    明写「单篇解析与 backfill 同路：index 行 + zsxq_sources.jsonl」）→ 采纳为
+    D-044③ 施工前置条件：增量接线开工前必须改口径（改读工件或 md 正文，或明示降级）**；
+    停写后 backfill 对新文章静默降级为 md 载体（图像评分表丢失、published_at 回退），
+    不阻塞本 diff（脚本手动一次性、D-044③ 未接线）。
+  - S1 裁定：cluster find-merge 只写仓从不回读，注入面从来 per-run 语义，无差异；
+    S3 备案两则：重建口径精确化=工件重排免 LLM（payload 即完整提取产物），仅无工件
+    最老条目需重提取；source_id 含文章路径属存量行为（路径迁移→ID 漂移，fresh 判定
+    不看 ID），备案不修。
