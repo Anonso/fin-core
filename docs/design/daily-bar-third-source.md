@@ -1,7 +1,7 @@
 # 日线第三结构化源（短设计）
 
 > 状态：设计稿（家规 5：核心链路动代码前必备；施工合入后本稿按例删除，Git 即归档）。
-> 设计门：施工前跑 `scripts/codex_open.sh --sandbox read-only` 外审（固定四问），packet 按
+> 设计门：施工前跑 `scripts/codex_open.sh exec` 外审（固定四问；评审者链见 D-045），packet 按
 > `docs/design-gate-packet-template.md`。
 > 立项依据：owner 2026-09-05 拍板「现在立项短设计」（09-05 审查报告 B：东财 push2his 自
 > 08-02 不可达，个股/指数日线实际单源依赖腾讯 ifzq.gtimg.cn——免费非官方接口单点撑生产）。

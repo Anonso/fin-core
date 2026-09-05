@@ -462,3 +462,9 @@
 - 为什么：09-05 全面审查实证三处断链——版本强势英雄 331 篇设计页要入 G 但 source_contract 静默全滤（BUG-020 同型）；Q&A 18 篇因 reference 候选源只收「普通」栏零车道且三个窗口键全死（配置/window_config/ready_evidence 三处已留口，属接了半截）；增量提取从未接线（parse_article_records 仅回填脚本调用）而工具描述声称已接（假断言诱导 agent）；run_ledger 无生产写入方致 alert 链结构性永不触发。
 - 否决了什么：①②的「明确不入 G/删死键」与「挂起待定」（按 BUG-020 先例与已交付设计页口径，车道缺口是漏不是设计）；③立即接线（D3 建造静默期不破例施工，只做一行级诚实化）；④立即补线或立即废除（Daily 反正随 D-031 迁问询环境重构，现在投入或删除都可能返工）。
 - 状态：active · 证据：2026-09-05 全面代码审查（四路只读深审，三 P1 均 cross-check；本条拍板会话）；执行项 = NOW 待办 #24/#25/#26/#27；描述诚实化随本决策 commit。
+
+## D-045 · 2026-09-05 · 门评审者链重构：cmd 主（deepseek-v4-pro）+ glm 替补，入口翻译层化（owner 拍板「用 cmd 做门」）
+- 决策：外部审视评审者入口 scripts/codex_open.sh 重构为评审者链——cmd·deepseek-v4-pro（Command Code CLI · Go Plan 账号）主 → glm·glm-5.3（codex-glm 路由凭据）替补；主 precheck 失败或运行非零自动落替补（stdout 横幅 + fallback.tsv 落账 + 主半份输出转 stderr 留存）；调用语法矩阵冻结（exec/e/review、stdin '-'、--sandbox/-C/--skip-git-repo-check 吸收；权限放大旗标与未知旗标 fail-closed；cmd 版本钉定 1.49.1，升级需改 CMD_VERSION_PIN 并重跑验证阶梯）；glm 降为替补即异构第二源。opencode ds pro（429 长期故障）不入链。
+- 为什么：门已两次因单一上游故障手工换评审者（opencode-go 429 断门、09-04 手工切 glm 无横幅无兜底）；owner 拍板「用 cmd 做门，glm 只是替补 opencode ds pro 的」。cmd 闭源账号客户端的三类特殊风险（版本漂移/-p 权限语义变化/会话过期）以版本钉定+翻译层 fail-closed+glm 兜底三道缓解。
+- 否决了什么：cmd 接入生产问询路由链（commandcode chat-only vs codex-provider Responses，协议不可行）；LiteLLM 桥转译（常驻基建无必要）；env-key 旁路认证（账号会话即凭据单源）；直接 Agent 全平行双评审（双计费，fallback 制已覆盖可用性）。
+- 状态：active · 证据：设计稿 docs/design/d045-gate-reviewer-chain.md v2（设计门 glm 评审者 410s/10 发现/10 采纳，台账 `$STATE/fin-analyse/design-gate/d045-gate-reviewer-chain-20260905/`；cmd 门形干跑同 packet 通过 ~18min）；执行 = codex_open.sh 重构 + run-design-gate/switch-codex-open-provider skill 重写 + GLOSSARY/AGENTS.md/NOW 同步。

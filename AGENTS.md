@@ -77,17 +77,18 @@ Spec 轴源指向 docs/design/、NOW.md、commit message 引用，不依赖
 issue tracker）。
 外部审视（按需动词，无常驻设施；CC/ZCode 同担）：评审者固定
 scripts/codex_open.sh
---sandbox read-only（当前 codex-glm · glm-5.3 · max；换
-provider/模型/强度只改该脚本，本文件不写死）。三触发、每触发一次：
+（评审者链，D-045：cmd·deepseek-v4-pro 主 → glm·glm-5.3 替补，主不可用自动
+fallback 并横幅+fallback.tsv 落账；换/加评审者只改该脚本 profile 表，本文件
+不写死）。三触发、每触发一次：
 核心设计稿动代码前（设计门，规则5 那类，非核心豁免）；吓人 diff 合入前
 （按规则5 核心判据：durable state/公共入口/大删大改/契约变更）；同一
-问题 ≥2 次修复未果（外援，执行会话直调无需用户中继，加第二意见模型——当前
-codex-glm·glm-5.3——前两次双模并行校准独立发现占比再定转正）。每次给
+问题 ≥2 次修复未果（外援，执行会话直调无需用户中继，替补链 glm·glm-5.3
+即异构第二源，双模并行校准程序不变）。每次给
 评审者冻结 packet：设计稿或 diff+提交清单+固定四问（契约破坏？durable
 state 时序/幂等？引用闭包漏删？相对直接 Agent 退化？），packet 骨架与落
 盘约定固定 docs/design-gate-packet-template.md；评审只产发现，裁决归执
 行会话逐条落稿；裁决记录附 elapsed_seconds/发现数/采纳数/驳回数（含部分
-采纳，逐条一句理由）。
+采纳，逐条一句理由）与实际服务的评审者（横幅/fallback.tsv 为证）。
 评审侧不用长驻会话，靠 packet 固定前缀吃 provider 缓存；仅外援出现
 一次单发 packet 反复漏上下文的真实事故才许引入 resume 会话。
 升级防线：外部审视每周真在手动用才许包脚本（规则11）；想接回自动
