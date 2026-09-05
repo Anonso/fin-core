@@ -86,60 +86,6 @@ def sample_traces(limit: int, teacher: str) -> None:
     click.echo(json.dumps([t.to_dict() for t in traces], ensure_ascii=False, indent=2))
 
 
-@main.command("deep-read")
-@click.argument("article", type=click.Path(exists=True))
-@click.option(
-    "--format",
-    "-f",
-    "fmt",
-    type=click.Choice(["json", "text"]),
-    default="json",
-    help="输出格式 (默认 json)",
-)
-def deep_read(article: str, fmt: str) -> None:
-    """对一篇 ZSXQ 文章执行完整认知学徒分析。
-
-    ARTICLE 为 knowledge-base/articles/ 下的 Markdown 文件路径。
-    输出包含 source、information_units、evidence_chains、theme_clusters、
-    dynamic_clocks、research_suggestions 和 warnings。
-    """
-    from fin_analyse.cognition.zsxq_apprentice import ZsxqCognitionApprentice
-
-    apprentice = ZsxqCognitionApprentice()
-    result = apprentice.deep_read(article)
-
-    if fmt == "text":
-        click.echo(f"# Deep Read: {result.source.title}")
-        click.echo(f"  source_rank: {result.source.source_rank}")
-        click.echo(f"  completeness: {result.source.completeness}")
-        click.echo()
-        if result.warnings:
-            click.echo("## Warnings")
-            for w in result.warnings:
-                click.echo(f"  - {w}")
-            click.echo()
-        click.echo(f"## Information Units ({len(result.units)})")
-        for unit in result.units:
-            click.echo(f"  [{unit.unit_type}] {unit.title}")
-            click.echo(f"    thesis: {unit.thesis[:120]}")
-            click.echo(f"    confidence: {unit.confidence:.0%}")
-            if unit.related_companies:
-                click.echo(f"    companies: {', '.join(unit.related_companies)}")
-            click.echo()
-        click.echo(f"## Theme Clusters ({len(result.theme_clusters)})")
-        for cluster in result.theme_clusters:
-            click.echo(
-                f"  [{cluster.active_status}] {cluster.name} ({len(cluster.unit_ids)} units)"
-            )
-            click.echo()
-        click.echo(f"## Research Suggestions ({len(result.suggestions)})")
-        for sug in result.suggestions:
-            click.echo(f"  [{sug.suggestion_level}] {sug.summary[:100]}")
-            click.echo()
-    else:
-        click.echo(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
-
-
 @main.command("priority-events")
 @click.option("--kb-root", type=click.Path(file_okay=False), default=None)
 @click.option("--runtime-root", type=click.Path(file_okay=False), default=None)
@@ -175,27 +121,6 @@ def priority_events(kb_root: str | None, runtime_root: str | None, limit_: int, 
         "outbox_path": str(outbox_path),
     }
     click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
-
-
-@main.command("refresh-clocks")
-@click.option("--dry-run", is_flag=True, help="只计算不写入")
-def refresh_clocks(dry_run: bool) -> None:
-    """刷新所有 dynamic clock 的时效性。
-
-    根据 elapsed time / half-life 自动降级或过期 clock。
-    建议 daily cron 调用。
-    """
-    from fin_analyse.cognition.dynamic_clock import refresh_all_clocks
-    from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
-
-    runtime_root = default_knowledge_base_root() / "runtime" / "cognition"
-    report = refresh_all_clocks(runtime_root, dry_run=dry_run)
-    click.echo(
-        f"total={report['total']} changed={report['changed']} "
-        f"expired={report['expired']} downgraded={report['downgraded']}"
-    )
-    if dry_run:
-        click.echo("[dry-run] 未写入")
 
 
 @main.command("verify-traces")

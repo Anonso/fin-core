@@ -320,9 +320,7 @@ class DeepReadArtifactService:
         try:
             from fin_analyse.cognition.zsxq_apprentice import ZsxqCognitionApprentice
 
-            apprentice = ZsxqCognitionApprentice(
-                runtime_root=self._kb_root / "runtime" / "cognition"
-            )
+            apprentice = ZsxqCognitionApprentice()
             result = (
                 apprentice.deep_read(path)
                 if control is None

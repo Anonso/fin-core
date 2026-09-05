@@ -21,7 +21,7 @@
 | store | owner | 位置/schema | 事实 |
 | --- | --- | --- | --- |
 | full/compact artifact | `DeepReadArtifactService` | `knowledge-base/runtime/cognition/deep_read_artifacts/{full,compact}` | 独占路径/权限/identity/原子发布与稳定读取（`deep_read_artifacts.py:141` class）；writer 随机 `O_EXCL|O_NOFOLLOW` 0600 temp + fsync + dirfd atomic replace（目录条目） |
-| deep-read 运行态 | `ZsxqCognitionApprentice` | caller-provided runtime root | 底层生成状态；artifact service 不替代其语义（目录条目） |
+| deep-read 运行态 | `ZsxqCognitionApprentice`（纯计算，无 durable 写入） | 无状态 | 六仓停写（BUG-047 B2-P1③，2026-09-05）后仅产出 `ZsxqApprenticeResult` 交工件轨；artifact service 不替代其语义（目录条目） |
 | availability 观测 | `DeepReadAvailabilityService`（只读） | 无状态 | 按 `index.json` canonical id/file 解析，不用 glob/文件名猜测（`deep_read_availability.py:92,99`） |
 
 artifact 内容事实：full 与 compact 必须共享非空 `generation_id` 与 envelope `generated_at`，且都携带 `content_hash`（`deep_read_artifacts.py:14-17,22-26`）；`generated_at = now(UTC)`、`generation_id = uuid4().hex`（:290-297）。

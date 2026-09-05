@@ -77,7 +77,7 @@ class _FakeBackend:
 
 
 def _apprentice(tmp_path: Path, backend: _FakeBackend) -> ZsxqCognitionApprentice:
-    apprentice = ZsxqCognitionApprentice(runtime_root=tmp_path / "runtime" / "cognition")
+    apprentice = ZsxqCognitionApprentice()
     apprentice.rule_extractor = _FakeRuleExtractor()
     apprentice.llm_extractor = LlmZsxqThesisExtractor(llm=backend)
     return apprentice

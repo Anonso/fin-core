@@ -3,19 +3,14 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
 from fin_analyse.cognition.dynamic_clock import evaluate_dynamic_clock
-from fin_analyse.cognition.evidence_store import JsonlRepository
 from fin_analyse.cognition.llm import CognitionCompletionControl
 from fin_analyse.cognition.models import (
-    DynamicClock,
     EvidenceChain,
     InformationUnit,
-    InvestmentResearchSuggestion,
-    ThemeCluster,
     ZsxqApprenticeResult,
     ZsxqCognitionSource,
 )
@@ -225,48 +220,8 @@ def _make_evidence_chain_for_unit(
     return None
 
 
-def _merge_theme_cluster(existing: ThemeCluster, incoming: ThemeCluster) -> ThemeCluster:
-    """Merge incoming cluster into existing, preserving accumulated unit_ids."""
-    merged_unit_ids = list(dict.fromkeys(existing.unit_ids + incoming.unit_ids))
-    merged_source_ids = sorted(set(existing.source_ids + incoming.source_ids))
-    merged_theses = list(dict.fromkeys(existing.core_theses + incoming.core_theses))
-    return replace(
-        existing,
-        unit_ids=merged_unit_ids,
-        source_ids=merged_source_ids,
-        core_theses=merged_theses,
-        active_status="reinforced"
-        if len(merged_unit_ids) > len(existing.unit_ids)
-        else existing.active_status,
-        priority=max(existing.priority, incoming.priority),
-        last_reinforced_at=incoming.last_reinforced_at,
-    )
-
-
 class ZsxqCognitionApprentice:
-    def __init__(self, runtime_root: Path | None = None) -> None:
-        if runtime_root is None:
-            from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
-
-            runtime_root = default_knowledge_base_root() / "runtime" / "cognition"
-        root = runtime_root
-        self.runtime_root = root
-        self.source_repo = JsonlRepository(
-            root / "zsxq_sources.jsonl", ZsxqCognitionSource, "source_id"
-        )
-        self.unit_repo = JsonlRepository(
-            root / "information_units.jsonl", InformationUnit, "unit_id"
-        )
-        self.chain_repo = JsonlRepository(root / "evidence_chains.jsonl", EvidenceChain, "chain_id")
-        self.cluster_repo = JsonlRepository(
-            root / "theme_clusters.jsonl", ThemeCluster, "cluster_id"
-        )
-        self.clock_repo = JsonlRepository(root / "dynamic_clocks.jsonl", DynamicClock, "unit_id")
-        self.suggestion_repo = JsonlRepository(
-            root / "research_suggestions.jsonl",
-            InvestmentResearchSuggestion,
-            "suggestion_id",
-        )
+    def __init__(self) -> None:
         self.rule_extractor = RuleBasedZsxqThesisExtractor()
         self.llm_extractor = LlmZsxqThesisExtractor()
 
@@ -313,7 +268,6 @@ class ZsxqCognitionApprentice:
             control.checkpoint_or_raise()
         actual_now = now or datetime.now(UTC).replace(microsecond=0).isoformat()
         source = load_zsxq_cognition_source(article_path)
-        self.source_repo.upsert(source)
 
         # Visual facts: VisionEvidenceService extraction from image descriptions (best-effort)
         vision_request = VisionEvidenceRequest(
@@ -421,31 +375,6 @@ class ZsxqCognitionApprentice:
             generate_research_suggestion(unit, clock_by_unit_id[unit.unit_id])
             for unit in clustered_units
         ]
-
-        if control is not None:
-            control.checkpoint_or_raise()
-        for unit in clustered_units:
-            self.unit_repo.upsert(unit)
-        for chain in chains:
-            self.chain_repo.upsert(chain)
-        for cluster in clusters:
-            # Merge with existing cluster to avoid losing unit_ids from
-            # previous deep_read calls on the same theme.
-            cluster_id = cluster.cluster_id
-
-            def same_cluster(c: ThemeCluster, *, cluster_id: str = cluster_id) -> bool:
-                return c.cluster_id == cluster_id
-
-            existing_list = self.cluster_repo.find(same_cluster)
-            if existing_list:
-                cluster = _merge_theme_cluster(existing_list[0], cluster)
-            self.cluster_repo.upsert(cluster)
-        for clock in clocks:
-            self.clock_repo.upsert(clock)
-        for suggestion in suggestions:
-            self.suggestion_repo.upsert(suggestion)
-        if control is not None:
-            control.checkpoint_or_raise()
 
         return ZsxqApprenticeResult(
             source=source,
