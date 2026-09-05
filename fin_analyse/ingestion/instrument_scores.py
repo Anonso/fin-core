@@ -7,6 +7,11 @@
 
 评分归一化：>10 一律 ÷10（如共识度 85 → 8.5），去 “%”/“分” 后缀；
 字段缺失/越界/代码非法 → status=needs_review，不丢行、不静默改。
+
+v3（owner 09-05 裁决）：①「项目评分」=利好度改版、「情绪热度」÷10=共识度、
+「投产启动」=启动时机（供货周期不映射，防落 horizon 兜底）；②列表锚点行后
+支持「k1：v1；k2：v2」分号单行格式，旧格式逐字节兼容；③正文显式代码优先，
+名称名册只在缺码时补（利通科技（603629）不得被覆盖为 920225）。
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 SCHEMA_VERSION = "fin.instrument-scores/v1"
-PARSER_VERSION = "v2"
+PARSER_VERSION = "v3"
 
 _SCORE_RE = re.compile(r"([0-9]+(?:\.[0-9]+)?)")
 _CODE_RE = re.compile(
@@ -38,12 +43,14 @@ _KEY_LINE_RE = re.compile(
 _FALLBACK_PREFIX_RE = re.compile(r"^fallback_chain:\s*\[[^\]]*\]\s*")
 
 # 别名按归一化后子串匹配；顺序 = 解析优先级
+# v3（owner 09-05 裁决）：「项目评分」=利好度改版、「情绪热度」÷10=共识度、
+# 「投产启动」=启动时机同义；旧别名全量保留（新旧格式并存支持）。
 _FIELD_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("lihao", ("利好度", "利好强度", "利好程度")),
-    ("consensus", ("共识度", "共识")),
+    ("lihao", ("利好度", "利好强度", "利好程度", "项目评分")),
+    ("consensus", ("共识度", "共识", "情绪热度")),
     ("core_business", ("核心业务", "主营业务", "核心逻辑", "简要描述")),
     ("sector", ("所属板块", "所属行业", "板块", "细分赛道")),
-    ("launch_in", ("预计多久启动", "预计启动时间", "预计介入时机", "启动时长", "介入时机")),
+    ("launch_in", ("预计多久启动", "预计启动时间", "预计介入时机", "启动时长", "介入时机", "投产启动")),
     ("horizon", ("期待周期", "周期周期", "持有时间", "持有周期", "周期")),
 )
 def _header_role(cell_norm: str) -> str | None:
@@ -92,6 +99,9 @@ def _clean_cell(value: str) -> str:
 
 def _alias_field(key: str) -> str | None:
     normalized = _norm(key)
+    # v3：供货周期是交付节奏，≠持有周期，不得落进 horizon 兜底别名「周期」。
+    if "供货" in normalized:
+        return None
     for field_name, aliases in _FIELD_ALIASES:
         for alias in aliases:
             if _norm(alias) in normalized:
@@ -294,7 +304,8 @@ def _parse_table(text: str) -> list[dict[str, Any]]:
         return []
     header = table[0]
     header_norm = [_norm(cell) for cell in header]
-    if not any("利好度" in cell for cell in header_norm):
+    # v2 门槛是「表头含利好度」；v3 起利好度家族（含项目评分）任一即启用。
+    if not any(_alias_field(cell) == "lihao" for cell in header):
         return []
     name_idx: int | None = None
     code_idx: int | None = None
@@ -344,6 +355,26 @@ def _parse_table(text: str) -> list[dict[str, Any]]:
     return drafts
 
 
+_KV_TAIL_RE = re.compile(r"[；;]\s*([^：:；;]{1,24}?)[：:]")
+
+
+def _iter_key_values(key: str, value: str) -> list[tuple[str, str]]:
+    """把“k1：v1；k2：v2”单行拆成多对（v3 新格式）。
+
+    分号后接「短 key+冒号」即切分；未映射字段的值丢弃不存储（如供货周期，
+    不得并回前值）；无冒号的散文尾段（如“做A；也做B”）并回前值——旧格式
+    单行取值不变。
+    """
+    pairs: list[tuple[str, str]] = []
+    current_key, cursor = key, 0
+    for match in _KV_TAIL_RE.finditer(value):
+        pairs.append((current_key, value[cursor : match.start()]))
+        current_key = match.group(1)
+        cursor = match.end()
+    pairs.append((current_key, value[cursor:]))
+    return [pair for pair in pairs if _alias_field(pair[0]) is not None]
+
+
 def _parse_list_style(text: str) -> list[dict[str, Any]]:
     lines = text.splitlines()
     drafts: list[dict[str, Any]] = []
@@ -369,14 +400,17 @@ def _parse_list_style(text: str) -> list[dict[str, Any]]:
         key_line = _KEY_LINE_RE.match(line)
         if not key_line:
             continue
-        mapped = _alias_field(key_line.group(1))
-        if mapped is None:
-            continue
-        value = _clean_cell(key_line.group(2))
-        if mapped in ("lihao", "consensus"):
-            current[mapped] = normalize_score(value)
-        elif current.get(mapped) is None:
-            current[mapped] = value or None
+        for pair_key, pair_value in _iter_key_values(
+            key_line.group(1), key_line.group(2)
+        ):
+            mapped = _alias_field(pair_key)
+            if mapped is None:
+                continue
+            value = _clean_cell(pair_value)
+            if mapped in ("lihao", "consensus"):
+                current[mapped] = normalize_score(value)
+            elif current.get(mapped) is None:
+                current[mapped] = value or None
     if current is not None:
         drafts.append(current)
     return drafts
@@ -495,6 +529,10 @@ def parse_article_records(
 
     def normalize_draft_code(draft: Mapping[str, Any]) -> dict[str, Any]:
         fixed = dict(draft)
+        # v3（owner 09-05 裁决）：正文显式代码优先，名册只在缺码时补——
+        # 「利通科技（603629）」不得被名册利通科技→920225 覆盖。
+        if str(fixed.get("code") or "").strip():
+            return fixed
         name = _compact_name(str(fixed.get("name") or ""))
         entry = normalized_entries.get(name)
         if entry is None:

@@ -19,7 +19,6 @@ from pathlib import Path
 
 from fin_analyse.ingestion.instrument_scores import (
     instrument_scores_path,
-    load_records,
     normalize_inline_codes,
     parse_article_records,
     upsert_records,
@@ -49,21 +48,6 @@ def _load_a_share_entries(kb_root: Path) -> dict[str, dict[str, object]]:
         return {}
     entries = payload.get("entries") if isinstance(payload, dict) else None
     return entries if isinstance(entries, dict) else {}
-
-
-def _compact(value: object) -> str:
-    return "".join(str(value or "").split())
-
-
-def _is_code_name_mismatch(
-    record: dict[str, object], entries: dict[str, dict[str, object]]
-) -> bool:
-    name = _compact(record.get("name"))
-    for key, entry in entries.items():
-        if _compact(key) == name and isinstance(entry, dict):
-            expected = str(entry.get("ticker") or "")
-            return bool(expected) and str(record.get("code")) != expected
-    return False
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -177,17 +161,10 @@ def main(argv: list[str] | None = None) -> int:
         print("dry-run: 未写盘；加 --write 真写")
         return 0
     target = instrument_scores_path(kb_root)
-    obsolete: set[str] = set()
-    for record in load_records(target).values():
-        if _is_code_name_mismatch(record, a_share_entries):
-            obsolete.add(str(record.get("record_id", "")))
-    added, updated = upsert_records(
-        target, all_records, remove_record_ids=obsolete
-    )
-    print(
-        f"written: {target} added={added} updated={updated} "
-        f"removed_obsolete={len(obsolete)}"
-    )
+    # v3 语义（owner 09-05）：正文显式代码优先，名册 mismatch 是合法行，
+    # 不再按 _is_code_name_mismatch 清除（那是 v2 误码时代的补救，已删）。
+    added, updated = upsert_records(target, all_records)
+    print(f"written: {target} added={added} updated={updated}")
     return 0
 
 

@@ -81,6 +81,73 @@ def test_parse_list_style() -> None:
     assert draft["consensus"] == 9.2
 
 
+V3_LIST_MD = """1. **利通电子（603629）**
+   核心业务：AI算力配套柜机；所属板块：算力服务；项目评分：8.5；投产启动：1-2周；供货周期：1-2月；情绪热度：78
+2. **天孚通信（300394）**
+   核心业务：光引擎；所属板块：光器件；项目评分：8.0；投产启动：已发；情绪热度：85
+"""
+
+
+def test_parse_v3_semicolon_single_line_format() -> None:
+    """9/5 实测分号单行格式（owner 09-05 裁决：项目评分=利好度、情绪热度÷10=共识度）。"""
+    drafts = parse_rows_from_text(V3_LIST_MD)
+    assert len(drafts) == 2
+    first = drafts[0]
+    assert first["code"] == "603629"
+    assert first["name"] == "利通电子"
+    assert first["core_business"] == "AI算力配套柜机"
+    assert first["sector"] == "算力服务"
+    assert first["lihao"] == 8.5
+    assert first["consensus"] == 7.8
+    assert first["launch_in"] == "1-2周"
+    assert first["horizon"] is None  # 供货周期≠持有周期，不落 horizon
+    second = drafts[1]
+    assert second["code"] == "300394"
+    assert second["lihao"] == 8.0
+    assert second["consensus"] == 8.5
+
+
+def test_v3_semicolon_split_preserves_non_field_tails() -> None:
+    """分号后不是「已知字段别名+冒号」时不切，旧格式单行取值逐字节保留。"""
+    text = """1. **思源电气 002428**
+   核心业务：开关/变压器；也做储能
+   利好度：9.5
+"""
+    drafts = parse_rows_from_text(text)
+    draft = drafts[0]
+    assert draft["core_business"] == "开关/变压器；也做储能"
+    assert draft["lihao"] == 9.5
+
+
+def test_explicit_code_beats_name_map() -> None:
+    """owner 09-05 裁决：正文显式代码优先——利通科技（603629）不得被名册覆盖为 920225。"""
+    article = {
+        "source_id": "zsxq-55521145582888484",
+        "column": "普通",
+        "title": "t",
+        "article_date": "2026-09-05",
+        "published_at": None,
+        "article_score": 6.8,
+    }
+    md_text = (
+        "## 图片描述\n"
+        "1. **利通科技（603629）**\n"
+        "   核心业务：AI算力配套柜机；所属板块：算力服务；项目评分：8.5；情绪热度：78\n"
+    )
+    records = parse_article_records(
+        article=article,
+        md_text=md_text,
+        source_record=None,
+        name_map={"利通科技": {"ticker": "920225"}},
+    )
+    assert len(records) == 1
+    assert records[0].code == "603629"
+    assert records[0].name == "利通科技"
+    assert records[0].status == "ok"
+    assert records[0].lihao_score == 8.5
+    assert records[0].consensus_score == 7.8
+
+
 INLINE_MD = """1. **600584 长电科技**：核心业务为HBM/2.5D/3D先进封装，所属板块为先进封装，利好度8.6，共识度88。
 2. **002156 通富微电**：核心业务为AMD高端封测+存储封测，所属板块为先进封装，利好度8.4，共识度86。
 4. **688200 翔宇微电子**：核心业务为2.5D/3D多芯片集成，所属板块为先进封装，利好度8
@@ -118,7 +185,7 @@ def test_parse_code_first_inline_rows() -> None:
     assert by_code["600584"].lihao_score == 8.6
     assert by_code["600584"].consensus_score == 8.8
     assert by_code["600584"].article_score == 6.8
-    assert by_code["600584"].parser_version == "v2"
+    assert by_code["600584"].parser_version == "v3"
     assert by_code["688200"].status == "needs_review"
     assert by_code["688200"].review_reason == "missing_fields:consensus"
 
@@ -172,6 +239,7 @@ def test_normalize_inline_codes_uses_name_map() -> None:
 
 
 def test_parse_article_records_name_map_fixes_drafts() -> None:
+    """v3 语义：名册只在缺码时补（赛微电子行）；显式代码不被名册覆盖（源杰科技行）。"""
     article = {
         "source_id": "src-2",
         "column": "普通",
@@ -197,7 +265,7 @@ def test_parse_article_records_name_map_fixes_drafts() -> None:
         name_map=name_map,
     )
     by_name = {record.name: record.code for record in records}
-    assert by_name["源杰科技"] == "688498"
+    assert by_name["源杰科技"] == "688515"
     assert by_name["赛微电子"] == "300456"
 
 

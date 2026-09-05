@@ -27,9 +27,9 @@ def main(argv: list[str] | None = None) -> int:
     list_p = sub.add_parser("list")
     list_p.add_argument("--limit", type=int, default=30)
     list_p.add_argument("--all", action="store_true", help="ok + needs_review 都列")
-    sub.add_parser("confirm")
-    sub.add_parser("drop")
-    parser.add_argument("record_id", nargs="?")
+    # record_id 挂子解析器：挂主解析器时「drop <id>」会被子解析器拒收。
+    sub.add_parser("confirm").add_argument("record_id")
+    sub.add_parser("drop").add_argument("record_id")
     args = parser.parse_args(argv)
 
     root = Path(args.kb_root) if args.kb_root else default_knowledge_base_root()

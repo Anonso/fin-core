@@ -346,6 +346,15 @@
   445 行/问询探针全过；详见 docs/design/instrument-score-timeline.md §11）·
   证据：会话 20260902 trace；20260829 长文评分表；instrument_scores.jsonl；
   本条目。
+- 追记（2026-09-05 · parser v3，owner 三项裁决当日落地）：①9/5 实测新
+  评分表格式（分号单行 k:v）与旧格式并存支持；②列语义：「项目评分」=
+  利好度改版、「情绪热度」÷10=共识度、「投产启动」=启动时机同义
+  （「供货周期」不映射，防落 horizon「周期」兜底）；③正文显式代码优先，
+  名称名册只在缺码时补——利通电子（603629）为准，v2 误映 射 920225 行
+  已 drop，mismatch 陈旧行清除逻辑（_is_code_name_mismatch）随新语义
+  删除。registry 重灌 ok 373→395；603629 最新锚=09-05（利好度 8.5/共识
+  度 7.8/能量 6.8，按本条④属「近但弱」）。证据：tests/ingestion/
+  test_instrument_scores.py v3 用例；git 本 commit；本追记。
 
 ## D-038 · 2026-09-03 · G 主线生长机制 + guo:v0 退役 + 主线效果盲评立项（owner 拍板）
 - 决策：①G 认知主线随 ZSXQ 增量 ingest 生长：机器全包（来源门选材→起草→
