@@ -11,8 +11,8 @@ description: Operate the ZSXQ six-slot capture topology — change a capture tim
 ## 拓扑（动手前必读）
 
 - **单一事实源**：`_EXPECTED_TIMES`（六时点，当前 08:45/12:20/14:40/15:30/18:00/20:20，
-  以文件为准）在**老仓** `~/fin-analyse/scripts/zsxq_windows_incremental_scheduler.py`
-  （老仓已归档但该脚本仍是本拓扑唯一渲染/验证工具）。它同时派生三面：
+  以文件为准）在**本仓** `~/fin-core/scripts/zsxq_windows_incremental_scheduler.py`
+  （2026-09-05 自老仓迁入，NOW #32；老仓副本自此只是历史回滚资产）。它同时派生三面：
   ① Windows Task `FIN-ZSXQ-Incremental` 触发器；② WSL poller timer 的 OnCalendar 窗口
   （每时点后 30 分钟）；③ `verify-task-xml` 拒漂移。**三面必须成套改，禁手改 timer 文件。**
 - Windows Task 动作 = `powershell … -File C:\Users\22873\fin-zsxq-capture\run-capture-and-import.ps1`
@@ -23,10 +23,10 @@ description: Operate the ZSXQ six-slot capture topology — change a capture tim
 
 ## 操作 A：改时点（如 13:50→12:20，owner 2026-09-04 实战过一遍）
 
-1. **改事实源并提交老仓**：`_EXPECTED_TIMES` 里改那一行；`git -C ~/fin-analyse commit`。
+1. **改事实源并提交本仓**：`_EXPECTED_TIMES` 里改那一行；`git -C ~/fin-core commit`。
 2. **重渲染 WSL timer**（用 fin-core 当前 HEAD）：
    ```bash
-   cd ~/fin-analyse && python3 scripts/zsxq_windows_incremental_scheduler.py \
+   cd ~/fin-core && python3 scripts/zsxq_windows_incremental_scheduler.py \
      render-poller-timer --release-sha $(git -C ~/fin-core rev-parse HEAD) \
      > /tmp/fin-render/poller.timer
    install -m 644 /tmp/fin-render/poller.timer ~/.config/systemd/user/fin-zsxq-capture-poller.timer
@@ -51,7 +51,7 @@ description: Operate the ZSXQ six-slot capture topology — change a capture tim
 5. **双端核验**：
    ```bash
    grep -o "T[0-9:]*:00+08:00" /mnt/c/Windows/System32/Tasks/FIN-ZSXQ-Incremental | sort
-   cd ~/fin-analyse && python3 scripts/zsxq_windows_incremental_scheduler.py verify-task-xml \
+   cd ~/fin-core && python3 scripts/zsxq_windows_incremental_scheduler.py verify-task-xml \
      --task-xml /mnt/c/Windows/System32/Tasks/FIN-ZSXQ-Incremental \
      --wrapper-path 'C:\Users\22873\fin-zsxq-capture\run-capture-and-import.ps1' \
      --user-sid 'S-1-5-21-1547283755-2148356556-3188188356-1001'

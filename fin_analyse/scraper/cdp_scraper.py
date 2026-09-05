@@ -272,9 +272,10 @@ _TIMELINE_LOADER_STATE_SCRIPT = r"""
 """
 
 # ── 脚本常量（传输面共享）───────────────────────────────────────────
-# 这些脚本由 CdpBridgeScraper 与 Windows 原生 capture（scripts/capture_zsxq_windows.mjs）
-# 两侧分别执行；脚本文本必须在两侧逐字节一致（一致性测试 test_capture_script_consistency
-# 校验）。replay client（capture_replay_client.py）按 sha256 匹配录制输出。
+# 这些脚本由 CdpBridgeScraper 与 Windows 原生 capture（scripts/capture_zsxq_windows.cjs，
+# 2026-09-05 自老仓迁入本仓）两侧分别执行；脚本文本必须在两侧逐字节一致
+# （一致性测试 tests/scraper/test_capture_script_consistency.py 校验）。
+# replay client（capture_replay_client.py）按 sha256 匹配录制输出。
 
 _FULL_TEXT_SCRIPT = "document.body.innerText"
 #: 视图滚动指标（_scroll_until_cutoff 的页面底证据）
