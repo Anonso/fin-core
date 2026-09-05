@@ -3,7 +3,7 @@
 > 状态：设计稿 v1（待 owner 确认 + 设计门）。规则 5 判据：公共入口语义 +
 > 跨 harness 接线 → 核心处理；合入后本文件删除，Git 即归档。
 > owner 设计意图（2026-09-05 会话）：节点 = 现役三条无头腿（finqa-claude /
-> finqa-opencode〔原 finqa-codex 改名〕/ finqa-commandcode）；探活/fallback
+> finqa-codex / finqa-commandcode，不改名）；探活/fallback
 > 目的 = 减少人工换节点；session 语义接受「可丢」；节点优先级/开关/增删全进
 > 配置。参考形态：提取链（llm.yaml 节点表+声明序+enabled 语义）× 设计门
 > launcher（precheck+fallback+横幅+tsv）。
@@ -34,8 +34,8 @@ nodes:
     harness: commandcode
     model: deepseek/deepseek-v4-pro
     enabled: true
-  - id: opencode          # codex CLI + opencode-go（原 finqa-codex 改名）
-    harness: opencode
+  - id: codex             # codex CLI + opencode-go（现 finqa-codex，暂关）
+    harness: codex
     model: deepseek-v4-pro
     enabled: false         # 429 长期故障在案；恢复翻 true 即回声明位
 ```
@@ -59,8 +59,6 @@ nodes:
      横幅 + `fallback.tsv` 落账（0700/0600，state 目录）→ 下一位；
 - 全部失败 → **exit 78**，stderr 列各腿 rc/失败阶段（调用方自行裁决）；
 - `--node <id>`：单腿钉定（探针/对照/调试），跳过链；
-- bashrc 命名规则口径同步：`finqa-<X>` 的 X 从「引擎」改注为「节点/通道」
-  （opencode 是通道名，harness 是 codex CLI 只是实现细节），防未来又乱；
 - session 语义：**无状态无头**——一律 no-reserve/no-resume，每轮自足；
   fallback 换腿重发同参，丢的是上一腿会话（per-backend thread 本就不可跨腿）。
 - 无熔断/TTL（人频次，现探现走，设计门口径）；timeout 每节点固定
@@ -72,11 +70,11 @@ nodes:
 finqa            → finqa_chain.py "$@"            # 链（机器/脚本用）
 finqa-claude     → finqa_chain.py --node claude "$@"
 finqa-commandcode→ finqa_chain.py --node commandcode "$@"
-finqa-opencode   → finqa_chain.py --node opencode "$@"
+finqa-codex      → finqa_chain.py --node codex "$@"
 ```
 
-- **废除** `finqa-x` / `finqa-codex`（休眠在案；闭包=state 台账 runner 脚本，
-  复用需求出现时以 opencode 节点形态回归）；
+- `finqa-x` / `finqa-codex` 原函数**保留定义、暂时关闭**（休眠在案；恢复 =
+  yaml enabled 翻 true，或直接用原函数）——不删除；
 - 交互式 `finqa-c` / `finqa-cmd` **不动**（人用交互会话不在本链范围）。
 
 ## 3. 契约与边界
@@ -95,12 +93,12 @@ finqa-opencode   → finqa_chain.py --node opencode "$@"
 
 0. 消费方迁移进验收：盲评 runner（state 台账脚本）改调 `finqa` 链入口——
    链自第一天起有真实读方，防家规 10 空转；fallback.tsv 即使用证据。
-1. 三腿实弹各一发（enabled 全 true 时链序 claude→commandcode→opencode，
-   opencode 演练期 disabled 跳过）。
+1. 三腿实弹各一发（enabled 全 true 时链序 claude→commandcode→codex，
+   codex 演练期 disabled 跳过）。
 2. fallback 演练：首位节点注入坏认证（临时 yaml）→ 自动落次位，stderr
    横幅 + tsv 行 + 答案仍出，rc=0。
 3. 双挂演练：全部 enabled 节点坏认证 → exit 78 + 各腿失败列。
-4. disabled 跳过：opencode enabled:false 时链不含它，precheck 不触发。
+4. disabled 跳过：codex enabled:false 时链不含它，precheck 不触发。
 5. `--node` 单腿：三腿各一发与旧 bashrc 函数行为一致（同 cwd/同 MCP/同模型）。
 6. 家规 7 分级：以上是「测试绿/演练绿」；「在用」以机器消费方真实迁移
    （盲评 runner/效果评估改调 finqa）为准。
