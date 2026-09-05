@@ -15,6 +15,7 @@ import errno
 import fcntl
 import hashlib
 import json
+import logging
 import os
 import stat
 from collections.abc import Iterator, Mapping, Sequence
@@ -47,6 +48,8 @@ from .scheduler_handoff_lock import (
     scheduler_handoff_lock_path,
 )
 from .zsxq_stability import build_capture_ingest_audit
+
+logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = "fin.zsxq-capture-ingest/v1"
 CONSUMED_RECEIPT_SCHEMA_VERSION = "fin.zsxq-capture-consumed/v1"
@@ -199,7 +202,16 @@ def _capture_prior_g_json(knowledge_base_root: Path) -> str:
 
         assessment = GWorkingSetService(kb_root=knowledge_base_root).evaluate()
         return _canonical_json(assessment.to_publication_evidence().to_dict())
-    except Exception:
+    except Exception as error:
+        # BUG-045：全链唯一「吞异常不进台账」的 fallback。下游会把 prior={}
+        # 报成 g_working_set_no_change_prior_not_ready 并判 failed——根因只
+        # 在此处可见，必须落日志，否则 NO_CHANGE 班次误标 failed 无从诊断。
+        logger.warning(
+            "capture_prior_g_json failed; NO_CHANGE completion will degrade as "
+            "g_working_set_no_change_prior_not_ready: %s: %s",
+            type(error).__name__,
+            error,
+        )
         return "{}"
 
 

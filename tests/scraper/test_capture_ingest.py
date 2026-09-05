@@ -2309,3 +2309,36 @@ def test_ingest_handoff_identity_drift_emits_only_internal_error(tmp_path, capsy
     assert not list((_recovery_root(tmp_path) / "staged").glob("*.artifact.json"))
     assert (_recovery_root(tmp_path) / "consumed").exists()
     assert not (moved_handoff / "consumed").exists()
+
+
+def test_capture_prior_g_json_logs_typed_warning_on_failure(
+    monkeypatch, caplog, tmp_path
+) -> None:
+    """BUG-045：G evaluate 失败必须落日志。
+
+    下游会把 prior={} 报成 g_working_set_no_change_prior_not_ready 并把
+    NO_CHANGE 班次判 failed——根因只在本函数可见，静默吞掉即无从诊断。
+    """
+    import logging
+
+    from fin_analyse.guo_teacher_research import g_working_set
+    from fin_analyse.scraper.capture_ingest import _capture_prior_g_json
+
+    class _BoomService:
+        def __init__(self, *, kb_root):
+            del kb_root
+
+        def evaluate(self):
+            raise RuntimeError("index file unreadable")
+
+    monkeypatch.setattr(g_working_set, "GWorkingSetService", _BoomService)
+
+    with caplog.at_level(logging.WARNING, logger="fin_analyse.scraper.capture_ingest"):
+        result = _capture_prior_g_json(tmp_path)
+
+    assert result == "{}"
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(
+        "capture_prior_g_json failed" in message and "index file unreadable" in message
+        for message in messages
+    ), messages
