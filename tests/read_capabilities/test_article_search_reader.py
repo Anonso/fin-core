@@ -160,3 +160,57 @@ def test_date_enumeration_rejects_malformed_bounds(tmp_path: Path) -> None:
         )
     )
     assert result.data_gaps == ("article_search_date_bounds_invalid",)
+
+
+def test_index_warmup_returns_typed_gap_instead_of_freezing(
+    monkeypatch: object, tmp_path: Path
+) -> None:
+    """BUG-037：索引构建在后台线程预热，首查只做有界等待。
+
+    构建未完成时返回 article_search_index_warming typed gap（而非同步建索引
+    冻住整个 MCP 事件循环）；构建完成后同一 reader 正常出结果。
+    """
+    import threading
+    import time as time_mod
+
+    from fin_analyse.knowledge import article_search as mod
+
+    root = _kb(tmp_path)
+    release = threading.Event()
+    entered = threading.Event()
+
+    class _BlockingAdapter:
+        def __init__(self, kb_root: Path) -> None:
+            self.kb_root = kb_root
+
+        def fetch(self) -> list:
+            entered.set()
+            release.wait(5.0)
+            return []
+
+    monkeypatch.setattr(mod, "ZsxqMarkdownAdapter", _BlockingAdapter)  # type: ignore[arg-type]
+    reader = ArticleKeywordSearchReader(root)
+
+    started = time_mod.monotonic()
+    result = reader.read(
+        ProductionReadRequest(
+            question="先进封装",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+            deadline_at=datetime.fromtimestamp(time_mod.time() + 0.2, tz=UTC),
+        )
+    )
+    elapsed = time_mod.monotonic() - started
+
+    # 构建仍阻塞在 fetch 里，读已经返回 typed gap——没有冻住调用线程。
+    assert entered.is_set() and not release.is_set()
+    assert "article_search_index_warming" in result.data_gaps
+    assert elapsed < 5.0
+
+    release.set()
+    result2 = reader.read(
+        ProductionReadRequest(
+            question="先进封装",
+            as_of=datetime(2026, 9, 2, tzinfo=UTC),
+        )
+    )
+    assert "article_search_index_warming" not in result2.data_gaps

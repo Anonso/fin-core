@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 import re
+import threading
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -42,19 +44,59 @@ def _valid_date_bounds(date_from: str | None, date_to: str | None) -> bool:
 class ArticleKeywordSearchReader:
     """read_article_search：基于 TF-IDF 的本地文章检索。"""
 
+    #: 索引预热等待上限（request 无 deadline 时的兜底；有 deadline 取剩余预算）。
+    _WARM_WAIT_DEFAULT_SECONDS = 120.0
+
     def __init__(self, knowledge_base_root: Path, *, max_results: int = 8) -> None:
         self._kb_root = Path(knowledge_base_root)
         self._max_results = max_results
         self._store: KnowledgeStore | None = None
         self._service: KnowledgeQueryService | None = None
+        # BUG-037：全量索引构建挪到后台线程预热。原实现在首次检索时同步
+        # 遍历全库建索引，而 MCP 同步 handler 跑在事件循环线程上——大库
+        # 首查会冻住整台 server 的全部工具。检索只做有界等待，未就绪返回
+        # typed gap（article_search_index_warming）。
+        self._warm_error: BaseException | None = None
+        self._warm_done = threading.Event()
+        threading.Thread(
+            target=self._warm, name="article-search-warmup", daemon=True
+        ).start()
 
-    def _ensure(self) -> KnowledgeQueryService:
+    def _build(self) -> None:
+        adapter = ZsxqMarkdownAdapter(self._kb_root)
+        store = KnowledgeStore.from_adapter(adapter, RuleBasedClaimExtractor())
+        self._store = store
+        self._service = KnowledgeQueryService(store)
+
+    def _warm(self) -> None:
+        try:
+            self._build()
+        except BaseException as error:  # 原样转交调用线程，由 server 转 typed gap
+            self._warm_error = error
+        finally:
+            self._warm_done.set()
+
+    def _ensure(self, *, timeout_seconds: float) -> KnowledgeQueryService:
         if self._service is None:
-            adapter = ZsxqMarkdownAdapter(self._kb_root)
-            store = KnowledgeStore.from_adapter(adapter, RuleBasedClaimExtractor())
-            self._store = store
-            self._service = KnowledgeQueryService(store)
+            if not self._warm_done.wait(timeout_seconds):
+                raise TimeoutError("article_search_index_warming")
+            if self._warm_error is not None:
+                # 预热失败不粘死：保留原「逐次重试」语义，在调用线程重建一次，
+                # 失败异常照旧上抛（OSError/ValueError → unavailable gap）。
+                self._warm_error = None
+                self._build()
         return self._service
+
+    @staticmethod
+    def _warm_wait_seconds(request: Any) -> float:
+        """预热等待 = min(本次请求剩余 deadline, 默认上限)；无 deadline 取默认。"""
+        deadline_at = getattr(request, "deadline_at", None)
+        if deadline_at is None:
+            return ArticleKeywordSearchReader._WARM_WAIT_DEFAULT_SECONDS
+        remaining = (deadline_at - datetime.now(UTC)).total_seconds()
+        if remaining <= 0:
+            return 0.0
+        return min(remaining, ArticleKeywordSearchReader._WARM_WAIT_DEFAULT_SECONDS)
 
     @staticmethod
     def _excerpt(text: str, token: str, width: int = 120) -> str:
@@ -90,7 +132,12 @@ class ArticleKeywordSearchReader:
                 data_gaps=("article_search_index_unavailable",),
             )
         try:
-            service = self._ensure()
+            service = self._ensure(timeout_seconds=self._warm_wait_seconds(request))
+        except TimeoutError:
+            return ProductionReadResult(
+                value={"status": "EMPTY", "hits": []},
+                data_gaps=("article_search_index_warming",),
+            )
         except (OSError, ValueError):
             return ProductionReadResult(
                 value={"status": "EMPTY", "hits": []},
