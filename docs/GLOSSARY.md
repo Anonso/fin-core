@@ -47,6 +47,7 @@
 | **poller** | `fin-zsxq-capture-poller.service`：WSL 侧 transport/ingest 消费单元，timer 触发后逐次消费最旧 pending capture 并委托入库（深化排空随 ingest tail）；capture 触发拓扑归 Windows Task。 | [design/zsxq-capture](design/zsxq-capture.md) |
 | **knowledge index** | 知识索引 `index.json`，工作集与检索的地基。 | [design/g-cognition](design/g-cognition.md) |
 | **knowledge-base/** | 用户/领域数据根；规划随容器判决迁 `~/fin-data/knowledge`（数据出仓）。 | [rebaseline §0.5.6](pm/rebaseline-20260827.md) |
+| **板块指数（.PT lane）** | 腾讯自编的板块成分聚合统计（二级行业+概念，`pt` 8位码）；单源参考、无跨源同物、无分时；`read_market_snapshot` 按中文名直查，码表在 `config/market/board_symbols.json`。 | [board_symbols.py](../fin_analyse/market/board_symbols.py) |
 
 ## 链路与路由（LLM 泳道，三池零共享）
 

@@ -24,7 +24,10 @@ from fin_analyse.market.data_qualification import (
     SampleManifest,
     TradingStatus,
 )
-from fin_analyse.market.qualification_sources.tencent_raw import TencentRawQualificationSource
+from fin_analyse.market.qualification_sources.tencent_raw import (
+    TencentBoardQuoteSource,
+    TencentRawQualificationSource,
+)
 
 FIXTURE_ROOT = Path(__file__).parents[2] / "fixtures" / "market" / "tencent_raw"
 SAMPLE = QualificationSample(symbol="600519", venue="sh")
@@ -498,3 +501,83 @@ def test_index_limit_sentinel_parses_as_absent() -> None:
     assert capture.upper_limit_price is None
     assert capture.lower_limit_price is None
     assert capture.venue == "sh"
+
+
+def test_board_quote_row_parses_with_limit_sentinels_and_volume_turnover() -> None:
+    """板块行（pt 8位码）与个股行同构：f30 时间戳/f47-48 -1 哨兵/f6 成交量/f37 成交额。"""
+
+    fields = [""] * 49
+    fields[1] = "液冷概念"
+    fields[2] = "02GN2224"
+    fields[3] = "732.05"
+    fields[6] = "5860632.0000"
+    fields[30] = "20260904150016"
+    fields[37] = "975065.0000"
+    fields[47] = "-1"
+    fields[48] = "-1"
+    payload = f'v_pt02GN2224="{ "~".join(fields) }";\n'.encode("gb18030")
+    calls: list[str] = []
+
+    def http_get(url: str, *, headers, timeout, allow_redirects) -> _Response:
+        calls.append(url)
+        return _Response(payload)
+
+    times = iter(
+        [
+            datetime(2026, 9, 4, 8, 0, 5, tzinfo=UTC),
+            datetime(2026, 9, 4, 8, 0, 5, 500000, tzinfo=UTC),
+        ]
+    )
+    source = TencentBoardQuoteSource(
+        http_get=http_get,
+        clock=lambda: next(times),
+        monotonic_ns=lambda: 0,
+    )
+
+    capture = source.capture(QualificationSample(symbol="02GN2224", venue="pt"))
+
+    assert calls == ["https://qt.gtimg.cn/q=pt02GN2224"]
+    assert source.source_id == "tencent_board_raw"
+    assert capture.symbol == "02GN2224"
+    assert capture.venue == "pt"
+    assert capture.price == "732.05"
+    assert capture.source_event_at is not None
+    assert capture.source_event_at.isoformat() == "2026-09-04T15:00:16+08:00"
+    assert capture.upper_limit_price is None
+    assert capture.lower_limit_price is None
+    assert capture.volume == "5860632.0000"
+    assert capture.turnover == "975065.0000"
+    assert capture.data_gaps == ()
+
+
+def test_board_quote_envelope_code_mismatch_fails_closed() -> None:
+    fields = [""] * 49
+    fields[1] = "液冷概念"
+    fields[2] = "02GN9999"
+    fields[3] = "732.05"
+    fields[30] = "20260904150016"
+    payload = f'v_pt02GN2224="{ "~".join(fields) }";\n'.encode("gb18030")
+
+    source = TencentBoardQuoteSource(
+        http_get=lambda *args, **kwargs: _Response(payload),  # type: ignore[arg-type]
+        clock=lambda: datetime(2026, 9, 4, 8, 0, 5, tzinfo=UTC),
+        monotonic_ns=lambda: 0,
+    )
+
+    capture = source.capture(QualificationSample(symbol="02GN2224", venue="pt"))
+
+    assert capture.venue is None
+    assert capture.price is None
+    assert capture.data_gaps == ("source_payload_parse_failed",)
+
+
+def test_board_quote_rejects_stock_sample_before_network() -> None:
+    """共享源的个股域不受影响：六位码样本在板块源直接拒绝（不触网）。"""
+
+    def forbidden_http_get(*args, **kwargs):
+        raise AssertionError("stock sample unexpectedly reached the board source")
+
+    source = TencentBoardQuoteSource(http_get=forbidden_http_get)
+
+    with pytest.raises(ValueError, match="8-character code and venue pt"):
+        source.capture(QualificationSample(symbol="600519", venue="sh"))

@@ -173,10 +173,14 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "(quotes, daily bars, technicals). Major indices are supported by exact "
         "Chinese name or qualified symbol (上证指数/深成指/创业板指/科创50/深证综指, "
         "000688.SH etc.) and return index daily bars + technicals; bare six-digit "
-        "codes resolve to equities only. May fetch from public market sources "
-        "when cached artifacts are missing. A data gap or empty return means "
-        "DATA UNAVAILABLE — never state it as 'no such data exists in the "
-        "world'; say the tool returned nothing and give conditional guidance."
+        "codes resolve to equities only. Sector/concept boards are supported by "
+        "exact alias or qualified symbol (液冷/半导体/通信设备/CPO/PCB, 02GN2224.PT "
+        "etc.) and return Tencent board-index daily bars + technicals as "
+        "single-source reference with no intraday bars. May fetch from public "
+        "market sources when cached artifacts are missing. A data gap or empty "
+        "return means DATA UNAVAILABLE — never state it as 'no such data exists "
+        "in the world'; say the tool returned nothing and give conditional "
+        "guidance."
     ),
     "read_market_overview": (
         "Read the current A-share market overview: indices, breadth, boards, "

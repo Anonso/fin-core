@@ -34,10 +34,15 @@ from fin_analyse.market.qualified_daily_bars import (
 _PROVIDER_ID = "tencent_daily_bars"
 _BASE_PROVIDER_VERSION = "tencent_qfq_daily_bars.v1"
 _KLINE_ENDPOINT = "https://ifzq.gtimg.cn/appstock/app/fqkline/get"
+# 板块码走 newfqkline：fqkline 对 pt 板块只吐最新 1 根（2026-09-05 实测，
+# 四种参数变体皆然），newfqkline 有全量历史（基期 2025-05-19）。行键/形状
+# 与个股同构（qfqday or day，idx 0-5）。
+_BOARD_KLINE_ENDPOINT = "https://ifzq.gtimg.cn/appstock/app/newfqkline/get"
 _MAX_ROWS = 120
 _LOOKBACK_DAYS = 240  # 120 bars + 周末/节假日余量
 _VENUES = frozenset({"sh", "sz"})
 _SYMBOL_PATTERN = re.compile(r"^(?P<code>[0-9]{6})(?:\.(?P<venue>SH|SZ))?$")
+_BOARD_SYMBOL_PATTERN = re.compile(r"^(?P<code>[0-9A-Z]{8})\.PT$")
 _DATE_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 _A_SHARE_CLOSE_TIME = time(15, 0)
 _CN_TZ = ZoneInfo("Asia/Shanghai")
@@ -164,7 +169,10 @@ class TencentDailyBarReader(_ImmutableSourceConfiguration):
         start = (scope.cutoff_date - timedelta(days=_LOOKBACK_DAYS)).isoformat()
         end = scope.cutoff_date.isoformat()
         param = f"{scope.venue}{scope.symbol},day,{start},{end},{_MAX_ROWS},qfq"
-        url = f"{_KLINE_ENDPOINT}?{urlencode({'param': param})}"
+        endpoint = (
+            _BOARD_KLINE_ENDPOINT if scope.venue == "pt" else _KLINE_ENDPOINT
+        )
+        url = f"{endpoint}?{urlencode({'param': param})}"
         remaining = _deadline_remaining_seconds(deadline_at) if deadline_at is not None else None
         timeout = (
             min(self._timeout_seconds, remaining)
@@ -249,14 +257,18 @@ def _venue_for_symbol(symbol: str) -> str:
 
 
 def _parse_symbol(symbol: str) -> tuple[str, str]:
-    """Return (code, venue) from a bare or canonical (``600519.SH``) symbol.
+    """Return (code, venue) from a canonical (``600519.SH`` / ``02GN2224.PT``) symbol.
 
-    The canonical suffix carries the authoritative venue; bare symbols fall
-    back to the prefix rule so the reader accepts both FIN canonical
+    The canonical suffix carries the authoritative venue; bare six-digit codes
+    fall back to the prefix rule so the reader accepts both FIN canonical
     ``600519.SH`` instruments (what on-demand collection passes) and the
-    legacy bare form.
+    legacy bare form. Board symbols require the explicit ``.PT`` suffix —
+    bare 8-digit codes stay equities (no bare-board resolution).
     """
 
+    board_match = _BOARD_SYMBOL_PATTERN.fullmatch(symbol)
+    if board_match is not None:
+        return board_match.group("code"), "pt"
     match = _SYMBOL_PATTERN.fullmatch(symbol)
     if match is None:
         raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_SYMBOL_INVALID")

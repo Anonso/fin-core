@@ -54,6 +54,7 @@ from fin_analyse.market.current_overview import (
     AshareMarketOverviewResult,
 )
 from fin_analyse.market.instrument_directory import verified_a_share_equity_venue
+from fin_analyse.market.board_symbols import split_board_aliases
 from fin_analyse.market.index_symbols import split_index_aliases
 from fin_analyse.market.on_demand_tactical_context import (
     OnDemandTacticalContext,
@@ -430,8 +431,11 @@ class ProductionReadCapabilityProvider:
                 _extend_gaps(gaps, ("market_snapshot_instruments_truncated",))
             # 指数别名 lane 只挂本入口（snapshot-index-support §2.1）：命中项
             # 直接产出指数符号并从 equity 列表剔除，共享解析器保持纯个股，
-            # margin/external 零外溢。
-            equity_targets, index_names, index_symbols = split_index_aliases(selected)
+            # margin/external 零外溢。板块 lane（board-index-support §2.2，
+            # 设计稿随合入归档 git f475220）在同一入口再拆一刀，顺序=
+            # 板块→指数→个股；板块名与个股名精确撞名时板块优先（确定性）。
+            board_targets, board_names, board_symbols = split_board_aliases(selected)
+            equity_targets, index_names, index_symbols = split_index_aliases(board_targets)
             equity_symbols, equity_resolved_names, identity_gaps = (
                 _resolve_on_demand_instruments(
                     equity_targets,
@@ -439,8 +443,8 @@ class ProductionReadCapabilityProvider:
                 )
             )
             _extend_gaps(gaps, identity_gaps)
-            symbols = (*index_symbols, *equity_symbols)
-            names = {**index_names, **equity_resolved_names}
+            symbols = (*board_symbols, *index_symbols, *equity_symbols)
+            names = {**board_names, **index_names, **equity_resolved_names}
             if not symbols:
                 return ProductionReadResult(
                     value=_on_demand_market_snapshot_value(None),

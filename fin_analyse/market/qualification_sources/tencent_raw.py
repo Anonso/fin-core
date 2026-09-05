@@ -26,6 +26,9 @@ _HEADERS = {
     "User-Agent": "fin-analyse-market-data-qualification/1",
 }
 _RESPONSE = re.compile(r'v_(?P<venue>sh|sz)(?P<symbol>[0-9]{6})="(?P<payload>[^"\r\n]*)";\r?\n?')
+_BOARD_RESPONSE = re.compile(
+    r'v_pt(?P<code>[0-9A-Z]{8})="(?P<payload>[^"\r\n]*)";\r?\n?'
+)
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _SYMBOL_INDEX = 2
 _LAST_PRICE_INDEX = 3
@@ -33,6 +36,8 @@ _SOURCE_EVENT_TIME_INDEX = 30
 _UPPER_LIMIT_INDEX = 47
 _LOWER_LIMIT_INDEX = 48
 _MINIMUM_FIELD_COUNT = _LOWER_LIMIT_INDEX + 1
+_BOARD_VOLUME_INDEX = 6
+_BOARD_TURNOVER_INDEX = 37
 
 
 class _HttpResponse(Protocol):
@@ -252,6 +257,161 @@ def _validate_sample(sample: QualificationSample) -> None:
         raise ValueError("Tencent sample must use six digits and venue sh/sz")
 
 
+def _validate_board_sample(sample: QualificationSample) -> None:
+    if re.fullmatch(r"[0-9A-Z]{8}", sample.symbol) is None or sample.venue != "pt":
+        raise ValueError("Tencent board sample must use an 8-character code and venue pt")
+
+
+class TencentBoardQuoteSource(_ImmutableSourceConfiguration):
+    """Capture one Tencent board-index quote row without dual-source pretense.
+
+    Tencent board indices (``pt`` codes) are Tencent-published aggregate
+    statistics with no cross-source twin, so this source is the board lane's
+    only quote leg by design; the single-source property surfaces as a
+    context limitation upstream, never as a data gap. Parsing shares the
+    stock-row field layout (f30 event time, f47/f48 ``-1`` limit sentinels);
+    board rows add f6 volume and f37 turnover. The stock/index
+    ``TencentRawQualificationSource`` sample domain stays untouched — this
+    class never feeds the periodic qualification pipeline.
+    """
+
+    __slots__ = (
+        "_clock",
+        "_evidence_origin",
+        "_http_get",
+        "_monotonic_ns",
+        "_timeout_seconds",
+    )
+
+    _clock: Callable[[], datetime]
+    _evidence_origin: ObservationEvidenceOrigin
+    _http_get: TencentHttpGet
+    _monotonic_ns: Callable[[], int]
+    _timeout_seconds: float
+
+    source_id = "tencent_board_raw"
+    adapter_version = "tencent_board_raw_qualification.v1"
+
+    def __init__(
+        self,
+        *,
+        http_get: TencentHttpGet | None = None,
+        clock: Callable[[], datetime] | None = None,
+        monotonic_ns: Callable[[], int] | None = None,
+        evidence_origin: ObservationEvidenceOrigin = ObservationEvidenceOrigin.TEST_ONLY,
+        timeout_seconds: float = 10.0,
+    ) -> None:
+        _reject_reinitialization(self, "_evidence_origin")
+        resolved_http_get = requests.get if http_get is None else http_get
+        resolved_clock = _utc_now if clock is None else clock
+        resolved_monotonic_ns = _system_monotonic_ns if monotonic_ns is None else monotonic_ns
+        if type(evidence_origin) is not ObservationEvidenceOrigin:
+            raise TypeError("evidence_origin must be ObservationEvidenceOrigin")
+        if http_get is not None and evidence_origin is not ObservationEvidenceOrigin.TEST_ONLY:
+            raise ValueError("injected Tencent transport must use TEST_ONLY evidence origin")
+        if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)):
+            raise ValueError("timeout_seconds must be finite and positive")
+        normalized_timeout_seconds = float(timeout_seconds)
+        if not math.isfinite(normalized_timeout_seconds) or normalized_timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be finite and positive")
+        object.__setattr__(self, "_http_get", resolved_http_get)
+        object.__setattr__(self, "_clock", resolved_clock)
+        object.__setattr__(self, "_monotonic_ns", resolved_monotonic_ns)
+        object.__setattr__(self, "_evidence_origin", evidence_origin)
+        object.__setattr__(self, "_timeout_seconds", normalized_timeout_seconds)
+
+    @property
+    def evidence_origin(self) -> ObservationEvidenceOrigin:
+        return self._evidence_origin
+
+    def capture(
+        self,
+        sample: QualificationSample,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> QualificationSourceCapture:
+        """Fetch exactly one board code and retain the response content."""
+
+        _validate_board_sample(sample)
+        started_ns = self._monotonic_ns()
+        requested_at = self._clock()
+        response = self._http_get(
+            f"{_TENCENT_QUOTE_API}pt{sample.symbol}",
+            headers=_HEADERS,
+            timeout=_effective_timeout(self._timeout_seconds, timeout_seconds),
+            allow_redirects=False,
+        )
+        received_at = self._clock()
+        fetch_duration_ms = (self._monotonic_ns() - started_ns) // 1_000_000
+        raw_payload = response.content
+        if response.status_code != 200:
+            return _failed_capture(
+                sample,
+                requested_at=requested_at,
+                received_at=received_at,
+                fetch_duration_ms=fetch_duration_ms,
+                raw_payload=raw_payload,
+                data_gap=f"http_status_{response.status_code}",
+            )
+        try:
+            normalized = self.replay_normalize(sample, raw_payload)
+        except (UnicodeError, ValueError):
+            return _failed_capture(
+                sample,
+                requested_at=requested_at,
+                received_at=received_at,
+                fetch_duration_ms=fetch_duration_ms,
+                raw_payload=raw_payload,
+                data_gap="source_payload_parse_failed",
+            )
+        return QualificationSourceCapture(
+            symbol=normalized.symbol,
+            venue=normalized.venue,
+            requested_at=requested_at,
+            received_at=received_at,
+            fetch_duration_ms=fetch_duration_ms,
+            source_event_at=normalized.source_event_at,
+            price=normalized.price,
+            trading_status=normalized.trading_status,
+            upper_limit_price=normalized.upper_limit_price,
+            lower_limit_price=normalized.lower_limit_price,
+            raw_payload=raw_payload,
+            raw_payload_kind="upstream_http_response",
+            volume=normalized.volume,
+            turnover=normalized.turnover,
+        )
+
+    def replay_normalize(
+        self,
+        sample: QualificationSample,
+        raw_payload: bytes,
+    ) -> QualificationNormalizedRecord:
+        """Normalize only the supplied bytes using Tencent's fixed GB18030 encoding."""
+
+        _validate_board_sample(sample)
+        text = _decode_response(raw_payload)
+        match = _BOARD_RESPONSE.fullmatch(text)
+        if match is None:
+            raise ValueError("unexpected Tencent board quote response envelope")
+        fields = match.group("payload").split("~")
+        if len(fields) < _MINIMUM_FIELD_COUNT:
+            raise ValueError("truncated Tencent board quote response")
+        code = match.group("code")
+        if fields[_SYMBOL_INDEX] != code:
+            raise ValueError("Tencent board quote envelope and payload codes disagree")
+        return QualificationNormalizedRecord(
+            symbol=code,
+            venue="pt",
+            source_event_at=_source_event_at(fields[_SOURCE_EVENT_TIME_INDEX]),
+            price=_optional_positive_decimal("last price", fields[_LAST_PRICE_INDEX]),
+            trading_status=TradingStatus.UNKNOWN,
+            upper_limit_price=_optional_limit_price("upper limit", fields[_UPPER_LIMIT_INDEX]),
+            lower_limit_price=_optional_limit_price("lower limit", fields[_LOWER_LIMIT_INDEX]),
+            volume=_optional_positive_decimal("volume", fields[_BOARD_VOLUME_INDEX]),
+            turnover=_optional_positive_decimal("turnover", fields[_BOARD_TURNOVER_INDEX]),
+        )
+
+
 def _source_event_at(value: str) -> datetime | None:
     if not value:
         return None
@@ -299,4 +459,4 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-__all__ = ["TencentHttpGet", "TencentRawQualificationSource"]
+__all__ = ["TencentBoardQuoteSource", "TencentHttpGet", "TencentRawQualificationSource"]

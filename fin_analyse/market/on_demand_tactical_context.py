@@ -22,6 +22,7 @@ from typing import Literal, Protocol, cast
 from zoneinfo import ZoneInfo
 
 from fin_analyse.common.execution_control import BoundedExecutor, ExecutorCapacityError
+from fin_analyse.market.board_symbols import BOARD_SYMBOLS as _BOARD_SYMBOLS
 from fin_analyse.market.index_symbols import MAJOR_INDEX_SYMBOLS as _MAJOR_INDEX_SYMBOLS
 from fin_analyse.market.data_qualification import (
     ObservationEvidenceOrigin,
@@ -353,12 +354,14 @@ class OnDemandTacticalContextService:
         symbol_executor: BoundedExecutor | None = None,
         detail_executor: BoundedExecutor | None = None,
         quote_executor: BoundedExecutor | None = None,
+        board_quote: QualificationSourcePort | None = None,
     ) -> None:
         self._primary_quote = primary_quote
         self._reference_quote = reference_quote
         self._daily_bars = daily_bars
         self._thirty_minute_bars = thirty_minute_bars
         self._calendar = calendar
+        self._board_quote = board_quote
         self._clock = clock or (lambda: datetime.now(UTC))
         self._symbol_executor = symbol_executor or _MARKET_SYMBOL_EXECUTOR
         self._detail_executor = detail_executor or _MARKET_DETAIL_EXECUTOR
@@ -375,9 +378,17 @@ class OnDemandTacticalContextService:
         results: dict[str, TacticalInstrumentContext] = {}
         futures: dict[Future[TacticalInstrumentContext], str] = {}
         for symbol in symbols:
+            # 板块符号走专用收集路径（board-index-support §2.5，设计稿随
+            # 合入归档 git f475220）：单源 quote 不进双源资格，无 30m 腿；
+            # 共享个股/主指数路径零改动。
+            collector = (
+                self._collect_board_symbol
+                if symbol in _BOARD_SYMBOLS
+                else self._collect_symbol
+            )
             try:
                 future = self._symbol_executor.submit(
-                    self._collect_symbol,
+                    collector,
                     symbol,
                     as_of=request.as_of,
                     phase=phase,
@@ -812,6 +823,233 @@ class OnDemandTacticalContextService:
             return None
         return decision.previous_open_date
 
+    def _collect_board_symbol(
+        self,
+        symbol: str,
+        *,
+        as_of: datetime,
+        phase: str,
+        session_open: bool,
+        session_gaps: tuple[str, ...],
+        deadline_at: datetime | None,
+    ) -> TacticalInstrumentContext:
+        """One Tencent board index: single-source quote + daily bars, no intraday.
+
+        Board indices have no cross-source twin, so the quote leg never enters
+        ``_qualify_quotes`` (its single-fact branch hardcodes
+        PARTIAL + DUAL_SOURCE_QUOTE_INCOMPLETE) — one fact assembles directly.
+        READY mirrors the close_qualified precedent without tightening: a
+        missing latest bar degrades to a limitation, never a status drop
+        (board-index-support §2.5; design archived at merge, git f475220).
+        """
+
+        parsed = _parse_board_symbol(symbol)
+        if parsed is None or self._board_quote is None:
+            return _unknown_symbol(
+                symbol,
+                phase=phase,
+                gap="ON_DEMAND_MARKET_BOARD_SOURCE_UNAVAILABLE",
+            )
+        code = parsed
+        if _deadline_reached(deadline_at, self._clock):
+            return _unknown_symbol(symbol, phase=phase, gap="CONSULTATION_DEADLINE_REACHED")
+
+        quote_future: Future[QualificationSourceCapture] | None = None
+        bars_future: Future[tuple[QualifiedDailyBarSeries | None, tuple[str, ...]]] | None = None
+        quote_capacity_exhausted = False
+        bars_capacity_exhausted = False
+        try:
+            quote_future = self._detail_executor.submit(
+                self._capture_quote,
+                self._board_quote,
+                QualificationSample(symbol=code, venue="pt"),
+                deadline_at=deadline_at,
+            )
+        except ExecutorCapacityError:
+            quote_capacity_exhausted = True
+        try:
+            bars_future = self._detail_executor.submit(
+                self._collect_bars,
+                symbol,
+                as_of=as_of,
+                deadline_at=deadline_at,
+            )
+        except ExecutorCapacityError:
+            bars_capacity_exhausted = True
+        pending_inputs = tuple(
+            cast(Future[object], future)
+            for future in (quote_future, bars_future)
+            if future is not None
+        )
+        done, pending = wait(
+            pending_inputs,
+            timeout=_deadline_wait_seconds(deadline_at, self._clock),
+        )
+        for future in pending:
+            future.cancel()
+
+        quote_gaps: list[str] = []
+        fact: TacticalQuoteFact | None = None
+        quote_observed_at: datetime | None = None
+        if quote_future is None:
+            quote_gaps.append("ON_DEMAND_MARKET_CAPACITY_EXHAUSTED")
+        elif quote_future not in done:
+            quote_future.cancel()
+            quote_gaps.append("CONSULTATION_DEADLINE_REACHED")
+        else:
+            if quote_capacity_exhausted:
+                quote_gaps.append("ON_DEMAND_MARKET_CAPACITY_EXHAUSTED")
+            try:
+                capture = quote_future.result()
+            except Exception:
+                capture = None
+            if capture is None:
+                quote_gaps.append("TENCENT_BOARD_QUOTE_UNAVAILABLE")
+            elif capture.venue is None:
+                quote_gaps.extend(
+                    f"{self._board_quote.source_id.upper()}_{gap.upper()}"
+                    for gap in capture.data_gaps
+                )
+            elif capture.symbol != code or capture.venue != "pt":
+                quote_gaps.append(f"{self._board_quote.source_id.upper()}_IDENTITY_MISMATCH")
+            else:
+                fact = _quote_fact(
+                    self._board_quote.source_id,
+                    capture,
+                    continuous=session_open,
+                )
+                if fact is None:
+                    quote_gaps.append("TENCENT_BOARD_QUOTE_STALE_OR_INCOMPLETE")
+                else:
+                    quote_observed_at = capture.received_at
+        try:
+            bars, bars_gap = (
+                bars_future.result()
+                if bars_future is not None and bars_future in done
+                else (
+                    None,
+                    (
+                        "ON_DEMAND_MARKET_CAPACITY_EXHAUSTED"
+                        if bars_capacity_exhausted
+                        else "CONSULTATION_DEADLINE_REACHED",
+                    ),
+                )
+            )
+        except Exception:
+            bars, bars_gap = None, ("COMPLETED_DAILY_BARS_UNAVAILABLE",)
+
+        daily_adjustment_qualified = bars is not None and bars.adjustment == "FORWARD_ADJUSTED_QFQ"
+        latest_date: str | None = None
+        technical_facts: dict[str, object] = {}
+        provider_provenance: list[str] = []
+        if fact is not None:
+            provider_provenance.append(fact.source_id)
+        if daily_adjustment_qualified:
+            assert bars is not None
+            latest_date = bars.completed_bars[-1].date if bars.completed_bars else None
+            technical_facts = _compact_technical_facts(bars)
+            provider_provenance.append(f"{bars.provider_id}@{bars.provider_version}")
+        elif bars is not None:
+            bars_gap = tuple(dict.fromkeys((*bars_gap, "COMPLETED_DAILY_BARS_ADJUSTMENT_MISMATCH")))
+            provider_provenance.append(f"{bars.provider_id}@{bars.provider_version}")
+        timeframes = _daily_timeframes(
+            bars,
+            as_of=as_of,
+            data_gaps=bars_gap,
+        )
+
+        close_session = phase in {
+            TradingSessionPhase.AFTER_CLOSE.value,
+            TradingSessionPhase.CLOSED_DAY.value,
+        }
+        expected_close_date = self._expected_close_trade_date(as_of) if close_session else None
+        close_qualified = (
+            close_session
+            and expected_close_date is not None
+            and fact is not None
+            and fact.source_event_at is not None
+            and fact.source_event_at.astimezone(_SHANGHAI).date() == expected_close_date
+        )
+
+        gaps = [*quote_gaps, *bars_gap, *session_gaps]
+        limitations: list[str] = ["BOARD_INDEX_TENCENT_SINGLE_SOURCE"]
+        if close_qualified:
+            limitations.extend(bars_gap)
+            limitations.append("MARKET_SESSION_REFERENCE_ONLY")
+            if latest_date != expected_close_date.isoformat():
+                limitations.append("CURRENT_TRADING_DAY_BAR_NOT_INCLUDED")
+        else:
+            if phase == TradingSessionPhase.AFTER_CLOSE.value and (
+                session_open
+                or session_gaps
+                or latest_date != as_of.astimezone(_SHANGHAI).date().isoformat()
+            ):
+                gaps.append("CURRENT_TRADING_DAY_BAR_NOT_INCLUDED")
+            if not session_open:
+                gaps.append("MARKET_SESSION_REFERENCE_ONLY")
+
+        if close_qualified:
+            status: TacticalEvidenceStatus = "READY"
+            # 与个股判例同序：收盘合格给 READY 后，日线缺席仍降级 PARTIAL。
+            if not daily_adjustment_qualified:
+                status = "PARTIAL"
+        elif fact is not None:
+            status = "PARTIAL"
+        else:
+            # quote 腿整体缺席（失败/身份错配/过期）同个股语义：UNKNOWN，
+            # 不因日线在场而升档。
+            status = "UNKNOWN"
+        if session_gaps and status == "READY":
+            status = "PARTIAL"
+
+        if close_qualified:
+            observation_mode: Literal[
+                "LIVE", "CLOSE_REFERENCE", "REFERENCE_ONLY", "UNAVAILABLE"
+            ] = "CLOSE_REFERENCE"
+        elif fact is not None:
+            observation_mode = "REFERENCE_ONLY"
+        else:
+            observation_mode = "UNAVAILABLE"
+        evidence_payload = {
+            "symbol": symbol,
+            "as_of": as_of.isoformat(),
+            "status": status,
+            "phase": phase,
+            "quote": [fact.to_agent_dict()] if fact is not None else [],
+            "quote_observed_at": (
+                quote_observed_at.isoformat() if quote_observed_at is not None else None
+            ),
+            "quote_price": fact.price if fact is not None else None,
+            "quote_price_role": "PRIMARY" if fact is not None else "NONE",
+            "latest_bar": latest_date,
+            "bar_count": len(bars.completed_bars) if bars is not None else 0,
+            "technical_facts": technical_facts,
+            "timeframes": timeframes,
+            "provider_provenance": provider_provenance,
+            "gaps": list(dict.fromkeys(gaps)),
+        }
+        return TacticalInstrumentContext(
+            symbol=symbol,
+            status=status,
+            evidence_id=f"market-evidence-{_canonical_hash(evidence_payload)[:24]}",
+            quote_price=fact.price if fact is not None else None,
+            quote_price_role="PRIMARY" if fact is not None else "NONE",
+            quote_disagreement_ratio=None,
+            quote_facts=(fact,) if fact is not None else (),
+            quote_observed_at=quote_observed_at,
+            session_phase=phase,
+            reference_only=True,
+            manual_review_eligible=False,
+            latest_completed_bar_date=latest_date,
+            completed_bar_count=len(bars.completed_bars) if bars is not None else 0,
+            technical_facts=technical_facts,
+            provider_provenance=tuple(provider_provenance),
+            data_gaps=tuple(dict.fromkeys(gaps)),
+            timeframes=timeframes,
+            observation_mode=observation_mode,
+            context_limitations=tuple(dict.fromkeys(limitations)),
+        )
+
     def _collect_quotes(
         self,
         symbol: str,
@@ -1131,6 +1369,17 @@ def build_default_on_demand_tactical_context(
         )
     except (OSError, ValueError):
         calendar = _UnavailableTradingCalendar()
+    board_quote: QualificationSourcePort | None = None
+    board_timeouts = [
+        driver.timeout_seconds for driver in plan.quote if driver.driver_id == "tencent_quote"
+    ]
+    if board_timeouts:
+        from fin_analyse.market.qualification_sources.tencent_raw import TencentBoardQuoteSource
+
+        board_quote = TencentBoardQuoteSource(
+            evidence_origin=ObservationEvidenceOrigin.LIVE_CAPTURE,
+            timeout_seconds=board_timeouts[0],
+        )
     return OnDemandTacticalContextService(
         primary_quote=quote_drivers[0],
         reference_quote=quote_drivers[1],
@@ -1138,6 +1387,7 @@ def build_default_on_demand_tactical_context(
         thirty_minute_bars=thirty_minute_bars,
         calendar=calendar,
         clock=clock,
+        board_quote=board_quote,
     )
 
 
@@ -1788,6 +2038,16 @@ def _parse_symbol(symbol: str) -> tuple[str, str] | None:
     if match is None or match.group("venue") == "BJ":
         return None
     return match.group("code"), match.group("venue")
+
+
+_BOARD_SYMBOL = re.compile(r"^(?P<code>[0-9A-Z]{8})\.PT$")
+
+
+def _parse_board_symbol(symbol: str) -> str | None:
+    """Return the Tencent board code for a canonical ``{code}.PT`` symbol."""
+
+    match = _BOARD_SYMBOL.fullmatch(symbol) if isinstance(symbol, str) else None
+    return match.group("code") if match is not None else None
 
 
 def _aggregate_status(statuses) -> TacticalEvidenceStatus:

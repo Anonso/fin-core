@@ -264,3 +264,80 @@ def test_cutoff_uses_cn_tz_with_1500_completion_semantics() -> None:
     assert [bar.date for bar in series2.completed_bars] == ["2026-09-03"]
     # 抓取窗口端点也按 CN 日界（end 含 cutoff 当日，过滤层裁剪）。
     assert "20260904" in captured[0].replace("-", "")
+
+
+def test_reader_routes_board_symbols_to_newfqkline_and_parses_day_rows() -> None:
+    """板块码走 newfqkline（fqkline 对 pt 只吐 1 根，2026-09-05 实测）；行 idx0-5 同构。"""
+
+    board_rows = [
+        [
+            "2026-09-03",
+            "721.55",
+            "696.62",
+            "732.10",
+            "690.02",
+            "5800000.00",
+            {},
+            "1.03",
+            "383142.00",
+            "0.00",
+            "0.00",
+        ],
+        [
+            "2026-09-04",
+            "696.62",
+            "732.05",
+            "756.21",
+            "721.55",
+            "5860632.00",
+            {},
+            "4.75",
+            "975065.00",
+            "0.00",
+            "0.00",
+        ],
+    ]
+    payload = json.dumps(
+        {"code": 0, "msg": "", "data": {"pt02GN2224": {"day": board_rows}}},
+        separators=(",", ":"),
+    ).encode("utf-8")
+    urls: list[str] = []
+
+    def http_get(url: str, *, params: dict[str, str], timeout: float) -> _Response:
+        urls.append(url)
+        return _Response(payload)
+
+    reader = TencentDailyBarReader(http_get=http_get)  # type: ignore[arg-type]
+    series = reader.read(
+        QualifiedDailyBarReadRequest(
+            symbol="02GN2224.PT",
+            trade_date=date(2026, 9, 4),
+            decision_cutoff_at=datetime(2026, 9, 4, 8, 0, tzinfo=UTC),
+            minimum_completed_bars=2,
+        )
+    )
+
+    assert len(urls) == 1
+    assert "newfqkline" in urls[0]
+    assert "fqkline" not in urls[0].replace("newfqkline", "")
+    assert "pt02GN2224" in urls[0]
+    assert series.symbol == "02GN2224"
+    assert [bar.close for bar in series.completed_bars] == [696.62, 732.05]
+    assert series.completed_bars[-1].volume == 5860632.0
+    assert series.adjustment == "FORWARD_ADJUSTED_QFQ"
+
+
+def test_board_symbol_requires_explicit_pt_suffix() -> None:
+    """裸 8 位码仍只解个股命名空间：无 .PT 后缀的板块码拒绝（无裸板块解析）。"""
+
+    reader = TencentDailyBarReader(http_get=lambda *a, **k: _Response(b"{}"))  # type: ignore[arg-type]
+
+    with pytest.raises(TencentDailyBarSourceError, match="SYMBOL_INVALID"):
+        reader.read(
+            QualifiedDailyBarReadRequest(
+                symbol="02GN2224",
+                trade_date=date(2026, 9, 4),
+                decision_cutoff_at=datetime(2026, 9, 4, 8, 0, tzinfo=UTC),
+                minimum_completed_bars=2,
+            )
+        )
