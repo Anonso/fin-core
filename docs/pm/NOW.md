@@ -98,7 +98,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 环节 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006/027 已闭（027 审计链 09-04 实弹 chain_ready=true）；Windows 声明清洗对齐已落（09-05，老仓 5c3f8d92+部署副本身份同步，08:45 班实弹确认） |
+| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006/027 已闭（027 审计链 09-04 实弹 chain_ready=true）；Windows 声明清洗对齐已落并实弹过（09-05，老仓 5c3f8d92+部署同步；08:45 班 run 20260905T084505177 capture_exit 0/consumer ready；同日 opencli 1.8.7+扩展 1.0.24 doctor 全绿） |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
 | 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | [../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
@@ -125,7 +125,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·owner | 16 | 直播总结入档后继：明日标注批次勾 9/4 锐评（as_of 已滚、从提名单隐去，从 index 直接勾；BUG-028 边界修复后后续批次自动可见；首例 09-04 已入档收口，git 55722a8） | owner 明日标注批次 |
 | 旁路·owner | 18 | 主线效果盲评下轮增量：finq 并排记分 + 失败样本常驻（首轮 09-04 收口：主线腿双判者皆胜 CC +7.5 / J2 +5.0 per 200；预算决策按家规 11 不施工；台账 $STATE/fin-analyse/mainline-blind-eval-20260904/） | 随用随记积累后 |
 | 旁路·使用触发 | 21 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
-| 旁路·随手 | 23 | opencli 扩展 v1.0.24 商店自拉**已落盘**（09-05 午后核对：Profile 1/3 Extensions 均有 1.0.24_0，激活仍指 1.0.23、扩展未连=待激活态）：owner 重启 Chrome 后 `opencli doctor` 两 profile 复绿即出队 | 随手（下次开 Chrome） |
 | 旁路·时间（10-04） | 20 | BUG-031 档位口径复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）；finqa-x 恢复后补发 codex 腿探针（探针题与判据在 BUGS 条目；台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/；09-05 午后复查 finqa-x 仍 429）；双验闭环当日按序撤单腿披露行（BUGS BUG-031 撤行顺序） | 10-04 满月或样本先到；finqa-x 恢复即补发 |
 | 旁路·owner | 22 | meta 设施家规10 自审（D-043/C5）：决策日志 v1、run-design-gate、switch-codex-open-provider、manage-zsxq-capture、manage-zsxq-article-retirement、book-shared-brain-learning、外部审视链（codex_open.sh+双 profile）——无真实使用记录者入休眠候选清单 | 2026-09-18 |
 | 旁路·随手 | 24 | 版本强势英雄补列进 G（D-044①）：source_contract 白名单补列走 45 天 G 窗口；09-05 审查实证 331 篇零车道，验收=该栏新帖进 G manifest | D3 建造静默结束后 |

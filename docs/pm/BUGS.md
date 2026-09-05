@@ -979,7 +979,9 @@
   verify-task-xml 报 task_enabled_invalid=现役 task Settings 缺显式
   `<Enabled>true</Enabled>`（Windows 规范化丢缺省、语义仍启用，疑 09-04
   触发器重写所致；待 owner 白天重注册补元素后 verifier 复绿）。实弹：
-  08:45 班确认。
+  **08:45 班确认过**（run 20260905T084505177-31684：新脚本 5c3f8d92
+  capture_exit 0、artifact 发布、consumer ready completed=1）；同日
+  opencli 1.8.7+扩展 1.0.24 商店自拉落位，doctor "Everything looks good!"。
 
 ## BUG-028 mainline 候选扫描锚门滤掉复核日当天全部 G 层材料（2026-09-04 CC 立案，同日闭）
 
