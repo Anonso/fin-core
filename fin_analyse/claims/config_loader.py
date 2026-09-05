@@ -518,6 +518,15 @@ def create_backends_from_config(config_path: str | None = None) -> dict[str, LLM
     backends: dict[str, LLMBackend] = {}
     for plan in compile_backend_plan(config):
         if not _plan_is_configured(plan):
+            # BUG-038：enabled 模型凭据未配置必须 fail-visible。静默缩池会让
+            # t0/t1/cognition 池无声变短，且 provider_health 的口径相反（报
+            # 「已配置」），故障只剩回退可观察。
+            logger.warning(
+                "LLM backend '%s' skipped: enabled but credentials not configured "
+                "(api_key/base_url missing, '你的' placeholder, or unresolved "
+                "${ENV} reference — check env file / FIN_LLM_ENV_FILE)",
+                plan.name,
+            )
             continue
         try:
             backends[plan.name] = _BACKEND_ADAPTER_CATALOG[plan.adapter_id](plan)

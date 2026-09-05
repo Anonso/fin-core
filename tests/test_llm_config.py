@@ -385,3 +385,52 @@ models:
     backend = create_backends_from_config(str(config_path))["explicit"]
 
     assert backend.__class__.__name__ == "OpenAICompatibleBackend"
+
+
+def test_unresolved_env_key_backend_skips_with_visible_warning(
+    tmp_path, caplog, monkeypatch
+):
+    """BUG-038：enabled 模型凭据未解键必须 fail-visible（warning 点名模型）。"""
+    import logging
+
+    monkeypatch.delenv("FIN_TEST_MISSING_KEY_038", raising=False)
+    config_path = tmp_path / "llm.yaml"
+    config_path.write_text(
+        """
+models:
+  broken_model:
+    provider: openai_compatible
+    model: test-model-v1
+    api_key: ${FIN_TEST_MISSING_KEY_038}
+    enabled: true
+"""
+    )
+
+    with caplog.at_level(logging.WARNING, logger="fin_analyse.claims.config_loader"):
+        backends = create_backends_from_config(str(config_path))
+
+    assert backends == {}
+    assert any(
+        "broken_model" in record.getMessage() for record in caplog.records
+    ), [record.getMessage() for record in caplog.records]
+
+
+def test_provider_health_configured_scope_aligns_with_loader(monkeypatch):
+    """BUG-038：含未解析 ${ENV} 的 key 按「未配置」报，不再与 loader 相反。"""
+    from fin_analyse.runtime import provider_health
+
+    cfg = {
+        "models": {
+            "ok_model": {"enabled": True, "api_key": "sk-real"},
+            "unresolved_model": {"enabled": True, "api_key": "${FIN_TEST_MISSING_KEY_038}"},
+        }
+    }
+    monkeypatch.setattr(
+        "fin_analyse.claims.config_loader.load_llm_config",
+        lambda *args, **kwargs: cfg,
+    )
+
+    configured = provider_health._read_configured_llm_backends()
+
+    assert "ok_model" in configured
+    assert "unresolved_model" not in configured

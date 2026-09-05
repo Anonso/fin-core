@@ -658,7 +658,7 @@ def _read_llm_backend_snapshot() -> dict[str, dict[str, Any]]:
 def _read_configured_llm_backends() -> dict[str, Any]:
     """Read configured LLM backend names without constructing backends."""
     try:
-        from fin_analyse.claims.config_loader import load_llm_config
+        from fin_analyse.claims.config_loader import _configured_text, load_llm_config
 
         config = load_llm_config(load_dotenv=False)
         models = config.get("models", {})
@@ -671,7 +671,9 @@ def _read_configured_llm_backends() -> dict[str, Any]:
             if not cfg.get("enabled", False):
                 continue
             api_key = cfg.get("api_key", "")
-            if not api_key or "你的" in str(api_key):
+            # BUG-038：口径与 config_loader._plan_is_configured 对齐——含未解析
+            # ${ENV} 引用的 key 按「未配置」报，不再与 loader 的实际跳过行为相反。
+            if not isinstance(api_key, str) or not _configured_text(api_key):
                 continue
             configured[str(name)] = dict(cfg)
         return configured
