@@ -276,3 +276,18 @@ def test_load_index_handles_both_formats(tmp_path):
     scraper._load_index()
     assert "xyz789" in scraper._index
     assert scraper._index["xyz789"]["column"] == "星大派特刊"
+
+
+def test_load_index_fails_closed_on_corrupt_index(tmp_path):
+    """索引存在但读不了必须 fail-closed：静默清空会让下一次 _save_index
+    用本轮新文覆盖全量索引（BUG-027 同款爆炸半径）。"""
+    import pytest
+
+    index_path = tmp_path / "index.json"
+    index_path.write_text('{"articles": [', encoding="utf-8")
+
+    scraper = CdpBridgeScraper(knowledge_base_root=tmp_path)
+    with pytest.raises(RuntimeError, match="不可读"):
+        scraper._load_index()
+    # 半截文件原样保留，未被空索引覆盖。
+    assert index_path.read_text(encoding="utf-8") == '{"articles": ['

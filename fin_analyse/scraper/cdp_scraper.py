@@ -2880,9 +2880,13 @@ class CdpBridgeScraper:
         if self._index_file.exists():
             try:
                 data = json.loads(self._index_file.read_text())
-            except Exception:
-                self._index = {}
-                return
+            except (OSError, ValueError) as error:
+                # fail-closed：索引在但读不了时宁可本 run 失败。带空索引继续跑，
+                # 下一次 _save_index 会用本轮新文覆盖全量索引（BUG-027 同款爆炸半径）。
+                raise RuntimeError(
+                    f"knowledge index 存在但不可读（{self._index_file}）：{error!r}；"
+                    "拒绝以空索引继续，先人工修复或移除该文件"
+                ) from error
         else:
             self._index = {}
             return
