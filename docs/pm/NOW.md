@@ -19,7 +19,7 @@
 > 7. 推进位五词：`先决 / 主线 / 旁路（时间·使用·owner·随手）/ 随部署 / 最后`；
 >    主线同一时刻只推一项，完成即出队。
 >
-> 最后核对：2026-09-05（Asia/Shanghai）。
+> 最后核对：2026-09-06（Asia/Shanghai）。
 
 ## 生产声明
 
@@ -85,7 +85,7 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 问询探针 = 一次真实提问，看 trace 三字段（`~/fin-data/trace/read-capability/calls.jsonl`：
 工具被调、`data_gaps` 空、`status` 正常）判「起了作用没」；效果好坏归打分/盲评，不混判。
 
-推进位标记（执行顺序，与状态六档无关；主线当前 = 准备期·基础功能深化（owner 09-05 拍板继续准备，D3 改自选窗口）；owner 侧最近验收 = BUG-024 盘前读法实弹〔下个交易日 09-07 周一〕；时间窗项放旁路·时间触发到点执行、不占主线位〔owner 08-30 裁定〕；完整顺序看待办队列）：
+推进位标记（执行顺序，与状态六档无关；主线 = 准备期·基础功能深化两主项已清尾（09-06，#25 三卡 seed+#26 人格 r18 瘦身），下一主线项待 owner 指定（候选：旁路·排后 #27 先重读 point-line-plane survey）；owner 侧最近验收 = BUG-024 盘前读法实弹〔09-07 周一〕+人格 r18 实弹复核；时间窗项放旁路·时间触发到点执行、不占主线位〔owner 08-30 裁定〕；完整顺序看待办队列）：
 `【先决】【主线】【旁路·时间/使用/owner/随手】【随部署】`。
 
 使用路由（D-043/C4，owner 09-05 口述确认「按优势面路由」，见 usage-profile）：凡需本地持久上下文或工具序列的题（G 覆盖/持仓/
@@ -130,7 +130,7 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
 | 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | [../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | G 准入/工作集 | G 注入新鲜度 | 在用（manifest 契约失配已消〔08-29 晚六题 g_context 零失配码〕；fresh pair 专项探针 09-02 ✅） | 老师体系问题，验 fresh pair | [../design/g-cognition.md](../design/g-cognition.md)；CC 收口 b2da8d9c |
-| 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（09-04 接口B read_shared_brain 上线〔12 只读工具，c1da3ea〕+件3 已 apply〔40 卡：38 卡带激活词+三新卡，施工门 14 发现 12 采纳，幂等复验过，三新卡实弹第一顺位点亮〕+压测验收门 PASS〔双腿 12/12+四维不退化，台账 state/analysis-mindset-stress-20260904*/〕；残余=finq 真实使用记账照常） | 方法论类问题，验 read_shared_brain 被调+卡命中+边界收紧 | [analysis-mindset-v1](../design/analysis-mindset-v1.md)；D-039；seed_methodology_qa.py（541368d8） |
+| 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（09-04 接口B read_shared_brain 上线〔12 只读工具，c1da3ea〕+件3 已 apply〔40 卡：38 卡带激活词+三新卡，施工门 14 发现 12 采纳，幂等复验过，三新卡实弹第一顺位点亮〕+压测验收门 PASS〔双腿 12/12+四维不退化，台账 state/analysis-mindset-stress-20260904*/〕；09-06 persona-gov 三卡入册〔管理层检查/护城河验证/反向预期，43 卡：词面重叠零冲突+幂等复验+激活探针正3负2含挤占全过+双腿抽查卡命中〔CC+cmd〕，台账 state/fin-analyse/persona-governance-3cards-20260906/〕；残余=finq 真实使用记账照常） | 方法论类问题，验 read_shared_brain 被调+卡命中+边界收紧 | [analysis-mindset-v1](../design/analysis-mindset-v1.md)；D-039；seed_methodology_qa.py（541368d8） |
 | 薄 server 装配 | 十三工具可用性（12 只读+1 写，单缝失败隔离降级） | 在用 | 任一问询，验 gaps 可查 | read_capabilities/ |
 
 ### 其他产品面
@@ -143,10 +143,9 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 
 | 位置 | 序 | 事项 | 等谁 / 何时 |
 | --- | --- | --- | --- |
-| 主线·准备 | 25 | 知识脑 3 卡 seed：管理层/护城河/反向预期——persona-governance-v1 §4 已批；seed 前置三件（38 卡词面重叠检查/related_items 连边/幂等复验）+激活探针（正向 3+负向 2 含估值挤占） | 下一会话（清尾，半小时级） |
-| 主线·准备 | 26 | 人格 r18 逐行瘦身 417→约 400（编号顺延：r16=路由判据入人格、r17=09-05 板块线源配套；内容同 persona-governance-v1 §3）：只删 v2–v4 历史 bullet，4 行活规则原地保留，删前逐段 diff 验证 r15 备份；施工后跑回归探针+owner 实弹复核 | 下一会话（清尾） |
 | 旁路·排后 | 27 | 分时/盘中数据（规模大源不稳）；消息时间线视图（先重读 2026-09-03-point-line-plane-survey 评估 B1 剩余价值） | 排后，准备期主两项完成后 |
 | 旁路·owner | 4 | 决策日志 v1 收尾：施工全清（09-04 合入 b72ddf5：设计门 345s/10/10 + 施工外审 474s/7 发现/6 采纳、1 P2 同根裁决；231+全仓 3141 绿 + 实弹 18/18；人格规则 8 已增补）。会签两项 ✅（09-05 owner 签：人格计数行 13+2 追认、README 冻结行整行重写并注记会签）。剩 owner：复盘问询探针（「当初为什么买 X」，随真实使用，finq 记账） | owner 随用 |
+| 旁路·owner | 26 | 人格 r18 瘦身实弹复核：419→407 净 -12（删 v2–v4 历史 bullet+v5 出处叙事，修订史唯一存活载体=backups/CLAUDE.md.20260905-r15；判定口径并入规则 2/5 独有条款保留）；回归探针通过（09-06 q1–q6 全 PASS，预期跟踪位 CU 泄漏裁定在案 flash 缺陷非回归）；八股化复发则整包回滚 backups/CLAUDE.md.20260906-r18-pre-slim | owner 下次实弹使用 |
 | 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+主指数日线 lane（09-04，96f8fcd）+细分板块 lane（09-05，ff372bd）均施工全清，剩 owner 实弹验「线层现工具序列或诚实标注」；09-07 收盘后另核板块 lane 当日 bar 即时性（评审 Q2-P2，见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前+盘后 |
 | 旁路·owner | 2 | finq 记账（D-043/C3）：y 记一字、n 必须一句原因（owner 纪律，不加校验）；存量 3 条历史缺口接受（不回填 append-only 台账），自 D3 起新账强制 | owner 随用 |
 | 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；09-05 夜核对：registry 1695 条、parser v3+增量接线落地（#26 出队）、首篇 [6,7) 边界样本已入册（603629@09-05 能量 6.8）——分级行为核对仍待做；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
