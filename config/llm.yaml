@@ -42,7 +42,9 @@ models:
   #   cognition 链 = glm53_flash → deepseek_flash_opencode → deepseek_flash_cmd
   #   → qwen。
   # deepseek_flash_opencode（当前禁用中：opencode-go 429 长期故障，owner
-  # 2026-09-05 拍板；恢复 = enabled 翻 true，即回 DS 槽位第一位，无其他改动）。
+  # 2026-09-05 拍板；恢复 = enabled 翻 true，即回 DS 槽位第一位，无其他改动。
+  # 前提：llm.env 的 OPENCODE_GO_* 与 auth.json 的 opencode-go 条目仍在位——
+  # 若已清理，启用后节点会被 fail-visible 跳过（非静默），需先补 key）。
   deepseek_flash_opencode:
     provider: openai_compatible
     model: deepseek-v4-flash

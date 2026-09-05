@@ -130,13 +130,18 @@ glm-5.3 也在）；`/responses` ❌ 404（官方文档明示仅 OpenAI chat com
 Anthropic Messages 两形态）；chat h2 ❌ EOF×3 / h1 ✅ 实弹返回 ok。→
 **codex 腿全部不可换**（finqa-x/finqa-codex、生产 codex-open 路由——后者另有
 manage-fin-codex-routes 边界「codex-provider 仅 Responses-compatible」双重锁）；
-`llm.yaml` deepseek_flash（openai_compatible，python 客户端默认 h1）可换。
+`llm.yaml` DS 槽位节点（openai_compatible，python 客户端默认 h1）可换——
+2026-09-05 起 DS 槽位拆两独立链节点 `deepseek_flash_opencode`（enabled 开关，
+禁用中）/`deepseek_flash_cmd`（现役，commandcode），恢复 opencode=翻该节点
+`enabled: true`，不再用补丁挪端点。
 
 **已落地（2026-09-05）**：key 吸收进持久双库——`~/.local/share/opencode/auth.json`
 新增 `commandcode` 条目 + `llm.env` 追加 `COMMANDCODE_API_KEY/_BASE_URL`（/tmp/command
 已 chmod 600 且重启即清，勿再指 /tmp，见「只换 key」教训）；opencode-go 全部使用点
 现场备份在 `~/.local/share/opencode-go-backup-20260905/`（0700/0600，MANIFEST 含
-sha256 与回滚说明，内附 deepseek_flash 换 commandcode 的现成补丁）。
+sha256 与回滚说明；内附的 deepseek_flash 换 commandcode 补丁 **已 stale**——
+基于重构前单节点 llm.yaml 生成，现行两节点结构以 llm.yaml `enabled` 开关为准，
+勿再应用该补丁）。
 
 **未上线/边界**：codex-open 路由与 finqa-x/finqa-codex 保持 opencode-go 不动
 （429 只能等服务商侧恢复，或 owner 另批本地 responses→chat 翻译代理——新基建，

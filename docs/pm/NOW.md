@@ -48,7 +48,7 @@ ZSXQ 采集腿源真身已迁 fin-core（NOW #32，09-05）。
 BUG-031 双验闭环用其闭环）。提取链 cognition 按 owner 设计（09-05）拆两独立
 链节点、每节点 enabled 开关：glm5.3-flash → opencode ds flash（禁用中，恢复
 翻 `enabled: true` 即回 DS 槽位首位，无其他改动）→ cmd ds flash → qwen
-（llm.yaml ee0f4e1 → 重构提交，待部署标记不变：随下次发版生效；发版核对加
+（llm.yaml ee0f4e1 → 25724de 重构，待部署标记不变：随下次发版生效；发版核对加
 项=llm.env 含 COMMANDCODE_* 且 flash 端点探针 200——D-045 审计门 P2）。外部审视入口
 `scripts/codex_open.sh` 重构（D-045）：评审者链 cmd·deepseek-v4-pro 主 →
 glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路由 codex-open
