@@ -1186,9 +1186,12 @@ def test_scheduled_state_conflict_preserves_that_runtime_was_invoked(tmp_path) -
 
 def test_scheduled_concurrent_second_caller_reports_in_progress(tmp_path) -> None:
     repo = _real_repo(tmp_path)
+    # 时钟钉在与占位 claim 同一 epoch：TTL 回收按「相对 service 时钟的年龄」
+    # 判僵尸，假 epoch + 真时钟会把占位误判成超时遗留。
     service = DailyWorkspaceService(
         consultation_runner=_FakeConsultationRunner(),
         state_repository=repo,
+        clock=lambda: datetime.fromtimestamp(1_720_000_000.0, tz=UTC),
     )
 
     # 第一调用方占位（acquire 赢家）——用 acquire 直接模拟并发中的持有者。

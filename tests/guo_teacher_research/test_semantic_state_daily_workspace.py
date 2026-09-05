@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from fin_analyse.guo_teacher_research.semantic_state import (
+    DAILY_WORKSPACE_CHECKPOINT_CLAIM_TTL_SECONDS,
     SCHEMA_VERSION,
     DailyWorkspaceTimingSample,
     ResearchStateRepository,
@@ -1101,3 +1102,28 @@ def test_read_only_timing_snapshot_never_provisions_missing_state(tmp_path: Path
 
     assert not path.exists()
     assert not path.parent.exists()
+
+
+def test_checkpoint_claim_reclaims_stale_unbound_claim_after_ttl(tmp_path: Path) -> None:
+    """SIGTERM/OOM 遗留的未绑定 claim（finally 不执行）超 TTL 后自动回收重取；
+    新鲜未绑定 claim 仍拒绝第二个 caller，绑定行永不回收。"""
+    repo = _repo(tmp_path / "state.sqlite3")
+    repo.create_daily_workspace_chain(
+        principal_id="finp_daily",
+        trading_day_id="2026-08-03",
+        idempotency_key="daily:2026-08-03:premarket",
+        now=_NOW,
+    )
+    claim = {
+        "principal_id": "finp_daily",
+        "trading_day_id": "2026-08-03",
+        "idempotency_key": "daily:2026-08-03:premarket:prepare",
+    }
+
+    assert repo.acquire_daily_workspace_checkpoint(**claim, now=_NOW)
+    # TTL 内的未绑定 claim = 可能仍在生成，保持 generation-in-progress 语义。
+    assert not repo.acquire_daily_workspace_checkpoint(**claim, now=_NOW + 60.0)
+    # 超 TTL 的僵尸 claim 回收并重取成功。
+    assert repo.acquire_daily_workspace_checkpoint(
+        **claim, now=_NOW + DAILY_WORKSPACE_CHECKPOINT_CLAIM_TTL_SECONDS + 60.0
+    )

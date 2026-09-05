@@ -62,6 +62,10 @@ SCHEMA_VERSION: Final = 8
 DEFAULT_EPOCH: Final = SCHEMA_NAME
 DAILY_WORKSPACE_KIND: Final = "daily_workspace"
 CAPABILITY: Final = "guo.decision_guidance"
+# checkpoint 生成权 claim 的回收时限。合法持有以 systemd prepare 单元
+# TimeoutStartSec=35min 封顶，6h > 3.5× 上界且允许同交易日晚班回收早班僵尸；
+# 只有 job_id/product_id 仍为 NULL 的未绑定行才可回收，绑定行（幂等守卫）永不动。
+DAILY_WORKSPACE_CHECKPOINT_CLAIM_TTL_SECONDS: Final = 6 * 3600
 _SNAPSHOT_CHILD_MAX_OUTPUT_BYTES: Final = 16 * 1024
 _SNAPSHOT_CHILD_TIMEOUT_SECONDS: Final = 10.0
 _SNAPSHOT_MATERIALIZER_TIMEOUT_SECONDS: Final = 10.0
@@ -3534,18 +3538,40 @@ class ResearchStateRepository:
             )
             if chain is None:
                 raise SemanticStateError("daily_workspace_chain_missing")
+            claim_sql = """
+                INSERT INTO idempotency(
+                    principal_id, capability, key_hash, request_hash,
+                    chain_id, job_id, product_id, created_at
+                ) VALUES (?, 'daily_workspace', ?, ?, ?, NULL, NULL, ?)
+                """
+            claim_params = (
+                principal_id,
+                key_hash,
+                request_hash,
+                str(chain["chain_id"]),
+                now,
+            )
             try:
-                connection.execute(
-                    """
-                    INSERT INTO idempotency(
-                        principal_id, capability, key_hash, request_hash,
-                        chain_id, job_id, product_id, created_at
-                    ) VALUES (?, 'daily_workspace', ?, ?, ?, NULL, NULL, ?)
-                    """,
-                    (principal_id, key_hash, request_hash, str(chain["chain_id"]), now),
-                )
+                connection.execute(claim_sql, claim_params)
             except sqlite3.IntegrityError:
-                return False
+                # SIGTERM/OOM 杀掉 prepare 进程时 finally 不执行，未绑定 claim
+                # 会永久泄漏并把该班次锁死在 generation_in_progress。合法持有
+                # 以 systemd TimeoutStartSec=35min 封顶，超 TTL 的未绑定行只能
+                # 是死亡进程遗留；绑定行（幂等守卫）永不被此路径删除。
+                cutoff = now - DAILY_WORKSPACE_CHECKPOINT_CLAIM_TTL_SECONDS
+                reclaimed = connection.execute(
+                    """
+                    DELETE FROM idempotency
+                    WHERE principal_id = ? AND capability = 'daily_workspace'
+                      AND key_hash = ? AND job_id IS NULL AND product_id IS NULL
+                      AND created_at < ?
+                    """,
+                    (principal_id, key_hash, cutoff),
+                ).rowcount
+                if not reclaimed:
+                    return False
+                connection.execute(claim_sql, claim_params)
+                return True
             return True
 
     def release_daily_workspace_checkpoint(
