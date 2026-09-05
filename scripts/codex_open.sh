@@ -9,6 +9,8 @@
 #   旗标 fail-closed（exit 78）。glm profile：codex 参数原样透传（现行为）。
 # fallback：主评审者 precheck 失败或运行非零 → stdout 横幅 + fallback.tsv 落账
 #   → 替补重发同参。换主评审者改 DEFAULT_PROFILE 一行。
+# tsv 行语义 = fallback 事件（非最终结论；双挂时 glm 的失败 rc 见 stderr）。
+# cmd 翻译层：-C 仅吸收 WORKSPACE；--sandbox 仅吸收 read-only 值；其余见 D-045。
 
 set -euo pipefail
 
@@ -71,21 +73,22 @@ export_cmd_glm_key() {
 # 拒绝：权限放大旗标、其余未识别 -- 旗标（fail-closed）；'-' stdin 标记保留
 translate_cmd() {
     CMD_ARGS=()
-    local a skip_next=0
+    local a skip_next=0 skip_flag=""
     for a in "$@"; do
         if [[ $skip_next -eq 1 ]]; then
             skip_next=0
-            if [[ "$a" != "$WORKSPACE" ]]; then
-                die78 "cmd profile 的 -C 仅支持 $WORKSPACE（收到: $a）"
-            fi
+            case "$skip_flag" in
+                -C) [[ "$a" == "$WORKSPACE" ]] || die78 "cmd profile 的 -C 仅支持 $WORKSPACE（收到: $a）" ;;
+                --sandbox) [[ "$a" == "read-only" ]] || die78 "cmd profile 仅吸收 --sandbox read-only（收到: $a）" ;;
+            esac
             continue
         fi
         case "$a" in
             exec|e|review) ;;
             --sandbox)
-                skip_next=1 ;;
+                skip_next=1; skip_flag="--sandbox" ;;
             -C)
-                skip_next=1 ;;
+                skip_next=1; skip_flag="-C" ;;
             --skip-git-repo-check) ;;
             -) CMD_ARGS+=("$a") ;;
             -*) die78 "cmd profile 未识别旗标（fail-closed，不猜译）: $a" ;;
@@ -99,6 +102,7 @@ note() { printf 'codex-open: %s\n' "$*" >&2; }
 note_fallback() {  # $1=primary $2=final $3=rc $4=stage
     printf 'codex-open: REVIEWER FALLBACK %s → %s（%s 失败 rc=%s @%s）\n' "$1" "$2" "$1" "$3" "$4" >&2
     mkdir -p "$(dirname "$FALLBACK_TSV")"
+    chmod 700 "$(dirname "$FALLBACK_TSV")" 2>/dev/null || true
     printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s)" "$1" "$2" "$3" "$4" >> "$FALLBACK_TSV"
     chmod 600 "$FALLBACK_TSV" 2>/dev/null || true
 }
@@ -145,7 +149,8 @@ if [[ $HEADLESS -eq 0 ]]; then
     if [[ $PRIMARY == cmd ]]; then
         if [[ $PRE_CMD == ok ]]; then
             translate_cmd "$@"
-            exec "$CMD_BIN" --skip-onboarding --no-auto-update -m "$CMD_MODEL" "${CMD_ARGS[@]}"
+            exec "$CMD_BIN" --skip-onboarding --no-auto-update --permission-mode plan \
+                --effort max -m "$CMD_MODEL" "${CMD_ARGS[@]}"
         fi
         if [[ $PRE_GLM == ok ]]; then
             note_fallback "cmd" "glm" "pre" "tui"

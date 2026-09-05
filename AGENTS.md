@@ -83,7 +83,9 @@ fallback 并横幅+fallback.tsv 落账；换/加评审者只改该脚本 profile
 核心设计稿动代码前（设计门，规则5 那类，非核心豁免）；吓人 diff 合入前
 （按规则5 核心判据：durable state/公共入口/大删大改/契约变更）；同一
 问题 ≥2 次修复未果（外援，执行会话直调无需用户中继，替补链 glm·glm-5.3
-即异构第二源，双模并行校准程序不变）。每次给
+即异构第二源，双模并行校准程序不变）。审计门触发判据（规模/门面路径/
+生产语义三轴 R1-R3 + 会话裁量 R4，owner 2026-09-05 拍板）固化在
+run-design-gate skill §0，合入前跑清单，命中即审。每次给
 评审者冻结 packet：设计稿或 diff+提交清单+固定四问（契约破坏？durable
 state 时序/幂等？引用闭包漏删？相对直接 Agent 退化？），packet 骨架与落
 盘约定固定 docs/design-gate-packet-template.md；评审只产发现，裁决归执

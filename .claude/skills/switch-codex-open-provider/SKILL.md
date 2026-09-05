@@ -1,6 +1,6 @@
 ---
 name: switch-codex-open-provider
-description: Switch the CC reviewer entry scripts/codex_open.sh (codex-open) between known provider profiles — codex-glm·glm-5.3 and opencode-go·deepseek-v4-pro — covering credential file, model catalog entry, the ~/.local/bin/codex-open symlink check, owner-only backup, and the exec verification ladder. Also run the four-step wire-protocol feasibility precheck before onboarding ANY new provider (2026-09-05 commandcode case: chat-only upstream cannot attach to codex harness). Use when the user asks to 换/切/改回/评估 codex-open 的 provider/模型/API/key; not for FIN product Codex routes (use manage-fin-codex-routes) nor personal ~/.codex/config.toml profiles.
+description: Switch the CC reviewer entry scripts/codex_open.sh (codex-open) between known provider profiles — codex-glm·glm-5.3 and opencode-go·deepseek-v4-pro — covering credential file, model catalog entry, the ~/.local/bin/codex-open symlink check, owner-only backup, and the exec verification ladder. Since D-045 (2026-09-05) the gate reviewer chain is cmd·deepseek-v4-pro primary with these codex profiles as fallback — switch the primary via DEFAULT_PROFILE in the script. Also run the four-step wire-protocol feasibility precheck before onboarding ANY new provider (2026-09-05 commandcode case: chat-only upstream cannot attach to codex harness). Use when the user asks to 换/切/改回/评估 codex-open 的 provider/模型/API/key; not for FIN product Codex routes (use manage-fin-codex-routes) nor personal ~/.codex/config.toml profiles.
 ---
 
 # Codex-open provider 切换
@@ -29,7 +29,7 @@ ls -la ~/.local/bin/codex-open   # 必须是 symlink -> /home/ypk/fin-core/scrip
 
 ## 两个已验证 profile（只替换脚本中两段片段，勿动 TTY/exec 处理逻辑）
 
-### Profile A（2026-09-04 起，现役）：codex-glm · glm-5.3（官方 Responses 端点）
+### Profile A（2026-09-05 起为替补；09-04 曾现役）：codex-glm · glm-5.3（官方 Responses 端点）
 
 凭据段：
 
@@ -186,7 +186,9 @@ GLM 问询腿（finqa-cmd / finqa-commandcode，2026-09-05 owner 拍板换腿）
 2026-09-05 owner 完成 `cmd login`（Go Plan）后试点：基础 `-p -m deepseek/deepseek-v4-pro`
 ✓、consult-agent 人格加载 ✓（纪律复述含「跨会话记忆不存数字」）、MCP 闭环 ✓
 （read_user_watchlist 返回 30 标的，与 Kilo 一致）。要点：二进制 `~/.local/share/
-command-code` + symlink `~/.local/bin/cmd`；`cmd mcp add-json <name> <json> --scope
+command-code` + symlink `~/.local/bin/cmd`（重装 = `npm install --prefix
+~/.local/share/command-code command-code@1.49.1`，精确版本钉定，升级需同步
+脚本 CMD_VERSION_PIN 并重跑验证阶梯）；`cmd mcp add-json <name> <json> --scope
 project`（在目标工作区执行）**直接写共享的 .mcp.json**（与 CC 同一面，会给条目补
 transport/enabled 字段，CC 忽略无碍）；`--skip-onboarding` 关 taste、`--no-auto-update`
 钉版本；-p 前必须已认证（无 env-key 旁路）。UNLICENSED 闭源薄客户端（dist 3.3M，

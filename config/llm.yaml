@@ -50,7 +50,8 @@ models:
       - name: commandcode-primary
         api_key: ${COMMANDCODE_API_KEY}
         base_url: ${COMMANDCODE_BASE_URL}
-      # opencode 端点（禁用中；恢复时取消注释并移到 commandcode 之前）：
+      # opencode 端点（禁用中；恢复时取消注释并移到 commandcode 之前，且过
+      # 验证阶梯——探针 200 + 提取链实测——再前移）：
       # - name: opencode-primary
       #   api_key: ${OPENCODE_GO_API_KEY}
       #   base_url: ${OPENCODE_GO_BASE_URL}

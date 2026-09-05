@@ -468,3 +468,4 @@
 - 为什么：门已两次因单一上游故障手工换评审者（opencode-go 429 断门、09-04 手工切 glm 无横幅无兜底）；owner 拍板「用 cmd 做门，glm 只是替补 opencode ds pro 的」。cmd 闭源账号客户端的三类特殊风险（版本漂移/-p 权限语义变化/会话过期）以版本钉定+翻译层 fail-closed+glm 兜底三道缓解。
 - 否决了什么：cmd 接入生产问询路由链（commandcode chat-only vs codex-provider Responses，协议不可行）；LiteLLM 桥转译（常驻基建无必要）；env-key 旁路认证（账号会话即凭据单源）；直接 Agent 全平行双评审（双计费，fallback 制已覆盖可用性）。
 - 状态：active · 证据：设计稿 docs/design/d045-gate-reviewer-chain.md v2（设计门 glm 评审者 410s/10 发现/10 采纳，台账 `$STATE/fin-analyse/design-gate/d045-gate-reviewer-chain-20260905/`；cmd 门形干跑同 packet 通过 ~18min）；执行 = codex_open.sh 重构 + run-design-gate/switch-codex-open-provider skill 重写 + GLOSSARY/AGENTS.md/NOW 同步。
+- 追记（2026-09-05 审计门补跑闭环）：ee0f4e1+4463582 合入后补审，cmd 评审者 861s/12 发现（P2×3/P3×9）/12 采纳——TTY 分支补 plan 只读档、--sandbox 值校验、fallback 目录 700、llm.yaml 恢复需过验证阶梯、待部署标记+发版核对加项入 NOW、设计稿按家规 5 删除（git 史 4463582）；台账 `$STATE/fin-analyse/design-gate/audit-d045-llmdash-20260905/`。

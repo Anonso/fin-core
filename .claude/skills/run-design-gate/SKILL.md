@@ -9,6 +9,26 @@ description: Run the CC external review gate (设计门/吓人 diff/外援) thro
 D-045 起：cmd·deepseek-v4-pro 主 → glm·glm-5.3 替补，评审者入口自动 fallback）。
 本 skill 只固化**执行程序与环境坑**，不复制机制条款。触发即一次，不设轮次。
 
+## 0. 审计门触发判定（吓人 diff 合入前；owner 2026-09-05 拍板）
+
+判据三轴 = 大改动 / 影响范围大 / 功能重要。**每次合入前跑一遍清单，命中任一
+即走审计门**（本 skill 同流程，packet = diff + 提交清单，见 §1 审计门形态）：
+
+- **R1 规模**：diff 合计变更 >300 行（增删合计）或 >10 个文件。
+- **R2 门面路径**：触及 `scripts/`、`config/`、`AGENTS.md`、`.claude/skills/`、
+  `.zcode/skills/`（行为载体与合同面）。
+- **R3 生产语义**：触及 fin_analyse 生产模块、durable schema/迁移、systemd/
+  部署单元、网关配置。
+- **R4 会话裁量**：未命中 R1-R3 但功能重要（如 prompt/契约语义变更），可触发；
+  记录一句理由即可，不强制。
+
+豁免：纯文档（`docs/`、`*.md`，AGENTS.md 除外）、台账、本地态（`.claude` 本地
+配置、`$STATE`）。设计门与审计门**不互相豁免**：设计门过 ≠ 免审计门（实现可
+偏离设计——D-045 门形干跑实证，cmd 审实现层抓出 4 个设计门不可见的 P2）。
+
+判定与执行顺序：合入前判定 → 命中 → 先合入后审计亦可（补跑形态，packet 标注
+「补跑」与提交 sha），但裁决发现的 P1 必须落修复提交。
+
 ## 1. 冻结 packet（先于一切）
 
 台账目录：`~/.local/state/fin-analyse/design-gate/<slug>-<YYYYMMDD>/`
@@ -19,16 +39,18 @@ mkdir -p ~/.local/state/fin-analyse/design-gate/<slug>-<YYYYMMDD>
 
 packet.md 结构（固定前缀吃 provider 缓存，正文附被审对象全文）：
 
-1. 头部：一句话背景 + 触发类型（设计门/吓人 diff/外援）。
+1. 头部：一句话背景 + 触发类型（设计门/吓人 diff/外援；审计门补跑须标注
+   「补跑」+ 提交 sha）。
 2. **固定四问**（逐条回答，每问 发现/无发现 + 一句依据）：
    - Q1 契约破坏？
    - Q2 durable state 时序/幂等？
    - Q3 引用闭包漏删？
    - Q4 相对直接 Agent 退化？
 3. 输出格式约定：每问一节；发现按 P1（必须修）/P2（应修）/P3（可选）分级，
-   附设计稿节号。
+   附设计稿节号或 diff 文件行。
 4. 评审范围约束：只评本对象与波及面。
-5. 附录：设计稿全文，或 diff + 提交清单。
+5. 附录：**设计门** = 设计稿全文；**审计门** = 按受影响文件 allowlist 生成的
+   diff（`git show <sha>` 逐提交）+ 提交清单（sha/主题/命中规则）。禁止整仓 diff。
 
 ## 2. 发射与看门狗（长时外呼纪律）
 

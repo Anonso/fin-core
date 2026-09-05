@@ -53,7 +53,7 @@
 | **L1 生产管线（认知链）** | 批量管线（深化、Daily 生成）的 LLM 直调链；路由权威 `config/llm.yaml`；挂了停知识更新与 Daily 生成，不影响交互咨询（泳道独立）。 | [design/daily-delivery](design/daily-delivery.md)「L1 直调投影」 |
 | **问询链（= 咨询链）** | 交互咨询的 codex 路由链；路由权威 `~/fin-data/codex_routes.yaml`；故障退避不影响 L1。 | [l1-route-chain-survey](pm/l1-route-chain-survey-20260827.md) §1 |
 | **priorities t0 / t1** | llm.yaml 分层：t0=难题质量锚 `[glm53, deepseek, qwen]`；t1=简单任务吞吐（glm53_flash 优先）。 | [config/llm.yaml](../config/llm.yaml) |
-| **codex-glm / codex-open** | 问询链两条活路由：官方 glm-5.3 Responses 端点 / 既有 codex 路由（priority 1 / 2）。 | 生产 `~/fin-data/codex_routes.yaml`（D-018/D-019 后形态） |
+| **codex-glm / codex-open** | 问询链路由：官方 glm-5.3 Responses 端点（priority 1，活）/ codex-open（opencode-go，priority 2，09-05 起 429 长期故障禁用，恢复即回原位）。 | 生产 `~/fin-data/codex_routes.yaml`（D-018/D-019 后形态） |
 | **probe / 冷却** | 路由探活（probe TTL 1800s）与故障退避（step 900s / max 3600s / half-open 300s）。 | [l1-route-chain-survey](pm/l1-route-chain-survey-20260827.md) §1.1 |
 | **熔断** | 按命名空间（如 `vision:`）的故障隔离，防单点拖垮整链。 | [backend_health.py](../fin_analyse/claims/backend_health.py)（BackendCircuitBreaker） |
 | **vision chain** | 识图链：glm53_flash → glm-4.6v-flash → 硅基流动 → mimo，已配置化。 | [config/llm.yaml](../config/llm.yaml) `vision.chain` 段 |
