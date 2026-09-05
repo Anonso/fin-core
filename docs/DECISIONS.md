@@ -469,3 +469,9 @@
 - 否决了什么：cmd 接入生产问询路由链（commandcode chat-only vs codex-provider Responses，协议不可行）；LiteLLM 桥转译（常驻基建无必要）；env-key 旁路认证（账号会话即凭据单源）；直接 Agent 全平行双评审（双计费，fallback 制已覆盖可用性）。
 - 状态：active · 证据：设计稿 docs/design/d045-gate-reviewer-chain.md v2（设计门 glm 评审者 410s/10 发现/10 采纳，台账 `$STATE/fin-analyse/design-gate/d045-gate-reviewer-chain-20260905/`；cmd 门形干跑同 packet 通过 ~18min）；执行 = codex_open.sh 重构 + run-design-gate/switch-codex-open-provider skill 重写 + GLOSSARY/AGENTS.md/NOW 同步。
 - 追记（2026-09-05 审计门补跑闭环）：ee0f4e1+4463582 合入后补审，cmd 评审者 861s/12 发现（P2×3/P3×9）/12 采纳——TTY 分支补 plan 只读档、--sandbox 值校验、fallback 目录 700、llm.yaml 恢复需过验证阶梯、待部署标记+发版核对加项入 NOW、设计稿按家规 5 删除（git 史 4463582）；台账 `$STATE/fin-analyse/design-gate/audit-d045-llmdash-20260905/`。
+
+## D-046 · 2026-09-05 · 设计页事实引用闭包：会话纪律成立，机制明确不做（owner 采纳）
+- 决策：①会话纪律（非机制、不入 AGENTS.md）：凡施工改变了某设计页登记的 durable 事实，收尾时全仓 grep 旧措辞清「事实引用闭包」——规则 12 同理，对象换成事实措辞；②明确不做文档-状态一致性 lint/自动同步器（A3 陷阱：自检绿灯≠事实正确）；③升级触发=再现第二次同类漂移，届时落点=规则 5 归档步骤或设计门固定四问，再收进 AGENTS.md（家规 11：一次真实事故不上机制）。
+- 为什么：首例漂移——G 认知线数据层 ingest+标注指纹双触发自动 rebuild（gen 41→54），g-cognition.md 长认知行却停在移植期快照「26 单元」（09-01 后未动），owner 问时间线才撞见；根因=触发链写方不含 docs、指针权威（NOW 维护协议4）与维护义务不匹配、施工收尾只核代码引用闭包不核事实措辞、文档过时无 BUGS 立案面。
+- 否决了什么：lint/自动同步器（A3+无第二次事故举证）；立即写入 AGENTS.md（一次事故不上机制）；「治理时间线」类叙事用法不入术语约束（普通叙事非领域术语，见 40a5c1a 消歧）。
+- 状态：active · 证据：修正 ab6cbb7（g-cognition.md 长认知行对齐生长管线现状）、消歧 40a5c1a、本条目。
