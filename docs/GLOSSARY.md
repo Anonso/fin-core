@@ -34,6 +34,8 @@
 | **栏目（特刊 / 锐评 / 好问题 / 每日热点 / 人脉 / 小故事 / 普通）** | G 来源账号的文章栏目；只是来源/检索线索，不是认知模式。每日热点/人脉为 2026-09-01 owner 拍板新增严格 G 列。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（Relationships 末段） |
 | **Z** | 知识库中非 G 的知识；Z 不验证、覆盖或否定 G（Z_EVIDENCE_NOT_G 边界）。 | [catalog](architecture/internal-module-catalog.md) 使用规则 8 |
 | **主导 G / G 采用关系 / 认知模式** | Agent 对当前问题选定的主认知线索 / `adopted·not_applicable·not_used·no_g_available` / 单元的语义角色。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（认知底座节、时间与采用关系节，权威） |
+| **线（点线面）** | 方法论中间层：带时点的点在时间/因果上的连接；面的定性决定线怎么读，线的走向决定点的轻重。 | [点线面 survey](pm/research/2026-09-03-point-line-plane-survey.md) |
+| **时间线（禁裸用，三义）** | 评分时间线（`read_instrument_scores`，最新=当前锚）/ 长认知时间线（mainline evolution，`guo:v0` 不是它）/ 消息时间线视图（待建 B1）。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（线与时间线节，权威） |
 
 ## 采集与数据
 
