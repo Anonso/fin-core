@@ -1,0 +1,18 @@
+# finqa-chain 机器问询链节点表（fin.finqa-nodes/v1）。
+# 声明序 = 优先序（提取链 llm.yaml 语义）；每节点独立 enabled；新增/删除/
+# 排序/开关只改本文件（同 harness 加节点零代码）。秘钥不入本文件——三腿认证
+# 维持各自现状（claude=CLAUDE_CODE_CONFIG_DIR、cmd=cmd login 账号会话、
+# codex=auth.json + llm.env 环境键），起法基线 = bashrc 三腿函数体逐字，
+# 见 scripts/finqa_chain.py 模块注释。设计稿随合入归档（git bbd92db）。
+schema_version: fin.finqa-nodes/v1
+nodes:
+  - id: claude            # CC harness + glm-5.3（现 finqa-claude）
+    harness: claude
+    enabled: true
+  - id: codex             # codex CLI + opencode-go（现 finqa-codex，暂关）
+    harness: codex
+    enabled: false        # opencode-go 429 长期故障（owner 2026-09-05 拍板）；
+                          # 恢复翻 true 即回第二位，无其他改动
+  - id: commandcode       # Command Code + ds-pro（现 finqa-commandcode）
+    harness: commandcode
+    enabled: true

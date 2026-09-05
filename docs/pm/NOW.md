@@ -56,6 +56,12 @@ exit 0、flash 探针 200——D-045 发版核对加项已满足）。外部审�
 `scripts/codex_open.sh` 重构（D-045）：评审者链 cmd·deepseek-v4-pro 主 →
 glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路由 codex-open
 同名不同物）。
+2026-09-05 机器问询链 finqa-chain 上线：节点表 `config/finqa_nodes.yaml`
+（claude→codex 暂关→commandcode，声明序+enabled，提取链语义）+ launcher
+`scripts/finqa_chain.py`（无头自动 fallback、横幅/tsv/exit78 设计门语义、
+session 可丢、无熔断；设计门 cmd·ds-pro ≈250s 采纳 11 不采纳 1）；盲评
+runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评估（resume
+语义不同）两链并存，合并等真实需求。
 
 ## 板 A · 重构阶段（对齐 rebaseline §6）
 
@@ -95,7 +101,7 @@ glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路�
 | 能力 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
 | 顾问人格 | 全部问询的工具选择、证据纪律、输出格式 | 问询验收中 | 持仓类/老师体系类问题，验工具按规则被调；泛化体系题免提醒验个性化（「小仓该不该更激进」类原题，验自动带账户约束/闲钱边界/刻度带与买腿顺序；09-04 首枪过，owner 要求常态化不依赖提醒） | consult-agent/CLAUDE.md；开放：BUG-024（施工全清，owner 09-07 盘前实弹终验）；已闭：005/025/030/031（09-05 双验闭环，非 GLM 腿换 finqa-cmd） |
-| 问询模型/路由 | 答案质量、成本、时延 | 在用 | 任意问询 | config/llm.yaml；D-018/019/021 |
+| 问询模型/路由 | 答案质量、成本、时延 | 在用 | 任意问询 | config/llm.yaml（L1）；codex_routes.yaml（效果评估，冻结）；config/finqa_nodes.yaml（机器问询链 finqa-chain，09-05） |
 | 连续性/记忆 | 续问与跨会话上下文 | 在用（codex 客户端读不到 CC 记忆 = 已知边界） | 续问（六题 Q4） | consult-agent-workspace-design.md |
 | 外部检索 | 时事与星球外信息 | 在用 | 时事类问题，验引用可溯源 | consult-agent/.mcp.json |
 | 识图 | 图片理解 | 在用 | 带图问询 | llm.yaml vision 链 |

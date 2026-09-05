@@ -135,6 +135,11 @@ manage-fin-codex-routes 边界「codex-provider 仅 Responses-compatible」双�
 禁用中）/`deepseek_flash_cmd`（现役，commandcode），恢复 opencode=翻该节点
 `enabled: true`，不再用补丁挪端点。
 
+**两链边界（2026-09-05 起）**：问询侧恢复走 `config/finqa_nodes.yaml` 的
+codex 节点 `enabled: true`（finqa-chain，机器问询链），本 skill 的
+codex_routes 路径只服务效果评估追问轮（thread resume 语义）——两链各管各的，
+恢复 opencode-go 时两处都要翻（finqa_nodes + codex_routes），互不替代。
+
 **已落地（2026-09-05）**：key 吸收进持久双库——`~/.local/share/opencode/auth.json`
 新增 `commandcode` 条目 + `llm.env` 追加 `COMMANDCODE_API_KEY/_BASE_URL`（/tmp/command
 已 chmod 600 且重启即清，勿再指 /tmp，见「只换 key」教训）；opencode-go 全部使用点
