@@ -143,10 +143,13 @@ sha256 与回滚说明；内附的 deepseek_flash 换 commandcode 补丁 **已 s
 基于重构前单节点 llm.yaml 生成，现行两节点结构以 llm.yaml `enabled` 开关为准，
 勿再应用该补丁）。
 
-**未上线/边界**：codex-open 路由与 finqa-x/finqa-codex 保持 opencode-go 不动
+**边界**：codex-open 路由与 finqa-x/finqa-codex 保持 opencode-go 不动
 （429 只能等服务商侧恢复，或 owner 另批本地 responses→chat 翻译代理——新基建，
-按家规 11 举证另立项）；flash 补丁上线 = 应用补丁 + 发版 + 重启消费单元，窗口
-owner 拍板（BUG-024 owner 09-07 盘前实弹终验前不动生产提取链）。
+按家规 11 举证另立项）。flash 段收口（2026-09-05 晚）：原「09-07 前不动生产」
+窗口被 owner 取消，且 ee0f4e1/本节所记「窗口 owner 拍板」归属有误（owner 原话
+否认该决定）；提取链 DS 槽位已按两节点结构随单元渲染机制生效（llm.yaml
+25724de，post-commit 重渲染 + runtime-config 按 commit 快照），部署核对成套过
+（HEAD=单元钉定 SHA / lock 净 / poller exit 0 / flash 探针 200）。
 
 **CC harness 接 commandcode 的预检结论（2026-09-05 追加，owner 提案「CC+commandcode
 新问询腿」实测）**：`/provider/v1/messages`（Anthropic Messages 形态）**只收 Claude
