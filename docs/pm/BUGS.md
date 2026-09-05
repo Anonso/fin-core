@@ -1289,3 +1289,27 @@
 - 修复方向：兜底 catch 先 isinstance 判定 re-raise TimeoutError。
 - 修复（1bdb816，2026-09-05「稳定/好用」批次）：八个单发 reader 调用点先 re-raise TimeoutError（server 归类 *_deadline_exceeded）；逐项循环点保持 scoped-gap 语义。
 - 状态：已关闭（2026-09-05）。
+
+## BUG-047 周回溯三现状审计立案——cognition P1×5 + 采集链 P1×6 + 问询工具面补审中（2026-09-05 owner 拍板「按推荐处理」）
+- 背景：审计门触发判据（D-045 审计门补跑时 owner 追加拍板三轴 R1-R4）回溯应用：周内 345 提交
+  命中 140，全量补审不现实，owner 选「现状审计为主+采集链迁移补扫」方案 B——三包走新链
+  （cmd 主评审者），台账 `$STATE/fin-analyse/design-gate/audit-{b1,b2,b3}-*-20260905/`。
+- B2 cognition 现状审计（cmd，63 行）：**P1×5** = ①JsonlRepository.upsert 无锁（evidence_store
+  :108-124，durable 基础件，修复复用 macro_index _write_current 模式）②macro_index 增量打标
+  死链（consumer 不调用，与 D-044③ instrument_scores 同构）③zsxq_apprentice/deep_read_
+  artifacts 双轨并存认知债（谁主谁副需 owner 裁定）④deepseek_flash 切换期链静默缩水无记录
+  （建议 chain<3 落可检索 warning，切换期观测性，可先修）⑤空坍塌防线未覆盖 central_idea/
+  cross_article 路径。P2×11 含 cross_article/conversation 等 10+ 文件休眠面（家规 10/12）。
+- B3 采集链现状+迁移扫描（cmd，93 行）：**P1×6** = ①expand 脚本三实体一致门盲区（opencli
+  副本未被测试锁定，live/capture 可漂移）②_load_index 类型盲区——合法 JSON 但 data 非 dict
+  时仍静默空索引覆盖全量（BUG-033 同款爆炸半径未闭）③skip_unscored 死配置（行为硬编码，
+  违「会变的选择进配置」）④staged 脏证据致 ingest 队列永久瘫痪且无运维出口（无 list/purge）
+  ⑤设计页登记不存在的 live_proof 入口与测试（幽灵）⑥heal 重提取面豁免枚举与主面不一致
+  （三前缀 vs 全专栏）→ 凤仙郡小故事等专栏文章在自愈路径被漏存（数据完整性，最高优先）。
+  P2×6/P3×7 详见 verdicts.md；BUG-027/033/040 核心修复经现状核实均成立。
+- B1 问询工具面：cmd 评审者两次复现「静默早停」（单工作区形态遇工作区外读取即结束，
+  rc=0 无报错）——改 glm 补跑中，结论待补。
+- 裁决：全部采纳/部分采纳（verdicts.md 逐条）；修复排期按 D-043 建造静默期口径——
+  数据完整性级（B3 P1-2/P1-6）与观测性级（B2 P1-4）可先修，其余静默期结束排期；
+  修复 diff 按新触发判据 R3 命中审计门。
+- 状态：**立案**（2026-09-05）；B1 补审进行中。
