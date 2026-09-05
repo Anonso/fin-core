@@ -1046,6 +1046,8 @@
   stdio roundtrip 回归（tools/list schema 含两参 + args_digest 证明日期进
   payload + 非法日期必报错——再丢参即红）。read_capabilities 68 绿 + 全仓 3144 绿。
   状态仍：已关闭；owner 终验判据不变（下次实弹「某时刻发布的文章」能枚举命中）。
+  防复发设施（工具描述承诺参数 ⊆ MCP handler 签名的自动对账测试）未随修施工，
+  入 NOW #30。
 
 ## BUG-031 两腿档位口径漂移：中恒/华天买点带零交集 + codex 腿求许可追问下带外扩（2026-09-04 owner 报案）
 
@@ -1124,3 +1126,125 @@
   测试 test_checkpoint_claim_reclaims_stale_unbound_claim_after_ttl；既有并发
   测试补 clock 钉扎（假 epoch 占位 + 真时钟会把占位误判僵尸——恰好实证回收生效）。
 - 状态：已关闭（2026-09-05，owner 授权审查清账施工；D-031 复推前风险消除）。
+
+## BUG-035 交易日历 artifact 2026-12-31 到期且无 renewal 设施：到期后 Daily 四班「干净」停摆（2026-09-05 全面审查立案）
+
+- 现象（定时炸弹）：a_share_calendar_2026.json valid_through=2026-12-31。到期后
+  session_at 返 UNKNOWN+CALENDAR_DATE_OUTSIDE_COVERAGE → Daily 四班 exit 0
+  「干净」NOT_TRADING_DAY 静默停摆、行情 on-demand 全线 PARTIAL、close-reference
+  资格化失效；reconcile 侧 fail-open 反而当交易日 → 每日 4×SILENT_GAP 噪声。
+  触发后无报错，只有「再也不推送」。两域审查独立命中。
+- 修复方向：12 月前生成 2027 artifact，并给 runner/reconcile 加 coverage 即将耗尽
+  的显式告警（如 reconcile 输出 CALENDAR_EXPIRING）。已入 NOW 旁路·时间 #29。
+- 状态：立案待修（2026-09-05，owner 批准全量落台账）。
+
+## BUG-036 腾讯 qfq 日线用 UTC 日界做 cutoff：盘后当日 bar 次日 08:00 CST 才可见（2026-09-05 全面审查立案）
+
+- 现象：tencent_daily_bars.py:210 `cutoff.astimezone(UTC).date()`，与东财主源
+  「bar 日 15:00 CST 完成」语义及服务层不一致；盘后 15:00–次日 08:00 问询的
+  ma/MACD/last_completed_close 恒截至昨日（离线实验复现）。东财 push2his 自
+  08-02 不可达、fallback=常态路径；BUG-022 关闭记录里部分「真实缺料」可能实为
+  此代码 artifact，归因待修正。
+- 修复方向：cutoff 改 Asia/Shanghai 并对齐 15:00 完成语义（或去预过滤交服务层统一裁）；
+  补「cutoff 在 15:00 CST 后的当日 bar」用例；BUG-022 归因复核。
+- 状态：立案待修。
+
+## BUG-037 knowledge 侧 reader 零 deadline 执行且索引建在事件循环上，可冻住整台薄 server（2026-09-05 全面审查立案）
+
+- 现象：MCP 同步 handler 直接跑在事件循环线程；read_article_search 首次触发
+  `_ensure` 同步遍历 1300+ 篇建全量 store，15s 预算形同虚设，期间全部工具
+  （含两条写缝）集体无响应；每次 server 重启重复全量构建（无持久化索引）。
+  单缝失败隔离在时间维度不成立。
+- 修复方向：knowledge reader 传 deadline 分段检查；`_ensure` 挪启动期/后台线程 +
+  持久化索引。
+- 状态：立案待修。
+
+## BUG-038 LLM env 解键失败静默缩池，provider_health 口径相反（2026-09-05 全面审查立案）
+
+- 现象：config_loader `${VAR}` 未解出 → 占位串进 plan → `_plan_is_configured`
+  False → 该 backend 直接不建，零日志；`.env` 读失败同样静默。provider_health
+  配置判定只查 `"你的" in api_key` 不查 `${}` 占位——env 未解出时状态页报
+  「已配置」。NOW 遗留观察 3 同型事故形态：池静默变空/变短，唯一状态面给相反信号。
+- 修复方向：`_plan_is_configured` False 时按模型名 warning（含「含未解析 ${}」原因）；
+  provider_health 配置判定复用 `_configured_text`。
+- 状态：立案待修。
+
+## BUG-039 30m/60m 时间框架生产恒 UNKNOWN：intraday 主源 adjustment 契约互斥 + gap 不进顶层（2026-09-05 全面审查立案）
+
+- 现象：tencent_intraday 返回 `adjustment="UNKNOWN"`，服务层要求
+  FORWARD_ADJUSTED_QFQ → 每标的白花 8s 超时预算抓 30m 后必然整体丢弃
+  （TIMEFRAME_ADJUSTMENT_MISMATCH），且该 gap 只在 timeframes 子结构、不进
+  instrument 级 data_gaps——intraday 能力上线以来从未真正出过数（离线实验复现；
+  fallback reader 只在抛异常时切换，adjustment 不匹配不触发）。
+- 修复方向（二选一，owner 拍板）：服务层接受 30m 的 UNADJUSTED/UNKNOWN 带
+  limitation 放行（30 分钟跨除权日概率极低），或把 mkline 摘出 primary 省预算；
+  无论哪种把 TIMEFRAME_ADJUSTMENT_MISMATCH 提升进顶层 gaps。
+- 状态：立案待修（含一处拍板）。
+
+## BUG-040 两融源 HTTP≠200 无 stale 回放，最需兜底的分支不兜底（2026-09-05 全面审查立案）
+
+- 现象：margin/eastmoney._capture 网络异常走 latest 回放+STALE_CACHE，但 HTTP
+  非 200（恰是反爬 403/5xx 最常见形态）抛 MARGIN_EVIDENCE_HTTP_RESPONSE_INVALID
+  直接上抛无兜底；同一「源不可用」两种降级结局，data_gaps 形态随故障类型漂移，
+  下游按 gap 统计会把常态反爬误判为更严重故障。
+- 修复方向：HTTP 状态失败并入传输异常同分支（保留各自 typed gap，回放叠 STALE_CACHE）。
+- 状态：立案待修。
+
+## BUG-041 【推断】集合竞价窗口（09:15–09:30 CST）overview 整链 UNKNOWN 复发风险（2026-09-05 全面审查立案，观测项）
+
+- 现象：PRE_OPEN 不在 prefer_completed_session 内 → 指数走腾讯实时；竞价期间
+  qt 时间戳翻到当日即触发 INDEX_TRADE_DATE_MISMATCH 整链拒。09:07 实弹通过
+  只因时间戳尚为昨日 15:00；BUG-002 关闭实证只覆盖 09:03–09:07。代码链完整、
+  未实弹。
+- 观测：下个交易日盘前班次看 overview 诊断 JSONL；坐实则按「无更新」语义豁免
+  trade-date 门（与 SECTION_ROWS_UNPROJECTABLE 同构）。已入 NOW 旁路·时间 #28。
+- 状态：立案观测。
+
+## BUG-042 错过投递窗口的 PENDING obligation 无出口：当日不可补投、跨日被身份校验拒（2026-09-05 全面审查立案）
+
+- 现象：delivery 窗口外（target±15min）直接 WINDOW_MISSED 拒发；跨日补投被
+  `_validate_product` 的 target_at 等式校验拒；该 obligation 在 reconcile 只产生
+  错名 UNACCOUNTED_PENDING。machine 瘫 16 分钟（suspend/Hermes 长挂）即造成
+  「已生成、永不投递」僵死义务，只能库外手工转发。
+- 修复方向：窗口外同日显式补投模式（产物 immutable，迟投诚实标注 delivered_at），
+  或定义 PENDING 日终 EXPLICIT 终态。
+- 状态：立案，量裁随 D-031（NOW 最后#9）。
+
+## BUG-043 CLAIMED-无-outbox 崩溃态在 reconcile 不可辨识，与 daily-delivery.md 声明不符（2026-09-05 全面审查立案）
+
+- 现象：设计 P0-1/§119 声明该崩溃态「reconcile 可见失配」，实际义务集合只从当日
+  outbox 行的 workspace_ref 反查，崩溃卡 CLAIMED（毫秒窗）仅得 SILENT_GAP，
+  无法与「根本没跑」区分（内存三库模拟实证）。方向安全（不漏报 ok）但不可诊断、
+  无修复出口，恰是唯一没有专属异常码的崩溃窗。
+- 修复方向：reconcile 加 CLAIMED_WITHOUT_OUTBOX（及 DISPATCHING-settlement-NULL
+  无进度）专码，义务集合改按 trading_day 直查。
+- 状态：立案，量裁随 D-031。
+
+## BUG-044 Daily 持仓材料仍中段截断：json.dumps 后 [:6000]（BUG-016 同型复发面）（2026-09-05 全面审查立案）
+
+- 现象：daily_workspace_generator.py:340-343 对 portfolio payload 施中段截断，
+  `_material_usable` 只查空串与对象地址，残破 JSON 畅通进 prompt；多持仓
+  （两融剔除后仍可能 15+ 只，每只含名称/现价补全字段）时事实密度静默损失。
+  market_overview 已按 BUG-016 改整行投影，portfolio 键未跟。
+- 修复方向：持仓投影改整条 position 为预算单位，超预算整条丢弃并记日志（同 g_context 法）。
+- 状态：立案待修。
+
+## BUG-045 _capture_prior_g_json 吞 G evaluate() 全部异常返 "{}"：NO_CHANGE 班次误标 failed 且根因不可见（2026-09-05 全面审查立案）
+
+- 现象：capture_ingest.py:195-203 `except Exception: return "{}"` 无日志无审计
+  字段；下游 prior=None → completion failed → exit 1 → artifact 终态 rejected
+  归档。claim 时点 G evaluate 一次瞬时失败（如索引正被并发读）即打掉整个
+  NO_CHANGE 窗口，journal 只见 failed，真实根因全台账不可见。全链唯一
+  「不记日志不进 audit」的 fallback（其余吞异常点均已 typed 化）。
+- 修复方向：{} 回退至少落一条 typed warning（run warning 或 audit gap），或把
+  「prior 不可得」与「prior 非 READY」分为不同 gap 码。
+- 状态：立案待修。
+
+## BUG-046 server 层 deadline 分类死路：reader 兜底 catch 吞 TimeoutError（2026-09-05 全面审查立案）
+
+- 现象：server.py `except TimeoutError` 专码分支几乎不可达——production_capability_
+  provider 各 reader 调用全部包在 `except Exception` 里，TimeoutError（OSError
+  子类）先被吞成 `*_read_failed`+`*_unavailable`；trace 里超时与故障不可分，
+  delay 分析只能靠 latency 反推（BUG-002 式 12-14s 指纹即此困境）。
+- 修复方向：兜底 catch 先 isinstance 判定 re-raise TimeoutError。
+- 状态：立案待修。
