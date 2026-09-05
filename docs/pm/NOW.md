@@ -45,8 +45,11 @@ ZSXQ 采集腿源真身已迁 fin-core（NOW #32，09-05）。
 2026-09-05 路由事实：生产问询路由 codex-open（opencode-go）禁用（429 长期
 故障，owner 拍板；`enabled: false` 翻回 + 重启网关即恢复优先位），问询链暂
 单腿 codex-glm；非 GLM 手动问询腿换 finqa-cmd（Command Code · Go Plan，
-BUG-031 双验闭环用其闭环）。提取链 deepseek_flash 的 opencode 端点同步禁用、
-commandcode 端点接替（llm.yaml ee0f4e1，待部署标记：随下次发版生效；发版核对加项=llm.env 含 COMMANDCODE_* 且 flash 端点探针 200——D-045 审计门 P2）。外部审视入口
+BUG-031 双验闭环用其闭环）。提取链 cognition 按 owner 设计（09-05）拆两独立
+链节点、每节点 enabled 开关：glm5.3-flash → opencode ds flash（禁用中，恢复
+翻 `enabled: true` 即回 DS 槽位首位，无其他改动）→ cmd ds flash → qwen
+（llm.yaml ee0f4e1 → 重构提交，待部署标记不变：随下次发版生效；发版核对加
+项=llm.env 含 COMMANDCODE_* 且 flash 端点探针 200——D-045 审计门 P2）。外部审视入口
 `scripts/codex_open.sh` 重构（D-045）：评审者链 cmd·deepseek-v4-pro 主 →
 glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路由 codex-open
 同名不同物）。

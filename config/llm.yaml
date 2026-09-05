@@ -37,27 +37,33 @@ models:
     reasoning_effort: max
     enabled: true
 
-  # DeepSeek V4 Flash - 深化提取链第三位（owner 2026-08-30：cognition 链 DS 槽位
-  # 换 flash；2026-09-05 owner 指令：opencode go 429 长期故障先禁用，commandcode
-  # 端点排其后——opencode 恢复时取消注释并移回 commandcode 之前，即回优先位。
-  # commandcode 实测 09-05：GET /models 与 flash chat completions 均 200。）
-  deepseek_flash:
+  # DeepSeek V4 Flash —— 提取链 DS 槽位按 owner 设计拆两个独立链节点（每个
+  # 节点 enabled 开关，声明序固定不挪动）：
+  #   cognition 链 = glm53_flash → deepseek_flash_opencode → deepseek_flash_cmd
+  #   → qwen。
+  # deepseek_flash_opencode（当前禁用中：opencode-go 429 长期故障，owner
+  # 2026-09-05 拍板；恢复 = enabled 翻 true，即回 DS 槽位第一位，无其他改动）。
+  deepseek_flash_opencode:
+    provider: openai_compatible
+    model: deepseek-v4-flash
+    api_key: ${OPENCODE_GO_API_KEY}
+    base_url: ${OPENCODE_GO_BASE_URL}
+    endpoints:
+      - name: opencode-primary
+        api_key: ${OPENCODE_GO_API_KEY}
+        base_url: ${OPENCODE_GO_BASE_URL}
+      - name: opencode-authjson
+        api_key: ${AUTHJSON:opencode-go}
+        base_url: ${OPENCODE_GO_BASE_URL}
+    enabled: false
+
+  # deepseek_flash_cmd（opencode 禁用期顶上 DS 槽位；Command Code chat
+  # completions，09-05 实测 GET /models 与 flash 均 200）。
+  deepseek_flash_cmd:
     provider: openai_compatible
     model: deepseek/deepseek-v4-flash
     api_key: ${COMMANDCODE_API_KEY}
     base_url: ${COMMANDCODE_BASE_URL}
-    endpoints:
-      - name: commandcode-primary
-        api_key: ${COMMANDCODE_API_KEY}
-        base_url: ${COMMANDCODE_BASE_URL}
-      # opencode 端点（禁用中；恢复时取消注释并移到 commandcode 之前，且过
-      # 验证阶梯——探针 200 + 提取链实测——再前移）：
-      # - name: opencode-primary
-      #   api_key: ${OPENCODE_GO_API_KEY}
-      #   base_url: ${OPENCODE_GO_BASE_URL}
-      # - name: opencode-authjson
-      #   api_key: ${AUTHJSON:opencode-go}
-      #   base_url: ${OPENCODE_GO_BASE_URL}
     enabled: true
 
   # 小米 MiMo v2.5-pro（token-plan 端点）- 视觉专用，识图链第一优先
@@ -110,11 +116,14 @@ models:
 # 名字必须是 models 下的条目；段缺失/非法时消费方回退各自硬编码缺省序。
 # cognition = thesis/central-idea 提取（owner 2026-09-04：首位换 glm53_flash，
 # 替换 08-30 晚的 glm53 先行裁决；更早助手引入的 qwen-first 未经同意已废。
-# 机制调查见 ~/fin-data/handoffs/20260830-cognition-empty-collapse-handoff.md）。
+# 机制调查见 ~/fin-data/handoffs/20260830-cognition-empty-collapse-handoff.md。
+# owner 2026-09-05 设计：DS 槽位 = opencode ds flash → cmd ds flash 两节点，
+# 每节点 enabled 独立开关，声明序固定——opencode 禁用时链自动落到 cmd 节点，
+# 恢复翻回 enabled: true 即回第一位，无其他改动）。
 priorities:
   t0: [glm53, deepseek, qwen]
   t1: [glm53_flash, deepseek, qwen]
-  cognition: [glm53_flash, deepseek_flash, qwen]
+  cognition: [glm53_flash, deepseek_flash_opencode, deepseek_flash_cmd, qwen]
 
 # 识图 fallback 链（owner 2026-08-28 拍板重排：glm5.3-flash → GLM-4.6V-Flash 免费 → 硅基流动 → mimo；
 # 2026-09-02 owner 再改：mimo-token-plan（mimo-v2.5-pro）置首、GLM-4.6V 恢复启用）
