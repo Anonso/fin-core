@@ -134,7 +134,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·时间（09-07） | 28 | BUG-041 竞价窗口观测：盘前班次看 overview 诊断 JSONL，INDEX_TRADE_DATE_MISMATCH 整链拒坐实即按 BUGS 修 | 09-07 盘前班次 |
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
 | 旁路·随手 | 31 | 日线第三源施工：短设计已备（docs/design/daily-bar-third-source.md，候选源待实弹核验，owner 09-05 拍板立项）；施工前跑设计门 | D3 建造静默结束后 |
-| 旁路·P5 前 | 32 | ZSXQ Windows 采集腿源真身迁移老仓→fin-core（owner 09-05 立项）：设计稿 v2 已过设计门（codex-glm 605s，9 发现 2P1+6P2+1P3 全采纳落稿；[设计稿](../design/zsxq-windows-capture-migration.md)、台账 $STATE/fin-analyse/design-gate/zsxq-capture-migration-20260905/）；2 脚本+4 测试件（含 consistency 跨语言门补迁、scheduler fixture 整组修复）+manage-zsxq-capture skill 切新仓+consumer@ 模板退役；纯平移零新逻辑，一个会话可清 | D3 三天门走完（最早 09-07 晚）后施工，owner 明示豁免可提前 |
+| 旁路·P5 前 | 32 | ZSXQ Windows 采集腿源真身迁移老仓→fin-core（owner 09-05 立项）：设计稿 v2 已过设计门（codex-glm 605s，9 发现 2P1+6P2+1P3 全采纳落稿；[设计稿](../design/zsxq-windows-capture-migration.md)、台账 $STATE/fin-analyse/design-gate/zsxq-capture-migration-20260905/）；2 脚本+4 测试件（含 consistency 跨语言门补迁、scheduler fixture 整组修复）+manage-zsxq-capture skill 切新仓+consumer@ 模板退役；纯平移零新逻辑，一个会话可清。**D3 静默豁免：owner 09-05 11:0x 明示「开工」，即刻施工** | 施工中（owner 09-05 豁免） |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
