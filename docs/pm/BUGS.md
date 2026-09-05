@@ -1035,6 +1035,17 @@
   1422→1318。三重校验：audit 34/34 PROVEN、时间线 1629/1629、audit 窗口零冲突。
   完整回滚资产 `KB/.index-recovery-20260904/index.pre-shrink-1422.json`。
   ~71 条仍不可判定（09-01 后新增的 5/6 月日期老文件因时间线命中保留，宁多勿失）。
+- **MCP 面断裂补遗（09-05 全面审查发现，同日修复，git 228eff6）**：09-04 修复
+  未达产品边界——通用 handler `_make_tool_handler` 签名无 date_from/date_to，
+  pydantic extra=ignore 在 MCP 面静默丢参（实测 status ok、零 gap、关键词模式
+  冒充日期枚举），而工具描述正主动指示 agent 用之；`_invoke_tool` 的白名单与
+  日期校验因此成死代码。原验收（reader 单测 + 真 KB 直调 reader）绕过了 MCP
+  transport 层。修复：read_article_search 转 custom handler（签名补两参并入
+  payload，与 read_decision_journal 同形）；日期校验改复用 `_is_iso_date`
+  （regex 过而日历非法如 2026-13-01，从裸 ValueError 归 invalid_params）；新增
+  stdio roundtrip 回归（tools/list schema 含两参 + args_digest 证明日期进
+  payload + 非法日期必报错——再丢参即红）。read_capabilities 68 绿 + 全仓 3144 绿。
+  状态仍：已关闭；owner 终验判据不变（下次实弹「某时刻发布的文章」能枚举命中）。
 
 ## BUG-031 两腿档位口径漂移：中恒/华天买点带零交集 + codex 腿求许可追问下带外扩（2026-09-04 owner 报案）
 
@@ -1081,3 +1092,35 @@
   答案末行现披露行、非动作题「看下当前自选股」零披露（rc=0/0，防泛化边界生效；
   全文台账 `$STATE/fin-analyse/design-gate/usage-loop-rebalance-20260905/probe-*.md`，
   finq 已记 y×2）。codex 腿同验随 finqa-x 恢复一并。
+
+## BUG-033 knowledge index 读失败被静默吞掉，下一次保存文章以空索引覆盖全量（2026-09-05 全面审查立案，同日修复）
+
+- 现象（潜在，未在生产发生）：index.json 一次瞬时读失败（EIO/半截文件/权限漂移）
+  → `_load_index` 吞一切异常置空索引且无任何告警 → 本轮 run 照常保存 →
+  `_save_index` 用本轮新文覆盖全量索引：1300+ 条目瞬间缩水、articles/*.md 变
+  孤儿、G/article_search/instrument_scores 全域失基。入账门禁只验 index.json
+  存在不验可读，拦不住（BUG-027 施工事故的同款机制残留：那次是「文件不存在」，
+  本条是「文件在但读不了」）。
+- 根因：`cdp_scraper._load_index` 对 read/parse 异常 `except Exception:
+  self._index = {}` 无声返回（/tmp 沙盒可复现覆盖）。
+- 修复（git 7776a43）：「文件在但读不了」fail-closed 抛 RuntimeError 使 run
+  failed，半截文件原样保留等人工处置；「文件不存在」维持空索引起步不变。
+  测试 test_load_index_fails_closed_on_corrupt_index（断言半截文件未被覆盖）。
+- 状态：已关闭（2026-09-05，owner 授权审查清账施工；全仓 3144 绿）。
+
+## BUG-034 Daily prepare 生成权 claim 被信号杀死后永久泄漏，该班次当日锁死（2026-09-05 全面审查立案，同日修复）
+
+- 现象（潜在）：prepare 单元 TimeoutStartSec=35min、KillSignal=SIGTERM，Python
+  默认立即终止 finally 不执行 → idempotency 未绑定行（product_id NULL）永久
+  遗留 → 同 checkpoint 重跑恒 IntegrityError → typed generation_in_progress，
+  当日只发失败通知；修复需手写 SQL，仓内无释放工具。B3 修复只覆盖进程内异常，
+  覆盖不了信号死亡。
+- 根因：`acquire_daily_workspace_checkpoint` 无 TTL/过期语义，释放仅靠进程内
+  finally（daily_workspace_runner.py:501-506）。
+- 修复（git 28879fe）：acquire 撞 IntegrityError 时回收「超 6h TTL 且仍未绑定
+  （job_id/product_id 双 NULL）」的僵尸行后重取一次，全部在同一写事务内；绑定行
+  （幂等守卫）永不动。合法持有以 systemd 35min 封顶，6h > 3.5× 上界，同交易日
+  晚班可回收早班僵尸。并发语义不变：TTL 内第二 caller 仍 generation_in_progress。
+  测试 test_checkpoint_claim_reclaims_stale_unbound_claim_after_ttl；既有并发
+  测试补 clock 钉扎（假 epoch 占位 + 真时钟会把占位误判僵尸——恰好实证回收生效）。
+- 状态：已关闭（2026-09-05，owner 授权审查清账施工；D-031 复推前风险消除）。
