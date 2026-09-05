@@ -7,8 +7,8 @@ design. The universe grows with owner usage, so the table lives in
 ``config/market/board_symbols.json`` (家规 6: changing lists go to config) —
 unlike the closed major-index table in ``index_symbols.py``. The loader is
 fail-closed at import: a malformed or colliding table must be loud, never a
-silent routing change. Design: docs/design/board-index-support.md §2.1 (archived
-at merge, git f475220).
+silent routing change. Design: board-index-support §2.1 (archived at merge,
+git f475220).
 
 扩面警示（config `_note` 同文）：新增板块避开主指数别名与常见个股全名——
 板块别名在 snapshot 拆分顺序中最优先，撞名会改变既有问询行为。
