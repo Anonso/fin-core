@@ -128,6 +128,10 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·随手 | 23 | opencli 扩展 v1.0.24 商店自拉**已落盘**（09-05 午后核对：Profile 1/3 Extensions 均有 1.0.24_0，激活仍指 1.0.23、扩展未连=待激活态）：owner 重启 Chrome 后 `opencli doctor` 两 profile 复绿即出队 | 随手（下次开 Chrome） |
 | 旁路·时间（10-04） | 20 | BUG-031 档位口径复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）；finqa-x 恢复后补发 codex 腿探针（探针题与判据在 BUGS 条目；台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/；09-05 午后复查 finqa-x 仍 429）；双验闭环当日按序撤单腿披露行（BUGS BUG-031 撤行顺序） | 10-04 满月或样本先到；finqa-x 恢复即补发 |
 | 旁路·owner | 22 | meta 设施家规10 自审（D-043/C5）：决策日志 v1、run-design-gate、switch-codex-open-provider、manage-zsxq-capture、manage-zsxq-article-retirement、book-shared-brain-learning、外部审视链（codex_open.sh+双 profile）——无真实使用记录者入休眠候选清单 | 2026-09-18 |
+| 旁路·随手 | 24 | 版本强势英雄补列进 G（D-044①）：source_contract 白名单补列走 45 天 G 窗口；09-05 审查实证 331 篇零车道，验收=该栏新帖进 G manifest | D3 建造静默结束后 |
+| 旁路·随手 | 25 | 老师 Q&A 放行 reference 车道（D-044②）：reference 候选源照 ready_evidence 的 _QA_COLUMNS 闭集放行，zsxq_reference_windows.json 三窗口键复活；09-05 审查实证 18 篇零车道 | D3 建造静默结束后 |
+| 旁路·随手 | 26 | instrument_scores 增量接线（D-044③）：ingest 尾部对 saved_ids 调 parse_article_records+upsert_records；工具描述诚实化已随审落盘（09-05） | D3 建造静默结束后 |
+| 旁路·随手 | 27 | run_ledger/alert 面量裁（D-044④）：补写入或按规则 12 废除，随 D-031 设计一并定；落定前 alert 链不可作为故障信号依赖 | 随 D-031 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）

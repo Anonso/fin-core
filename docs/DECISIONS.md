@@ -455,3 +455,10 @@
 - 否决了什么：提高使用量换数据（owner 时间税，09-05 讨论否）；存量 n 回填（append-only provenance，外审 P1）；finq 校验机械化（留证据门，家规11）；全量机制化/自动提醒（push 税）。
 - 状态：active · 证据：设计稿 git 史 usage-loop-rebalance（台账 `$STATE/fin-analyse/design-gate/usage-loop-rebalance-20260905/` 含 verdicts.md）；owner 09-04~05 两轮讨论；施工=persona r13 披露段+NOW 五处+BUGS BUG-031 补记+GLOSSARY 阶段行。
 - 追记（2026-09-05）：⑤ C4 已获 owner 口述确认（原话「按优势面路由」），落 usage-profile「口述补充（2026-09-05 · 使用路由按优势面）」节；NOW 板B 路由行挂确认来源。
+
+## D-044 · 2026-09-05 · 全面代码审查四项拍板：知识链两车道口径 + 评分增量诚实化 + run_ledger 量裁挂 D-031（owner 逐项拍板）
+- 功能面：instrument_score_registry / zsxq_reference / daily_delivery
+- 决策：①「版本强势英雄」补列进 G——source_contract 白名单补列，按评分注册表设计页走 45 天 G 窗口（施工排 D3 后）。②老师问答两列（问题回答/回答问题）放行进 reference 车道——候选源照 ready_evidence 的 _QA_COLUMNS 闭集放行，zsxq_reference_windows.json 三窗口键复活（施工排 D3 后）。③read_instrument_scores 工具描述先诚实化（本日随审落盘），ingest 侧增量接线施工排 D3 后。④Daily run_ledger/alert 死仪表盘量裁（补线或废除）挂 D-031 设计一并定，此前 alert 链不得作为故障信号依赖。
+- 为什么：09-05 全面审查实证三处断链——版本强势英雄 331 篇设计页要入 G 但 source_contract 静默全滤（BUG-020 同型）；Q&A 18 篇因 reference 候选源只收「普通」栏零车道且三个窗口键全死（配置/window_config/ready_evidence 三处已留口，属接了半截）；增量提取从未接线（parse_article_records 仅回填脚本调用）而工具描述声称已接（假断言诱导 agent）；run_ledger 无生产写入方致 alert 链结构性永不触发。
+- 否决了什么：①②的「明确不入 G/删死键」与「挂起待定」（按 BUG-020 先例与已交付设计页口径，车道缺口是漏不是设计）；③立即接线（D3 建造静默期不破例施工，只做一行级诚实化）；④立即补线或立即废除（Daily 反正随 D-031 迁问询环境重构，现在投入或删除都可能返工）。
+- 状态：active · 证据：2026-09-05 全面代码审查（四路只读深审，三 P1 均 cross-check；本条拍板会话）；执行项 = NOW 待办 #24/#25/#26/#27；描述诚实化随本决策 commit。
