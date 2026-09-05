@@ -1353,6 +1353,10 @@
   引擎逻辑保留、时钟评估结果仍进工件 payload；P1① 无锁整写风险面同步归零；②数据留存
   不删——工件实时承载全部内容（ID 为内容哈希确定性，重建=工件重排秒级；更老条目从爬取
   原文重提取兜底）+六仓文件原样留档；③六仓入休眠候选清单挂利用凭证（单元级时效、跨篇
-  单元/主题分析）；④`cli deep-read` 手动入口（guo:v0 退役残留）按引用闭包退役。思想源头
-  在案：老仓时效栈（time_sensitivity / temporal_influence / temporal 包 / dynamics
-  half_life，备份 git 史即档案）——复活须先有消费面（rebaseline 教训：机制跟消费面走）。
+  单元/主题分析）；④`cli deep-read` 手动入口（guo:v0 退役残留）按引用闭包退役。
+  思想载体**勘误（落账同晚复核）**：time_sensitivity / temporal_influence / temporal 包
+  **均在现仓且有生产接线**（`runtime_context.py:60` TemporalService 注入面、
+  `claims/extractor.py`），unit_type 半衰期表在现仓 `dynamic_clock.py`；仅
+  `dynamics/half_life.py` 未迁（备份档案）。它们与六仓无关（评估对象是内容/文章，
+  不读平铺仓）——六仓零读方结论不变；将来建单元级时效读面无须考古，从现仓模块+
+  工件起建即可（消费面先行的教训不变）。
