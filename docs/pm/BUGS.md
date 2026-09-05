@@ -988,12 +988,14 @@
   verifier 永远不可能绿；该检查本质是注册前对定义文件的契约断言。已从
   现场导出重建显式定义（+Settings/Enabled、+6×触发器 Enabled、+RunLevel
   LeastPrivilege），**verify-task-xml VERIFY_OK**，定义件存老仓部署目录
-  `backup-20260905/task-current.xml`；重注册首次成功后后续被间歇性拒绝
-  访问挡（非提权 token）。实体任务 CIM 复核全绿：State=Ready、
-  Settings.Enabled=True、6 触发器 Enabled=True、NextRun 12:20 不变——
-  显式元素与缺省值行为等价，无功能残差；字节级重登记如需可提权单行：
+  `C:\Users\22873\fin-zsxq-capture\backup-20260905\task-current.xml`（内容
+  已核：Settings/Enabled=true、6×触发器 Enabled=true、RunLevel）；重注册
+  首次成功后后续被间歇性拒绝访问挡（非提权 token）。实体任务 CIM 复核
+  全绿：State=Ready、Settings.Enabled=True、6 触发器 Enabled=True、
+  NextRun 12:20 不变——显式元素与缺省值行为等价，无功能残差；字节级
+  重登记如需可提权单行（**绝对路径**，勿依赖当前目录）：
   `Register-ScheduledTask -TaskName FIN-ZSXQ-Incremental -Xml (Get-Content
-  -Raw backup-20260905\task-current.xml) -Force`。
+  -Raw C:\Users\22873\fin-zsxq-capture\backup-20260905\task-current.xml) -Force`。
 
 ## BUG-028 mainline 候选扫描锚门滤掉复核日当天全部 G 层材料（2026-09-04 CC 立案，同日闭）
 
