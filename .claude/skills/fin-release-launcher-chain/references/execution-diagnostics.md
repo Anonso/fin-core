@@ -61,8 +61,8 @@ The config/auth SHA values are emitted by the route binder, not the YAML
 digest:
 
 ```text
-PYTHONPATH=/home/ypk/fin-analyse \
-  /home/ypk/fin-analyse/.venv/bin/python -B -m \
+PYTHONPATH=/home/ypk/fin-core \
+  /home/ypk/fin-core/.venv/bin/python -B -m \
   fin_analyse.guo_teacher_research.codex_route_binding \
   codex-proxy-b /home/ypk/.local/bin/codex-proxy-b
 ```

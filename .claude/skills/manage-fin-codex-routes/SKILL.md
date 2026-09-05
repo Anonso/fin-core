@@ -10,7 +10,7 @@ Change the production route chain through its single YAML owner, then prove the 
 ## Fixed boundaries
 
 - Production config: `/home/ypk/fin-data/codex_routes.yaml`, parent mode `0700`, file mode `0600`.
-- Repository schema example: `/home/ypk/fin-analyse/config/codex_routes.yaml.example`.
+- Repository schema example: `/home/ypk/fin-core/config/codex_routes.yaml.example`.
 - Deployed operator: `/home/ypk/.local/share/fin-analyse/current/.venv/bin/fin-codex-routes`.
 - Declaration order is consultation/review priority. A route ID is execution and continuation identity, not a display label.
 - Secrets stay in referenced owner-only credential files. Never put a secret in YAML, argv, evidence, logs, diffs, or the response.
