@@ -28,13 +28,16 @@
 `~/fin-core`（consult-agent/.mcp.json + systemd 单元，2026-08-29 步5 重指向）。
 Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disable，
 单元与 durable 状态机保留，可一键恢复；ZSXQ 采集不受影响）。
-老仓 `~/fin-analyse` 已归档（2026-08-29 步7）；release 退役后保留 `current`
-（→`319faf62`）+ `ff7441e2`（BUG-002 回滚候选）+ `13c791ca`（Daily 脱钩回滚候选）
-至 P5，其余 10 个已删。**保留 release 有运行时读方**（09-05 审计纠正，此前
-「无运行时读方」说法不成立）：hermes-gateway-fin/fq 两网关的 MCP 子进程
-（`fin_analyse.gateway.mcp_server`，旧咨询入口 08-27 停用后设计内允许报错）
-仍跑在 `current/.venv` 上——该绑定随 D-032/P5 Hermes 问询 agent 重接时切换，
-退役删 release 前置。ZSXQ 采集腿源真身已迁 fin-core（NOW #32，09-05）。
+**老仓 `~/fin-analyse` 已退役删除**（2026-09-05，owner 令「做干净」；家规 4
+备份+manifest+恢复演练后删：`/home/ypk/fin-backups/fin-analyse-retirement-20260905/`
+0700/0600，全树 33,598 文件+2,753 commits 含 14 个未 push，sha256 见 MANIFEST）。
+release 保留 `current`（→`319faf62`）+ `ff7441e2`（BUG-002 回滚候选）+
+`13c791ca`（Daily 脱钩回滚候选）至 P5，其余 10 个已删；**有运行时读方**：
+hermes-gateway-fin/fq 两网关的 MCP 子进程（`fin_analyse.gateway.mcp_server`，
+旧咨询入口 08-27 停用后设计内允许报错）仍跑在 `current/.venv` 上——该绑定
+随 D-032/P5 Hermes 问询 agent 重接时切换，删 release 前置；主仓删除后
+release 降级为纯文件资产（原为 git worktree，运行/回滚不受影响，git 操作失效）。
+ZSXQ 采集腿源真身已迁 fin-core（NOW #32，09-05）。
 2026-09-03 老仓可删审计：活跃引用清零（bashrc finlog 别名与 claude-mem
 分支、`~/.local/bin/claude` 注入分支、codex-proxy 死常量、consult README
 开发域指向全部改指新仓/删除），旧仓进入可退役状态；真删除仍按家规 4
