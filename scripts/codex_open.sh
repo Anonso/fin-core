@@ -15,7 +15,7 @@
 set -euo pipefail
 
 WORKSPACE="/home/ypk/fin-core"
-DEFAULT_PROFILE="cmd"
+DEFAULT_PROFILE="${GATE_PROFILE:-cmd}"   # 环境覆盖：GATE_PROFILE=glm（测试/运维用）
 
 CMD_BIN="$(command -v cmd || true)"
 CMD_MODEL="deepseek/deepseek-v4-pro"

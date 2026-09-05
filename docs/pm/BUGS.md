@@ -1313,3 +1313,13 @@
   数据完整性级（B3 P1-2/P1-6）与观测性级（B2 P1-4）可先修，其余静默期结束排期；
   修复 diff 按新触发判据 R3 命中审计门。
 - 状态：**立案**（2026-09-05）；B1 补审进行中。
+- B1 补审完成（cmd 两次复现静默早停——单工作区 `-p` 形态遇工作区外读取即结束，改 glm 直选）：
+  glm 评审者 95 行，**P1×3/P2×5/P3×5** = ①read_article_search「全域检索」为假断言（关键词
+  模式硬编码 180d 窗且忽略 as_of，生产 KB 探针实证 >181 天文章不命中）②consult-agent
+  CLAUDE.md 仍宣称 instrument scores「增量同门槛」，与 D-044③ server 侧诚实化矛盾（CLAUDE.md
+  :302/:333，诱导把索引覆盖缺口误读为无新评分）③默认 read_ready_evidence 内层仍吞
+  TimeoutError（BUG-046 同款死路，fake runtime 实证）；P2：watchlist 批非原子+CLAUDE.md
+  「禁 remove」与 server 契约冲突、read_article 坏索引 fail-open 伪装 not_found、UTC/本地
+  时区窗口混用（~8h 边界偏差）、测试覆盖缺口（macro_brain/shared_brain/watchlist 零测试等）。
+  全部采纳入 BUG-047 修复排期；CLAUDE.md 两处修正因并行会话 r15 刚触同文件，排并行会话
+  静止后落（冲突规避）。评审方法学亮点：生产 KB 只读探针 + fake runtime 实证，非纯读稿。
