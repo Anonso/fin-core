@@ -21,7 +21,7 @@ import json
 import os
 import re
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -660,20 +660,29 @@ def upsert_records(
     target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     target.parent.chmod(0o700)
     existing = load_records(target)
+    removed = 0
     for record_id in remove_record_ids:
-        existing.pop(str(record_id), None)
+        if existing.pop(str(record_id), None) is not None:
+            removed += 1
     added = 0
     updated = 0
     for record in records:
         record_id = record.record_id
-        payload = json.dumps(record.to_dict(), ensure_ascii=False, default=str)
-        if record_id in existing:
-            if existing[record_id] != record.to_dict():
+        incoming = record.to_dict()
+        # extracted_at 是解析时刻戳，不参与内容比较：首次提取时间保留，
+        # 重跑内容不变即 no-op（门审 P2-1：否则重解析恒 updated=全量）。
+        current = existing.get(record_id)
+        if current is not None:
+            comparable_in = {k: v for k, v in incoming.items() if k != "extracted_at"}
+            comparable_cur = {k: v for k, v in current.items() if k != "extracted_at"}
+            if comparable_in != comparable_cur:
                 updated += 1
-                existing[record_id] = json.loads(payload)
+                existing[record_id] = incoming
         else:
             added += 1
-            existing[record_id] = json.loads(payload)
+            existing[record_id] = incoming
+    if added == 0 and updated == 0 and removed == 0:
+        return added, updated
     body = "\n".join(
         json.dumps(value, ensure_ascii=False, default=str) for value in existing.values()
     )
@@ -693,6 +702,139 @@ def upsert_records(
             os.close(descriptor)
     os.replace(temporary, target)
     return added, updated
+
+
+@dataclass(frozen=True, slots=True)
+class InstrumentScoreUpdateReport:
+    """增量入册报告（update_instrument_scores 返回值，NOW #26 sidecar）。"""
+
+    candidates: int = 0
+    parsed: int = 0
+    added: int = 0
+    updated: int = 0
+    skipped: int = 0
+    warnings: tuple[str, ...] = ()
+
+
+def _as_float(value: object) -> float | None:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_a_share_entries(kb_root: Path) -> dict[str, dict[str, object]]:
+    path = kb_root / "runtime" / "a_share_name_map.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    entries = payload.get("entries") if isinstance(payload, dict) else None
+    return entries if isinstance(entries, dict) else {}
+
+
+def update_instrument_scores(
+    knowledge_base_root: Path,
+    *,
+    saved_ids: Iterable[str] | None = None,
+) -> InstrumentScoreUpdateReport:
+    """增量解析入册：本次保存的文章评分表 → instrument_scores.jsonl。
+
+    NOW #26（D-044③，owner 09-05 令提前施工）。处理集 = saved_ids ∪
+    水位补漏：水位为注册表现有最大 article_date，同日或更新的普通栏行
+    重解析（幂等）。自愈范围（门审 P3-1 收窄）：覆盖水位日及之后落下的
+    漏批/中断；更早日期的 retro 补抓行只有 saved_ids 当轮兜底，漏批靠
+    手动 backfill。过滤口径与 backfill 一致（column=普通、能量≥6.0、
+    日期可解析）。读面（BUG-047 施工前置，09-05 夜裁决）：六仓停写后只读
+    文章 md 正文（图片描述已内嵌「## 图片描述」节），不再读 zsxq_sources。
+    调用方（ingest 尾部）负责 try/except——本函数异常绝不阻塞采集。
+    """
+    kb = Path(knowledge_base_root)
+    warnings: list[str] = []
+    index_path = kb / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return InstrumentScoreUpdateReport(
+            warnings=(f"index_unreadable: {type(exc).__name__}",)
+        )
+    articles = index.get("articles") if isinstance(index, dict) else index
+    if not isinstance(articles, list):
+        return InstrumentScoreUpdateReport(warnings=("index_shape_invalid",))
+
+    existing = load_records(instrument_scores_path(kb))
+    watermark = max(
+        (str(record.get("article_date") or "") for record in existing.values()),
+        default="",
+    )
+    requested = {str(item).strip() for item in (saved_ids or ()) if str(item).strip()}
+
+    candidates: list[dict[str, Any]] = []
+    for row in articles:
+        if not isinstance(row, dict) or row.get("column") != "普通":
+            continue
+        row_id = str(row.get("id", ""))
+        row_date = str(row.get("date", ""))[:10]
+        # 门审 P3-3：日期不可解析即跳过（如 "None"），防污染水位导致全量重扫。
+        try:
+            date.fromisoformat(row_date)
+        except ValueError:
+            continue
+        if row_id not in requested and row_date < watermark:
+            continue
+        score = _as_float(row.get("score"))
+        if score is None or score < 6.0:
+            continue
+        candidates.append(row)
+
+    if not candidates:
+        return InstrumentScoreUpdateReport()
+
+    name_map = _load_a_share_entries(kb)
+    all_records: list[InstrumentScoreRecord] = []
+    skipped = 0
+    for row in candidates:
+        source_id = str(row.get("id", ""))
+        article = {
+            "source_id": source_id,
+            "topic_id": str(row.get("topic_id", "") or ""),
+            "column": str(row.get("column", "")),
+            "title": str(row.get("title", "")),
+            "article_date": str(row.get("date", ""))[:10],
+            # BUG-047 施工前置（09-05 夜裁决）：六仓停写后 zsxq_sources
+            # 不再是新文章载体，published_at 取 index 行 date（含时分）。
+            "published_at": (
+                str(row.get("date", "")) if ":" in str(row.get("date", "")) else None
+            ),
+            "article_score": _as_float(row.get("score")),
+        }
+        try:
+            md_text = Path(str(row.get("path", ""))).read_text(encoding="utf-8")
+        except OSError:
+            skipped += 1
+            warnings.append(f"md_read_error:{source_id}")
+            continue
+        md_text, _ = normalize_inline_codes(md_text, name_map)
+        records = parse_article_records(
+            article=article,
+            md_text=md_text,
+            source_record=None,
+            name_map=name_map,
+        )
+        if records:
+            all_records.extend(records)
+        else:
+            skipped += 1
+
+    added, updated = upsert_records(instrument_scores_path(kb), all_records)
+    return InstrumentScoreUpdateReport(
+        candidates=len(candidates),
+        parsed=len(all_records),
+        added=added,
+        updated=updated,
+        skipped=skipped,
+        warnings=tuple(warnings),
+    )
 
 
 _HISTORY_HINT_TOKENS = frozenset(

@@ -10,10 +10,13 @@ import pytest
 from fin_analyse.ingestion.instrument_scores import (
     InstrumentScoreRecord,
     build_record,
+    instrument_scores_path,
+    load_records,
     normalize_inline_codes,
     normalize_score,
     parse_article_records,
     parse_rows_from_text,
+    update_instrument_scores,
     upsert_records,
 )
 
@@ -401,3 +404,97 @@ def test_upsert_records_removes_obsolete_ids(tmp_path: Path) -> None:
     assert len(path.read_text(encoding="utf-8").splitlines()) == 1
     upsert_records(path, [], remove_record_ids={record.record_id})
     assert path.read_text(encoding="utf-8").strip() == ""
+
+
+def _seed_kb(tmp_path: Path, articles: list[dict]) -> None:
+    (tmp_path / "articles").mkdir(exist_ok=True)
+    for article in articles:
+        md = tmp_path / "articles" / f"{article['id']}.md"
+        md.write_text(
+            "## 图片描述\n"
+            f"1. **{article['name']}（{article['code']}）**\n"
+            "   核心业务：测试业务；所属板块：测试板块；项目评分：8.5；情绪热度：78\n",
+            encoding="utf-8",
+        )
+        article.setdefault("path", str(md))
+    (tmp_path / "index.json").write_text(
+        json.dumps({"articles": articles}), encoding="utf-8"
+    )
+
+
+def test_update_instrument_scores_incremental_and_watermark(tmp_path: Path) -> None:
+    """NOW #26：saved_ids 入册、幂等重跑、水位自愈（saved_ids 缺席也补）。"""
+    _seed_kb(
+        tmp_path,
+        [
+            {
+                "id": "src-a",
+                "column": "普通",
+                "date": "2026-09-05 14:34",
+                "score": 6.8,
+                "title": "甲",
+                "topic_id": "t-a",
+                "name": "利通电子",
+                "code": "603629",
+            }
+        ],
+    )
+    report = update_instrument_scores(tmp_path, saved_ids=["src-a"])
+    assert (report.candidates, report.parsed, report.added) == (1, 1, 1)
+    records = load_records(instrument_scores_path(tmp_path))
+    assert len(records) == 1
+    record = next(iter(records.values()))
+    assert record["code"] == "603629" and record["status"] == "ok"
+    assert record["lihao_score"] == 8.5 and record["consensus_score"] == 7.8
+
+    rerun = update_instrument_scores(tmp_path, saved_ids=["src-a"])
+    assert (rerun.added, rerun.updated) == (0, 0)  # 门审 P2-1：extracted_at 不参与比较
+
+    second = {
+        "id": "src-b",
+        "column": "普通",
+        "date": "2026-09-06 09:00",
+        "score": 7.2,
+        "title": "乙",
+        "topic_id": "t-b",
+        "name": "天孚通信",
+        "code": "300394",
+    }
+    _seed_kb(tmp_path, [second])
+    healed = update_instrument_scores(tmp_path, saved_ids=[])
+    assert healed.candidates == 1 and healed.added == 1
+    records = load_records(instrument_scores_path(tmp_path))
+    assert {record["code"] for record in records.values()} == {"603629", "300394"}
+
+
+def test_update_instrument_scores_skips_below_threshold_and_other_columns(
+    tmp_path: Path,
+) -> None:
+    _seed_kb(
+        tmp_path,
+        [
+            {
+                "id": "low",
+                "column": "普通",
+                "date": "2026-09-05 10:00",
+                "score": 5.0,
+                "title": "低能",
+                "topic_id": "t1",
+                "name": "甲公司",
+                "code": "600000",
+            },
+            {
+                "id": "qa",
+                "column": "问答",
+                "date": "2026-09-05 11:00",
+                "score": 9.0,
+                "title": "问答",
+                "topic_id": "t2",
+                "name": "乙公司",
+                "code": "600001",
+            },
+        ],
+    )
+    report = update_instrument_scores(tmp_path, saved_ids=["low", "qa"])
+    assert report.candidates == 0
+    assert not instrument_scores_path(tmp_path).exists()

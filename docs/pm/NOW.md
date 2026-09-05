@@ -149,7 +149,7 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 | 旁路·owner | 4 | 决策日志 v1 收尾：施工全清（09-04 合入 b72ddf5：设计门 345s/10/10 + 施工外审 474s/7 发现/6 采纳、1 P2 同根裁决；231+全仓 3141 绿 + 实弹 18/18；人格规则 8 已增补）。会签两项 ✅（09-05 owner 签：人格计数行 13+2 追认、README 冻结行整行重写并注记会签）。剩 owner：复盘问询探针（「当初为什么买 X」，随真实使用，finq 记账） | owner 随用 |
 | 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+主指数日线 lane（09-04，96f8fcd）+细分板块 lane（09-05，ff372bd）均施工全清，剩 owner 实弹验「线层现工具序列或诚实标注」；09-07 收盘后另核板块 lane 当日 bar 即时性（评审 Q2-P2，见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前+盘后 |
 | 旁路·owner | 2 | finq 记账（D-043/C3）：y 记一字、n 必须一句原因（owner 纪律，不加校验）；存量 3 条历史缺口接受（不回填 append-only 台账），自 D3 起新账强制 | owner 随用 |
-| 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；09-05 核对：registry 1629 条、<7 共 43 条且最新为 08-29 6.8 均交付前——尚无新边界样本；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
+| 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；09-05 夜核对：registry 1695 条、parser v3+增量接线落地（#26 出队）、首篇 [6,7) 边界样本已入册（603629@09-05 能量 6.8）——分级行为核对仍待做；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
 | 旁路·owner | 16 | 直播总结入档后继：明日标注批次勾 9/4 锐评（as_of 已滚、从提名单隐去，从 index 直接勾；BUG-028 边界修复后后续批次自动可见；首例 09-04 已入档收口，git 55722a8） | owner 明日标注批次 |
@@ -159,7 +159,6 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 | 旁路·owner | 22 | meta 设施家规10 自审（D-043/C5）：决策日志 v1、run-design-gate、switch-codex-open-provider、manage-zsxq-capture、manage-zsxq-article-retirement、book-shared-brain-learning、外部审视链（codex_open.sh+双 profile）——无真实使用记录者入休眠候选清单 | 2026-09-18 |
 | 旁路·随手 | 24 | 版本强势英雄补列进 G（D-044①）：source_contract 白名单补列走 45 天 G 窗口；09-05 审查实证 331 篇零车道，验收=该栏新帖进 G manifest | D3 建造静默结束后 |
 | 旁路·随手 | 25 | 老师 Q&A 放行 reference 车道（D-044②）：reference 候选源照 ready_evidence 的 _QA_COLUMNS 闭集放行，zsxq_reference_windows.json 三窗口键复活；09-05 审查实证 18 篇零车道 | D3 建造静默结束后 |
-| 旁路·随手 | 26 | instrument_scores 增量接线（D-044③）：ingest 尾部对 saved_ids 调 parse_article_records+upsert_records；工具描述诚实化已随审落盘（09-05）；owner 09-05 记需求（家规10 用户条款）+门开后第一顺位，过渡期手动 backfill 即使用证据（09-05 夜补跑 +33 条）；短设计 [../design/instrument-score-incremental-ingest.md](../design/instrument-score-incremental-ingest.md) 已冻结，施工前过设计门；**施工前置（BUG-047 B2-P1③ P2，09-05 夜裁决）：六仓已停写（535a067），解析读面必须从 zsxq_sources.jsonl 改读工件或 md 正文（backfill 同批改），否则 09-05 后新文章图像评分载体静默丢失** | D3 建造静默结束后 |
 | 旁路·随手 | 27 | run_ledger/alert 面量裁（D-044④）：补写入或按规则 12 废除，随 D-031 设计一并定；落定前 alert 链不可作为故障信号依赖 | 随 D-031 |
 | 旁路·时间（09-07） | 28 | BUG-041 竞价窗口观测：盘前班次看 overview 诊断 JSONL，INDEX_TRADE_DATE_MISMATCH 整链拒坐实即按 BUGS 修 | 09-07 盘前班次 |
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |

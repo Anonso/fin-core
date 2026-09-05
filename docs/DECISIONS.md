@@ -471,6 +471,8 @@
 - 为什么：09-05 全面审查实证三处断链——版本强势英雄 331 篇设计页要入 G 但 source_contract 静默全滤（BUG-020 同型）；Q&A 18 篇因 reference 候选源只收「普通」栏零车道且三个窗口键全死（配置/window_config/ready_evidence 三处已留口，属接了半截）；增量提取从未接线（parse_article_records 仅回填脚本调用）而工具描述声称已接（假断言诱导 agent）；run_ledger 无生产写入方致 alert 链结构性永不触发。
 - 否决了什么：①②的「明确不入 G/删死键」与「挂起待定」（按 BUG-020 先例与已交付设计页口径，车道缺口是漏不是设计）；③立即接线（D3 建造静默期不破例施工，只做一行级诚实化）；④立即补线或立即废除（Daily 反正随 D-031 迁问询环境重构，现在投入或删除都可能返工）。
 - 状态：active · 证据：2026-09-05 全面代码审查（四路只读深审，三 P1 均 cross-check；本条拍板会话）；执行项 = NOW 待办 #24/#25/#26/#27；描述诚实化随本决策 commit。
+- 追记（2026-09-05 夜 · ③提前施工收口，owner 令「把解析入册自动触发完成」豁免 D3 静默）：增量接线按冻结设计稿施工并过设计门（cmd·deepseek-v4-pro 主审无 fallback，566s；P1×0/P2×2/P3×4/专项 3——采纳 7、部分采纳 1、驳回 0；P2-1 extracted_at 破坏幂等→upsert 内容比较剔时间戳+真空不重写；P2-2 priority-scan 侧补 all_saved 守卫；P3-3 日期守卫防水位污染；P3-2 核实 sync/watch intent 互斥后按家规 11 不加锁）。施工中同批落 BUG-047 P2 前置口径：读面去 zsxq_sources、改纯 md 正文轨（backfill 同批改，dry-run 数字与 sources 版全等 76 表/512 行）。实弹探针：candidates=2/parsed=21/added=0/updated=0/0.1s。全仓 3237 绿；#26 出队；设计稿随合入删除（Git 即档案）。
+  台账：`$STATE/fin-analyse/design-gate/instrument-incremental-wiring-20260905/`（packet/review/stderr）。
 
 ## D-045 · 2026-09-05 · 门评审者链重构：cmd 主（deepseek-v4-pro）+ glm 替补，入口翻译层化（owner 拍板「用 cmd 做门」）
 - 决策：外部审视评审者入口 scripts/codex_open.sh 重构为评审者链——cmd·deepseek-v4-pro（Command Code CLI · Go Plan 账号）主 → glm·glm-5.3（codex-glm 路由凭据）替补；主 precheck 失败或运行非零自动落替补（stdout 横幅 + fallback.tsv 落账 + 主半份输出转 stderr 留存）；调用语法矩阵冻结（exec/e/review、stdin '-'、--sandbox/-C/--skip-git-repo-check 吸收；权限放大旗标与未知旗标 fail-closed；cmd 版本钉定 1.49.1，升级需改 CMD_VERSION_PIN 并重跑验证阶梯）；glm 降为替补即异构第二源。opencode ds pro（429 长期故障）不入链。

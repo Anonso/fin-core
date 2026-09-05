@@ -2050,6 +2050,35 @@ class CdpBridgeScraper:
             logger.warning("[MACRO-INDEX] watch 面打标失败(不阻塞): %s", e)
             result.warnings.append(f"macro_index_failed: {e}")
 
+        # Instrument score registry（sidecar，best-effort，D-044③/NOW #26）。
+        # 门审 P2-2：无新存不打针，与 §9c 的 saved_ids 守卫对称。
+        if all_saved:
+            try:
+                from fin_analyse.ingestion.instrument_scores import (
+                    update_instrument_scores,
+                )
+
+                score_report = update_instrument_scores(
+                    self._kb_root, saved_ids=all_saved
+                )
+                logger.info(
+                    "[INSTRUMENT-SCORES] 增量入册: candidates=%d parsed=%d "
+                    "added=%d updated=%d skipped=%d",
+                    score_report.candidates,
+                    score_report.parsed,
+                    score_report.added,
+                    score_report.updated,
+                    score_report.skipped,
+                )
+                if score_report.warnings:
+                    result.warnings.append(
+                        "instrument_scores_incomplete:"
+                        + ";".join(score_report.warnings[:3])
+                    )
+            except Exception as e:  # noqa: BLE001 — 钩子绝不阻塞 ingest
+                logger.warning("[INSTRUMENT-SCORES] 增量入册失败(不阻塞): %s", e)
+                result.warnings.append(f"instrument_scores_failed: {e}")
+
         logger.info(
             "[PRIORITY-SCAN] 完成: new=%d priority=%d deep_read=%d sources=%s",
             result.new_count,
@@ -2345,6 +2374,35 @@ class CdpBridgeScraper:
                 logger.warning("[DEEP-READ] backlog 排空失败: %s", e)
                 result.warnings.append(f"deep_read_backlog_drain_failed: {e}")
             self._surface_checkpoint()
+
+        # ── 9c. Instrument score registry（sidecar，best-effort，D-044③/NOW #26）
+        # 照 macro_index 先例：钩子绝不阻塞 ingest，失败降级为 warnings。
+        if saved_ids:
+            try:
+                from fin_analyse.ingestion.instrument_scores import (
+                    update_instrument_scores,
+                )
+
+                score_report = update_instrument_scores(
+                    self._kb_root, saved_ids=saved_ids
+                )
+                logger.info(
+                    "[INSTRUMENT-SCORES] 增量入册: candidates=%d parsed=%d "
+                    "added=%d updated=%d skipped=%d",
+                    score_report.candidates,
+                    score_report.parsed,
+                    score_report.added,
+                    score_report.updated,
+                    score_report.skipped,
+                )
+                if score_report.warnings:
+                    result.warnings.append(
+                        "instrument_scores_incomplete:"
+                        + ";".join(score_report.warnings[:3])
+                    )
+            except Exception as e:  # noqa: BLE001 — 钩子绝不阻塞 ingest
+                logger.warning("[INSTRUMENT-SCORES] 增量入册失败(不阻塞): %s", e)
+                result.warnings.append(f"instrument_scores_failed: {e}")
 
         # ── 10. Boundary healing: 页面异常时自愈重提取 ──
         if not result.oldest_seen_date and result.new_count == 0 and result.dom_text_chars > 100:

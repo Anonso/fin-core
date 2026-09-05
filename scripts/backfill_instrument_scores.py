@@ -73,17 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     index = json.loads(index_path.read_text(encoding="utf-8"))
     articles = index.get("articles") if isinstance(index, dict) else index
 
-    source_by_id: dict[str, dict[str, object]] = {}
-    sources_path = kb_root / "runtime" / "cognition" / "zsxq_sources.jsonl"
-    if sources_path.exists():
-        for line in sources_path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                record = json.loads(line)
-            except ValueError:
-                continue
-            source_by_id[str(record.get("article_id", ""))] = record
+    # BUG-047 施工前置（09-05 夜裁决）：六仓停写，读面去 zsxq_sources，
+    # 图片描述以文章 md「## 图片描述」节为准；published_at 取 index date。
 
     candidates = []
     for row in articles:
@@ -103,22 +94,14 @@ def main(argv: list[str] | None = None) -> int:
     all_records = []
     for row in candidates:
         source_id = str(row.get("id", ""))
-        source_record = source_by_id.get(source_id)
         row_date = str(row.get("date", ""))
-        source_published_at = (
-            str(source_record.get("published_at"))
-            if source_record and source_record.get("published_at")
-            else None
-        )
         article = {
             "source_id": source_id,
             "topic_id": str(row.get("topic_id", "") or ""),
             "column": str(row.get("column", "")),
             "title": str(row.get("title", "")),
             "article_date": row_date[:10],
-            "published_at": source_published_at or (
-                row_date if ":" in row_date else None
-            ),
+            "published_at": row_date if ":" in row_date else None,
             "article_score": _as_float(row.get("score")),
         }
         md_path = Path(str(row.get("path", "")))
@@ -128,19 +111,10 @@ def main(argv: list[str] | None = None) -> int:
             stats["md_read_error"] += 1
             continue
         md_text, _ = normalize_inline_codes(md_text, a_share_entries)
-        normalized_source: dict[str, object] | None = None
-        if source_record is not None:
-            normalized_source = dict(source_record)
-            descriptions = source_record.get("image_descriptions")
-            if isinstance(descriptions, list):
-                normalized_source["image_descriptions"] = [
-                    normalize_inline_codes(str(item), a_share_entries)[0]
-                    for item in descriptions
-                ]
         records = parse_article_records(
             article=article,
             md_text=md_text,
-            source_record=normalized_source,
+            source_record=None,
             name_map=a_share_entries,
         )
         if records:
