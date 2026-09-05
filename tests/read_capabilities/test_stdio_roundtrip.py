@@ -8,6 +8,7 @@ tools/call over real stdin/stdout frames, and asserts the trace lands in
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -212,3 +213,120 @@ class TestStdioRoundTrip:
         assert payload["id"] == 9
         body = payload.get("result", {})
         assert body.get("isError") is True or "error" in payload
+
+    def test_article_search_date_params_reach_payload_over_mcp(
+        self, smoke_env: tuple[Path, dict[str, str]]
+    ) -> None:
+        """BUG-029 回归：date_from/date_to 必须穿透 MCP 面进 _invoke_tool payload。
+
+        历史事故：通用 handler 签名缺这两个参数，pydantic extra=ignore 把它们
+        静默丢弃——status ok、零 gap 的关键词检索冒充日期枚举。若参数再次被
+        丢，非法日期（2026-13-01）会静默通过而非报 invalid_params。
+        """
+        home, env = smoke_env
+        proc = subprocess.Popen(
+            [
+                str(_REPO_ROOT / ".venv" / "bin" / "python"),
+                "-m",
+                "fin_analyse.read_capabilities.server",
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            cwd=_REPO_ROOT,
+            env=env,
+        )
+        try:
+            frames = [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {},
+                        "clientInfo": {"name": "pytest", "version": "0"},
+                    },
+                },
+                {"jsonrpc": "2.0", "method": "notifications/initialized"},
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "read_article_search",
+                        "arguments": {
+                            "question": "roundtrip 按日期找文章",
+                            "date_from": "2026-09-01",
+                            "date_to": "2026-09-05",
+                        },
+                    },
+                },
+                {
+                    "jsonrpc": "2.0",
+                    "id": 4,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "read_article_search",
+                        "arguments": {
+                            "question": "roundtrip 非法日期",
+                            "date_from": "2026-13-01",
+                        },
+                    },
+                },
+            ]
+            assert proc.stdin is not None
+            for frame in frames:
+                proc.stdin.write(json.dumps(frame) + "\n")
+            proc.stdin.flush()
+
+            responses: dict[int, dict] = {}
+            for _ in range(4):
+                line = proc.stdout.readline()
+                assert line, "server closed stdout early"
+                payload = json.loads(line)
+                if "id" in payload:
+                    responses[payload["id"]] = payload
+        finally:
+            if proc.stdin:
+                proc.stdin.close()
+            proc.wait(timeout=15)
+
+        # tools/list schema 必须声明 date_from/date_to。
+        search_tool = next(
+            t
+            for t in responses[2]["result"]["tools"]
+            if t["name"] == "read_article_search"
+        )
+        assert {"date_from", "date_to"} <= set(search_tool["inputSchema"]["properties"])
+
+        # 合法日期：调用不报错，且 trace 的 args_digest 证明日期进了 payload。
+        assert "result" in responses[3], responses[3].get("error")
+        assert not responses[3]["result"].get("isError", False)
+        expected_payload = {
+            "question": "roundtrip 按日期找文章",
+            "session_hint": "",
+            "date_from": "2026-09-01",
+            "date_to": "2026-09-05",
+        }
+        expected_digest = hashlib.sha256(
+            json.dumps(expected_payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:16]
+        trace_path = home / "fin-data" / "trace" / "read-capability" / "calls.jsonl"
+        search_records = [
+            json.loads(line)
+            for line in trace_path.read_text(encoding="utf-8").splitlines()
+            if json.loads(line)["tool"] == "read_article_search"
+        ]
+        assert len(search_records) == 1
+        assert search_records[0]["args_digest"] == expected_digest
+
+        # 非法日历日期：invalid_params 外溢可见，不许静默放行。
+        body = responses[4].get("result") or {}
+        text = (body.get("content") or [{}])[0].get("text", "")
+        assert body.get("isError") is True or "error" in responses[4]
+        assert "must be YYYY-MM-DD" in text or "must be YYYY-MM-DD" in str(
+            responses[4].get("error")
+        )

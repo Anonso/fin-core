@@ -103,12 +103,18 @@ _TOOL_DEADLINE_SECONDS: dict[str, float] = {
     "update_user_watchlist": 10.0,
     "record_decision": 10.0,
 }
-# Tools served by custom handlers (bounded write seams + the journal read,
-# whose params live outside the generic ProductionReadRequest whitelist).
+# Tools served by custom handlers (bounded write seams, the journal read,
+# and article_search's date_from/date_to — params living outside the generic
+# ProductionReadRequest-facing handler signature).
 # They stay in the deadline table as the single tool registry but are
 # skipped by the generic registration loop below.
 _CUSTOM_HANDLED_TOOLS = frozenset(
-    {"update_user_watchlist", "read_decision_journal", "record_decision"}
+    {
+        "update_user_watchlist",
+        "read_decision_journal",
+        "record_decision",
+        "read_article_search",
+    }
 )
 _MAX_DEADLINE_SECONDS = 300.0
 _MAX_SESSION_HINT_CHARS = 128
@@ -455,11 +461,8 @@ def _invoke_tool(
     date_from = payload.get("date_from")
     date_to = payload.get("date_to")
     for name, value in (("date_from", date_from), ("date_to", date_to)):
-        if value is not None and (
-            not isinstance(value, str)
-            or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is None
-            or datetime.fromisoformat(value).date().isoformat() != value
-        ):
+        # _is_iso_date 自带 try：regex 可过而日历非法（如 2026-13-01）同样归 invalid_params。
+        if value is not None and not _is_iso_date(value):
             raise InvalidParamsError(f"invalid_params: {name} must be YYYY-MM-DD")
     if date_from is not None and date_to is not None and date_from > date_to:
         raise InvalidParamsError("invalid_params: date_from must not exceed date_to")
@@ -644,6 +647,43 @@ def _make_tool_handler(tool: str):
 
     _handler.__name__ = tool
     _handler.__doc__ = _TOOL_DESCRIPTIONS.get(tool, tool)
+    return _handler
+
+
+def _make_article_search_handler():
+    """read_article_search is the one reader taking date_from/date_to
+    (BUG-029 enumeration mode); the generic handler signature cannot carry
+    them, so this custom handler keeps them reachable over MCP."""
+
+    def _handler(
+        question: str,
+        instruments: list[str] | None = None,
+        article_id: str | None = None,
+        as_of: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        deadline_seconds: float | None = None,
+        session_hint: str = "",
+    ) -> dict[str, object]:
+        """Bounded FIN read; see the tool description."""
+        wiring, trace = _tool_session()
+        payload: dict[str, object] = {"question": question, "session_hint": session_hint}
+        if instruments is not None:
+            payload["instruments"] = instruments
+        if article_id is not None:
+            payload["article_id"] = article_id
+        if as_of is not None:
+            payload["as_of"] = as_of
+        if date_from is not None:
+            payload["date_from"] = date_from
+        if date_to is not None:
+            payload["date_to"] = date_to
+        if deadline_seconds is not None:
+            payload["deadline_seconds"] = deadline_seconds
+        return _invoke_tool(wiring, trace, tool="read_article_search", payload=payload)
+
+    _handler.__name__ = "read_article_search"
+    _handler.__doc__ = _TOOL_DESCRIPTIONS["read_article_search"]
     return _handler
 
 
@@ -1037,6 +1077,12 @@ for _tool_name in _TOOL_DEADLINE_SECONDS:
         description=_TOOL_DESCRIPTIONS.get(_tool_name, _tool_name),
         annotations=_READ_ANNOTATIONS,
     )(_make_tool_handler(_tool_name))
+
+mcp.tool(
+    name="read_article_search",
+    description=_TOOL_DESCRIPTIONS["read_article_search"],
+    annotations=_READ_ANNOTATIONS,
+)(_make_article_search_handler())
 
 mcp.tool(
     name="update_user_watchlist",
