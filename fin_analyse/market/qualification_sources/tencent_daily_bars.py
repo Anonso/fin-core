@@ -19,9 +19,10 @@ import json
 import math
 import re
 from collections.abc import Callable
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any, Protocol
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 from fin_analyse.market.data_qualification import ObservationEvidenceOrigin
 from fin_analyse.market.providers.base import OHLCV
@@ -38,6 +39,8 @@ _LOOKBACK_DAYS = 240  # 120 bars + 周末/节假日余量
 _VENUES = frozenset({"sh", "sz"})
 _SYMBOL_PATTERN = re.compile(r"^(?P<code>[0-9]{6})(?:\.(?P<venue>SH|SZ))?$")
 _DATE_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+_A_SHARE_CLOSE_TIME = time(15, 0)
+_CN_TZ = ZoneInfo("Asia/Shanghai")
 
 
 class TencentDailyBarSourceError(RuntimeError):
@@ -140,7 +143,7 @@ class TencentDailyBarReader(_ImmutableSourceConfiguration):
             raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_DEADLINE_REACHED")
         payload = self._capture(scope, deadline_at=request.deadline_at)
         bars = _parse_bars(payload, scope=scope)
-        completed = _filter_cutoff(bars, cutoff=scope.cutoff_date)
+        completed = _filter_cutoff(bars, completed_through=scope.completed_through)
         if len(completed) < request.minimum_completed_bars:
             raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_INSUFFICIENT_BARS")
         return QualifiedDailyBarSeries(
@@ -190,12 +193,20 @@ def _build_on_demand_tencent_daily_bar_reader(
 
 
 class _ReadScope:
-    __slots__ = ("symbol", "venue", "cutoff_date")
+    __slots__ = ("symbol", "venue", "cutoff_date", "completed_through")
 
-    def __init__(self, *, symbol: str, venue: str, cutoff_date: date) -> None:
+    def __init__(
+        self,
+        *,
+        symbol: str,
+        venue: str,
+        cutoff_date: date,
+        completed_through: date,
+    ) -> None:
         self.symbol = symbol
         self.venue = venue
         self.cutoff_date = cutoff_date
+        self.completed_through = completed_through
 
 
 def _validate_request(request: QualifiedDailyBarReadRequest) -> _ReadScope:
@@ -207,7 +218,15 @@ def _validate_request(request: QualifiedDailyBarReadRequest) -> _ReadScope:
         request.decision_cutoff_at.tzinfo is None or request.decision_cutoff_at.utcoffset() is None
     ):
         raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_CUTOFF_INVALID")
-    cutoff_date = request.decision_cutoff_at.astimezone(UTC).date()
+    # 与东财主源同语义（BUG-036）：按 A 股时区取 cutoff 日；当日 bar 仅在
+    # cutoff 已过 15:00 CST 收盘后才算完成，否则 completed_through=前一日。
+    local_cutoff = request.decision_cutoff_at.astimezone(_CN_TZ)
+    cutoff_date = local_cutoff.date()
+    completed_through = (
+        cutoff_date
+        if local_cutoff.time() >= _A_SHARE_CLOSE_TIME
+        else cutoff_date - timedelta(days=1)
+    )
     if not isinstance(request.trade_date, date) or isinstance(request.trade_date, datetime):
         raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_TRADE_DATE_INVALID")
     if isinstance(request.minimum_completed_bars, bool) or not isinstance(
@@ -216,7 +235,12 @@ def _validate_request(request: QualifiedDailyBarReadRequest) -> _ReadScope:
         raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_MINIMUM_INVALID")
     if request.minimum_completed_bars < 0:
         raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_MINIMUM_INVALID")
-    return _ReadScope(symbol=code, venue=venue, cutoff_date=cutoff_date)
+    return _ReadScope(
+        symbol=code,
+        venue=venue,
+        cutoff_date=cutoff_date,
+        completed_through=completed_through,
+    )
 
 
 def _venue_for_symbol(symbol: str) -> str:
@@ -283,14 +307,14 @@ def _parse_bars(raw_payload: bytes, *, scope: _ReadScope) -> list[Any]:
     return bars
 
 
-def _filter_cutoff(bars: list[Any], *, cutoff: date) -> list[Any]:
+def _filter_cutoff(bars: list[Any], *, completed_through: date) -> list[Any]:
     completed: list[Any] = []
     for bar in bars:
         raw_date = bar["date"]
         if not isinstance(raw_date, str) or _DATE_PATTERN.fullmatch(raw_date) is None:
             raise TencentDailyBarSourceError("TENCENT_DAILY_BAR_PAYLOAD_INVALID")
         bar_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
-        if bar_date >= cutoff:
+        if bar_date > completed_through:
             continue
         completed.append(
             OHLCV(

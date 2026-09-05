@@ -214,3 +214,53 @@ def test_reader_parses_index_rows_under_day_key() -> None:
     assert series.symbol == "000688"
     assert [bar.close for bar in series.completed_bars] == [1653.56, 1602.34, 1604.59]
     assert series.completed_bars[0].volume == 6975365.0
+
+
+def test_cutoff_uses_cn_tz_with_1500_completion_semantics() -> None:
+    """BUG-036：cutoff 按 A 股时区判定，当日 bar 过 15:00 CST 收盘后即可见。
+
+    旧行为按 UTC 日界切，盘后（15:00–次日 08:00 CST）当日的已完成 bar 被丢，
+    技术面恒慢一天；东财主源（同请求形状）在同一时点已含当日 bar。
+    """
+    from zoneinfo import ZoneInfo
+
+    cn = ZoneInfo("Asia/Shanghai")
+    rows = [
+        ["2026-09-03", "10.000", "10.100", "10.200", "9.900", "100000.000"],
+        ["2026-09-04", "10.000", "10.500", "10.600", "9.950", "120000.000"],
+    ]
+
+    def make_reader() -> tuple[TencentDailyBarReader, list[str]]:
+        captured: list[str] = []
+
+        def http_get(url: str, *, params: dict[str, str], timeout: float) -> _Response:
+            captured.append(url)
+            return _Response(_payload(rows=rows))
+
+        return TencentDailyBarReader(http_get=http_get), captured  # type: ignore[arg-type]
+
+    # 周五 21:00 CST 盘后：当日（09-04）bar 已完成，必须进序列。
+    reader, captured = make_reader()
+    series = reader.read(
+        QualifiedDailyBarReadRequest(
+            symbol="600549",
+            trade_date=date(2026, 9, 4),
+            decision_cutoff_at=datetime(2026, 9, 4, 21, 0, tzinfo=cn),
+            minimum_completed_bars=2,
+        )
+    )
+    assert [bar.date for bar in series.completed_bars] == ["2026-09-03", "2026-09-04"]
+
+    # 同日 10:00 CST 盘中：当日 bar 未完成，只到前一日。
+    reader2, _ = make_reader()
+    series2 = reader2.read(
+        QualifiedDailyBarReadRequest(
+            symbol="600549",
+            trade_date=date(2026, 9, 4),
+            decision_cutoff_at=datetime(2026, 9, 4, 10, 0, tzinfo=cn),
+            minimum_completed_bars=1,
+        )
+    )
+    assert [bar.date for bar in series2.completed_bars] == ["2026-09-03"]
+    # 抓取窗口端点也按 CN 日界（end 含 cutoff 当日，过滤层裁剪）。
+    assert "20260904" in captured[0].replace("-", "")
