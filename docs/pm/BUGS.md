@@ -1344,3 +1344,15 @@
   时区窗口混用（~8h 边界偏差）、测试覆盖缺口（macro_brain/shared_brain/watchlist 零测试等）。
   全部采纳入 BUG-047 修复排期；CLAUDE.md 两处修正因并行会话 r15 刚触同文件，排并行会话
   静止后落（冲突规避）。评审方法学亮点：生产 KB 只读探针 + fake runtime 实证，非纯读稿。
+- **B2-P1③ owner 裁决（2026-09-05 22:47「按推荐处理」，23:00 起施工）**：双轨谁主谁副——
+  **主 = deep_read_artifacts 工件轨**（生产读方 ×3：g_working_set fresh pair 判定 +
+  runtime_context 注入面 ×2；深化盲评 7.59/逐字 63/63 质检面）；**副 = apprentice 六仓
+  JSONL**（source/units/chains/clusters/clocks/suggestions ~5.3M，活写零外部读方，引擎内
+  唯一回读=dynamic_clocks 自身评估）。处置四项：①六仓停写随本 BUG 修复、owner 定
+  09-05 23:00 起施工——摘 `deep_read()` 六处 upsert（`zsxq_apprentice.py:316,428-446`），
+  引擎逻辑保留、时钟评估结果仍进工件 payload；P1① 无锁整写风险面同步归零；②数据留存
+  不删——工件实时承载全部内容（ID 为内容哈希确定性，重建=工件重排秒级；更老条目从爬取
+  原文重提取兜底）+六仓文件原样留档；③六仓入休眠候选清单挂利用凭证（单元级时效、跨篇
+  单元/主题分析）；④`cli deep-read` 手动入口（guo:v0 退役残留）按引用闭包退役。思想源头
+  在案：老仓时效栈（time_sensitivity / temporal_influence / temporal 包 / dynamics
+  half_life，备份 git 史即档案）——复活须先有消费面（rebaseline 教训：机制跟消费面走）。
