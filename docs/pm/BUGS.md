@@ -1149,7 +1149,8 @@
   此代码 artifact，归因待修正。
 - 修复方向：cutoff 改 Asia/Shanghai 并对齐 15:00 完成语义（或去预过滤交服务层统一裁）；
   补「cutoff 在 15:00 CST 后的当日 bar」用例；BUG-022 归因复核。
-- 状态：立案待修。
+- 修复（4e16661，2026-09-05「稳定/好用」批次）：cutoff 改 CN 时区取日，当日 bar 过 15:00 CST 收盘才算完成（completed_through 语义），与东财主源一致；补盘后/盘中边界用例，市场域 307 绿。
+- 状态：已关闭（2026-09-05）。
 
 ## BUG-037 knowledge 侧 reader 零 deadline 执行且索引建在事件循环上，可冻住整台薄 server（2026-09-05 全面审查立案）
 
@@ -1159,7 +1160,8 @@
   单缝失败隔离在时间维度不成立。
 - 修复方向：knowledge reader 传 deadline 分段检查；`_ensure` 挪启动期/后台线程 +
   持久化索引。
-- 状态：立案待修。
+- 修复（5f9635a，2026-09-05「稳定/好用」批次）：索引构建挪构造期后台线程预热；检索按 min(剩余 deadline, 120s) 有界等待，未就绪返回 article_search_index_warming typed gap——首查不再冻住整台 server；预热失败保留逐次重试语义。
+- 状态：已关闭（2026-09-05）。
 
 ## BUG-038 LLM env 解键失败静默缩池，provider_health 口径相反（2026-09-05 全面审查立案）
 
@@ -1169,7 +1171,8 @@
   「已配置」。NOW 遗留观察 3 同型事故形态：池静默变空/变短，唯一状态面给相反信号。
 - 修复方向：`_plan_is_configured` False 时按模型名 warning（含「含未解析 ${}」原因）；
   provider_health 配置判定复用 `_configured_text`。
-- 状态：立案待修。
+- 修复（344202c，2026-09-05「稳定/好用」批次）：loader 跳过 enabled 但未配置的 backend 时按模型名 warning 点名原因；provider_health 配置判定复用 _configured_text，与 loader 同口径。
+- 状态：已关闭（2026-09-05）。
 
 ## BUG-039 30m/60m 时间框架生产恒 UNKNOWN：intraday 主源 adjustment 契约互斥 + gap 不进顶层（2026-09-05 全面审查立案）
 
@@ -1190,7 +1193,8 @@
   直接上抛无兜底；同一「源不可用」两种降级结局，data_gaps 形态随故障类型漂移，
   下游按 gap 统计会把常态反爬误判为更严重故障。
 - 修复方向：HTTP 状态失败并入传输异常同分支（保留各自 typed gap，回放叠 STALE_CACHE）。
-- 状态：立案待修。
+- 修复（21fdcef，2026-09-05「稳定/好用」批次）：HTTP 非 200 与传输异常统一走 _replay_or_raise：回放成功时原因码与 STALE_CACHE 叠加双 gap；无缓存按原码 typed 上抛，不伪造数据。
+- 状态：已关闭（2026-09-05）。
 
 ## BUG-041 【推断】集合竞价窗口（09:15–09:30 CST）overview 整链 UNKNOWN 复发风险（2026-09-05 全面审查立案，观测项）
 
@@ -1240,7 +1244,8 @@
   「不记日志不进 audit」的 fallback（其余吞异常点均已 typed 化）。
 - 修复方向：{} 回退至少落一条 typed warning（run warning 或 audit gap），或把
   「prior 不可得」与「prior 非 READY」分为不同 gap 码。
-- 状态：立案待修。
+- 修复（1de0d01，2026-09-05「稳定/好用」批次）：失败时 warning 点名 degrade 路径（g_working_set_no_change_prior_not_ready）与异常详情；返回值与下游语义不变。
+- 状态：已关闭（2026-09-05）。
 
 ## BUG-046 server 层 deadline 分类死路：reader 兜底 catch 吞 TimeoutError（2026-09-05 全面审查立案）
 
@@ -1249,4 +1254,5 @@
   子类）先被吞成 `*_read_failed`+`*_unavailable`；trace 里超时与故障不可分，
   delay 分析只能靠 latency 反推（BUG-002 式 12-14s 指纹即此困境）。
 - 修复方向：兜底 catch 先 isinstance 判定 re-raise TimeoutError。
-- 状态：立案待修。
+- 修复（1bdb816，2026-09-05「稳定/好用」批次）：八个单发 reader 调用点先 re-raise TimeoutError（server 归类 *_deadline_exceeded）；逐项循环点保持 scoped-gap 语义。
+- 状态：已关闭（2026-09-05）。

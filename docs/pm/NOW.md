@@ -133,7 +133,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·随手 | 27 | run_ledger/alert 面量裁（D-044④）：补写入或按规则 12 废除，随 D-031 设计一并定；落定前 alert 链不可作为故障信号依赖 | 随 D-031 |
 | 旁路·时间（09-07） | 28 | BUG-041 竞价窗口观测：盘前班次看 overview 诊断 JSONL，INDEX_TRADE_DATE_MISMATCH 整链拒坐实即按 BUGS 修 | 09-07 盘前班次 |
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
-| 旁路·随手 | 30 | BUG-029 防复发：工具描述承诺参数 ⊆ MCP handler 签名的自动对账测试（审查 P1-1 同型防火墙） | 随手 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
