@@ -490,3 +490,11 @@
 - 为什么：owner 09-05 已改 D3 为自选窗口、定义准备期=基础功能深化，准备期施工即题内之义；原判据担忧的「seed 改变运行时注入面干扰 D3 考试」在开考前完成恰好清零；两项各带安全网（seed=preview→owner 确认→apply+幂等复验；瘦身=逐行限定+回归探针+单包回滚）。
 - 否决了什么：按原字面等 D3 窗口结束后施工——把半小时级清尾拖过整个准备期，而无对应风险对价。
 - 状态：active · 证据：persona-governance-v1 §3/§4/§5；NOW #25/#26；本条目。
+
+
+## D-048 · 2026-09-05 · 机器问询链 finqa-chain 立项：节点=harness 级三腿，codex_routes 冻结两链并存（owner 拍板「节点换成 finqa 三腿 + 配置全控 + 有 fallback」）
+- 决策：机器用无头问询统一走 finqa-chain（`config/finqa_nodes.yaml` 节点表 claude→codex 暂关→commandcode，声明序+enabled+增删全配置；`scripts/finqa_chain.py` launcher：precheck+自动 fallback+横幅/tsv+exit78，session 可丢、无熔断）；codex_routes.yaml 冻结服务效果评估追问轮（thread resume 语义），不迁移不删除。
+- 为什么：09-05 opencode-go 429 时人工三处换节点（拍板/路由表/bashrc），机器问询零治理；owner 设计初衷=探活冷却 fallback 减少人工换节点，但旧路由表只罩 codex 协议面，日用 finqa 腿裸奔。形态=提取链（声明序+enabled）× 设计门（launcher 语义），无新发明。
+- 否决了什么：①三 harness 统一 API 路由表（要发明适配层，无消费方举证）；②熔断/TTL 状态机（人频次现探现走够，不预置）；③问询链做 --resume 续问（与可丢语义冲突，效果评估续问留在 codex_routes）；④finqa-codex 改名/旧函数废除（owner 收敛：不改名、暂时关闭）。
+- 功能面： finqa-chain
+- 状态：active · 证据：config/finqa_nodes.yaml + scripts/finqa_chain.py（0cd0b27）；设计门 cmd·ds-pro ≈250s 采纳 11 不采纳 1（台账 design-gate/finqa-chain-v1-20260905/）；演练绿（fallback/双挂 78/disabled 跳过），在用判定=盲评 runner CC 腿迁移后首次真实运行。
