@@ -46,7 +46,10 @@ ZSXQ 采集腿源真身已迁 fin-core（NOW #32，09-05）。
 故障，owner 拍板；`enabled: false` 翻回 + 重启网关即恢复优先位），问询链暂
 单腿 codex-glm；非 GLM 手动问询腿换 finqa-cmd（Command Code · Go Plan，
 BUG-031 双验闭环用其闭环）。提取链 deepseek_flash 的 opencode 端点同步禁用、
-commandcode 端点接替（llm.yaml ee0f4e1，随下次发版生效）。
+commandcode 端点接替（llm.yaml ee0f4e1，待部署标记：随下次发版生效；发版核对加项=llm.env 含 COMMANDCODE_* 且 flash 端点探针 200——D-045 审计门 P2）。外部审视入口
+`scripts/codex_open.sh` 重构（D-045）：评审者链 cmd·deepseek-v4-pro 主 →
+glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路由 codex-open
+同名不同物）。
 
 ## 板 A · 重构阶段（对齐 rebaseline §6）
 
@@ -57,7 +60,7 @@ commandcode 端点接替（llm.yaml ee0f4e1，随下次发版生效）。
 | W2 原地手术（备份/部署/Daily 脱钩/归档/L1 池） | ✅ 完成：生产 release `319faf62` | — |
 | 路由重排 D-018/019/021 | ✅ 完成（文件层 + 运行态） | [../DECISIONS.md](../DECISIONS.md) |
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
-| 外部项目吸收 | ⏳ 盘点+举证机制已闭环（09-03：五候选范围盘点、首轮盲评 118=118 零污染）；**吸收 0 项**——四候选挂观察名单等失效样本触发（finq n 即举证入库），过闸才施工；A2 typed 数据源未开 | [research/2026-09-03](research/2026-09-03-external-analysis-absorption-scope.md)、[盲评 pilot](research/2026-09-03-consult-blind-eval-pilot.md) |
+| 外部项目吸收 | ⏳ 盘点+举证机制已闭环（09-03）；**吸收 0 项**——09-05 二轮专业标准对照（ai-berkshire 镜子+5 题动态）：候选 1/5 缺口缩窄（承重拷问/三重检已有同构）、候选 4 动态零命中、管理层维度→知识脑新候选，测试暴露是否够闸②举证待 owner 裁决；cmd·flash 腿元叙述泄漏已记录；A2 typed 数据源未开 | [scope 09-03](research/2026-09-03-external-analysis-absorption-scope.md)、[盲评 pilot](research/2026-09-03-consult-blind-eval-pilot.md)、[gap 探查 09-05](research/2026-09-05-professional-standards-gap-hunt.md) |
 | W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点已恢复（D-028 解除，9a0320f） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | D3 三天真实使用门 | ⏳ 触发已到：决策日志收口（09-04）或 09-07 先到者开跑——pull-only 正常使用三天、只数事故；PASS=日 ≥1 记账+无整链不可用过夜+第 3 日 owner 判「明天还用吗=是」；期间主线建造静默（只修实弹暴露项） | D-043（取代 D-020 门语义）；供数 = finq usage.jsonl |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步）；P5 路线已定候选方案 A：Hermes 直接当问询 agent（D-032） | rebaseline §6；D-032 |
