@@ -982,6 +982,18 @@
   **08:45 班确认过**（run 20260905T084505177-31684：新脚本 5c3f8d92
   capture_exit 0、artifact 发布、consumer ready completed=1）；同日
   opencli 1.8.7+扩展 1.0.24 商店自拉落位，doctor "Everything looks good!"。
+- **task 契约补齐（2026-09-05 上午，owner 令补）**：根因修正——两个导出器
+  （Export-ScheduledTask / schtasks /query /xml）对「等于默认值的元素」一律
+  省略（Settings/Enabled、每触发器 Enabled、RunLevel），故对**导出件**跑
+  verifier 永远不可能绿；该检查本质是注册前对定义文件的契约断言。已从
+  现场导出重建显式定义（+Settings/Enabled、+6×触发器 Enabled、+RunLevel
+  LeastPrivilege），**verify-task-xml VERIFY_OK**，定义件存老仓部署目录
+  `backup-20260905/task-current.xml`；重注册首次成功后后续被间歇性拒绝
+  访问挡（非提权 token）。实体任务 CIM 复核全绿：State=Ready、
+  Settings.Enabled=True、6 触发器 Enabled=True、NextRun 12:20 不变——
+  显式元素与缺省值行为等价，无功能残差；字节级重登记如需可提权单行：
+  `Register-ScheduledTask -TaskName FIN-ZSXQ-Incremental -Xml (Get-Content
+  -Raw backup-20260905\task-current.xml) -Force`。
 
 ## BUG-028 mainline 候选扫描锚门滤掉复核日当天全部 G 层材料（2026-09-04 CC 立案，同日闭）
 
@@ -1184,7 +1196,12 @@
 - 修复方向（二选一，owner 拍板）：服务层接受 30m 的 UNADJUSTED/UNKNOWN 带
   limitation 放行（30 分钟跨除权日概率极低），或把 mkline 摘出 primary 省预算；
   无论哪种把 TIMEFRAME_ADJUSTMENT_MISMATCH 提升进顶层 gaps。
-- 状态：立案待修（含一处拍板）。
+- 修复（owner 2026-09-05 拍板「摘除」）：腾讯 mkline 从 intraday lane 停用
+  （market_evidence_plan.v1.json enabled=false），每标的 8s 无效预算消除；分时 lane
+  仅剩 eastmoney_intraday，push2his 恢复可达即自动出数（qfq 契约天然匹配）。reader
+  模块保留不删（放行设计激活时复用）；重启用前必须先做非复权资格化设计（使用触发），
+  拓扑钉表测试翻红即强制带回台面。设计页 market-data.md 已同步收缩。
+- 状态：已关闭（2026-09-05，摘除口径）。
 
 ## BUG-040 两融源 HTTP≠200 无 stale 回放，最需兜底的分支不兜底（2026-09-05 全面审查立案）
 
