@@ -68,7 +68,7 @@ glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路�
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 盘点+举证机制已闭环（09-03）；**吸收 0 项**——09-05 二轮专业标准对照（ai-berkshire 镜子+5 题动态）：候选 1/5 缺口缩窄（承重拷问/三重检已有同构）、候选 4 动态零命中、管理层维度→知识脑新候选，测试暴露是否够闸②举证待 owner 裁决；cmd·flash 腿元叙述泄漏已记录；A2 typed 数据源未开 | [scope 09-03](research/2026-09-03-external-analysis-absorption-scope.md)、[盲评 pilot](research/2026-09-03-consult-blind-eval-pilot.md)、[gap 探查 09-05](research/2026-09-05-professional-standards-gap-hunt.md) |
 | W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点已恢复（D-028 解除，9a0320f） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
-| D3 三天真实使用门 | ⏳ **owner 09-05 改自选窗口**：继续准备期（基础功能深化），首个自然三日段（每日 ≥1 条真实 finq）即算开考、事后追认；09-30 仍无自然三日段=回方向文档重议；PASS 判据不变（日 ≥1 记账+无整链不可用过夜+第 3 日「明天还用吗=是」） | D-043（取代 D-020 门语义）；供数 = finq usage.jsonl |
+| D3 三天真实使用门 | ⏳ **owner 09-05 改自选窗口**：继续准备期（基础功能深化），首个自然三日段（每日 ≥1 条真实 finq）即算开考、事后追认；09-30 仍无自然三日段=回方向文档重议；PASS 判据不变（日 ≥1 记账+无整链不可用过夜+第 3 日「明天还用吗=是」）；owner 09-05 宣布 23:00 起用（窗口起点） | D-043（取代 D-020 门语义）；供数 = finq usage.jsonl |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步）；P5 路线已定候选方案 A：Hermes 直接当问询 agent（D-032） | rebaseline §6；D-032 |
 
 ## 板 B · 能力地图（影响问询结果的每个接线点）
@@ -153,7 +153,7 @@ glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路�
 | 旁路·owner | 22 | meta 设施家规10 自审（D-043/C5）：决策日志 v1、run-design-gate、switch-codex-open-provider、manage-zsxq-capture、manage-zsxq-article-retirement、book-shared-brain-learning、外部审视链（codex_open.sh+双 profile）——无真实使用记录者入休眠候选清单 | 2026-09-18 |
 | 旁路·随手 | 24 | 版本强势英雄补列进 G（D-044①）：source_contract 白名单补列走 45 天 G 窗口；09-05 审查实证 331 篇零车道，验收=该栏新帖进 G manifest | D3 建造静默结束后 |
 | 旁路·随手 | 25 | 老师 Q&A 放行 reference 车道（D-044②）：reference 候选源照 ready_evidence 的 _QA_COLUMNS 闭集放行，zsxq_reference_windows.json 三窗口键复活；09-05 审查实证 18 篇零车道 | D3 建造静默结束后 |
-| 旁路·随手 | 26 | instrument_scores 增量接线（D-044③）：ingest 尾部对 saved_ids 调 parse_article_records+upsert_records；工具描述诚实化已随审落盘（09-05） | D3 建造静默结束后 |
+| 旁路·随手 | 26 | instrument_scores 增量接线（D-044③）：ingest 尾部对 saved_ids 调 parse_article_records+upsert_records；工具描述诚实化已随审落盘（09-05）；owner 09-05 记需求（家规10 用户条款）+门开后第一顺位，过渡期手动 backfill 即使用证据（09-05 夜补跑 +33 条）；短设计 [../design/instrument-score-incremental-ingest.md](../design/instrument-score-incremental-ingest.md) 已冻结，施工前过设计门 | D3 建造静默结束后 |
 | 旁路·随手 | 27 | run_ledger/alert 面量裁（D-044④）：补写入或按规则 12 废除，随 D-031 设计一并定；落定前 alert 链不可作为故障信号依赖 | 随 D-031 |
 | 旁路·时间（09-07） | 28 | BUG-041 竞价窗口观测：盘前班次看 overview 诊断 JSONL，INDEX_TRADE_DATE_MISMATCH 整链拒坐实即按 BUGS 修 | 09-07 盘前班次 |
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
