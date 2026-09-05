@@ -9,7 +9,10 @@
 
 **非目标**：
 - 不做飞书请求面/旧 Hermes 网关恢复（仍属 agent 调用待办，本期只做生成器后端）。
-- 不动手动 CLI（finqa-c/finqa-x/finqa-claude/finqa-codex 保持直连，不参与自动兜底；2026-09-03 前旧名 finqa/finqai/finqac/finqa-x）。
+- 不动手动 CLI（finqa-c/finqa-x/finqa-claude/finqa-codex 保持直连，不参与自动兜底）。
+  2026-09-03 改名，旧名映射：finqa→finqa-c、finqai→finqa-x、finqac→finqa-codex；
+  注意旧名 finqa-x（原 CC 无头一次性，即今 finqa-claude）已被复用为今 codex 交互
+  入口，读 09-03 前文档勿按今名理解。
 - 不重设计 durable 状态机。
 
 ## 兜底链（只生效于推送）
