@@ -39,6 +39,11 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 分支、`~/.local/bin/claude` 注入分支、codex-proxy 死常量、consult README
 开发域指向全部改指新仓/删除），旧仓进入可退役状态；真删除仍按家规 4
 先备份 + manifest。
+2026-09-05 路由事实：生产问询路由 codex-open（opencode-go）禁用（429 长期
+故障，owner 拍板；`enabled: false` 翻回 + 重启网关即恢复优先位），问询链暂
+单腿 codex-glm；非 GLM 手动问询腿换 finqa-cmd（Command Code · Go Plan，
+BUG-031 双验闭环用其闭环）。提取链 deepseek_flash 的 opencode 端点同步禁用、
+commandcode 端点接替（llm.yaml ee0f4e1，随下次发版生效）。
 
 ## 板 A · 重构阶段（对齐 rebaseline §6）
 
@@ -77,7 +82,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 能力 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| 顾问人格 | 全部问询的工具选择、证据纪律、输出格式 | 问询验收中 | 持仓类/老师体系类问题，验工具按规则被调；泛化体系题免提醒验个性化（「小仓该不该更激进」类原题，验自动带账户约束/闲钱边界/刻度带与买腿顺序；09-04 首枪过，owner 要求常态化不依赖提醒） | consult-agent/CLAUDE.md；开放：BUG-024（施工全清，owner 09-07 盘前实弹终验）、BUG-031（CC 腿探针 PASS，codex 腿待 finqa-x 恢复补发）；已闭：005/025/030 |
+| 顾问人格 | 全部问询的工具选择、证据纪律、输出格式 | 问询验收中 | 持仓类/老师体系类问题，验工具按规则被调；泛化体系题免提醒验个性化（「小仓该不该更激进」类原题，验自动带账户约束/闲钱边界/刻度带与买腿顺序；09-04 首枪过，owner 要求常态化不依赖提醒） | consult-agent/CLAUDE.md；开放：BUG-024（施工全清，owner 09-07 盘前实弹终验）；已闭：005/025/030/031（09-05 双验闭环，非 GLM 腿换 finqa-cmd） |
 | 问询模型/路由 | 答案质量、成本、时延 | 在用 | 任意问询 | config/llm.yaml；D-018/019/021 |
 | 连续性/记忆 | 续问与跨会话上下文 | 在用（codex 客户端读不到 CC 记忆 = 已知边界） | 续问（六题 Q4） | consult-agent-workspace-design.md |
 | 外部检索 | 时事与星球外信息 | 在用 | 时事类问题，验引用可溯源 | consult-agent/.mcp.json |
@@ -102,7 +107,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 
 | 环节 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006/027 已闭（027 审计链 09-04 实弹 chain_ready=true）；Windows 声明清洗对齐已落并实弹过（09-05，老仓 5c3f8d92+部署同步；08:45 班 run 20260905T084505177 capture_exit 0/consumer ready；同日 opencli 1.8.7+扩展 1.0.24 doctor 全绿） |
+| ZSXQ 采集 | 知识新鲜度 | 问询验收中 | 验 G 工作集 fresh pair 含新文（无直接工具，间接缝） | [../design/zsxq-capture.md](../design/zsxq-capture.md)；BUG-003/006/027 已闭（027 审计链 09-04 实弹 chain_ready=true）；Windows 采集腿源真身已迁本仓（09-05，NOW #32，face071：2 脚本+4 测试+skill+consumer@ 退役；12:20 班实弹 capture/consume 双侧 face071、consumer ready；opencli 1.8.7+扩展 1.0.24） |
 | 入库/索引 | 检索命中一致性 | 在用（BUG-007 已闭：默认路径换缝 + repo 副本绝根 08-29） | 验 G/深化命中历史文章（间接缝） | BUGS.md BUG-007 |
 | 文章标签 | 星球内容检索组织（尚无产品读方） | 观察期未接入 | 「翻星球内容而不得」即接入凭证 | 【旁路·使用】D-024 |
 | 深化 deep-read | 文章支撑证据 | 在用（B2 二轮复盲评 08-31 闭环：7.59>7、逐字 63/63；残余缺陷面=模板噪声/主题簇误归类/量化锚点覆盖，见打分表2；空壳 0→3 修复实证） | 需文章支撑的问题，验引用可溯源 | [../design/deepen.md](../design/deepen.md)；B2 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
@@ -129,7 +134,7 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·owner | 16 | 直播总结入档后继：明日标注批次勾 9/4 锐评（as_of 已滚、从提名单隐去，从 index 直接勾；BUG-028 边界修复后后续批次自动可见；首例 09-04 已入档收口，git 55722a8） | owner 明日标注批次 |
 | 旁路·owner | 18 | 主线效果盲评下轮增量：finq 并排记分 + 失败样本常驻（首轮 09-04 收口：主线腿双判者皆胜 CC +7.5 / J2 +5.0 per 200；预算决策按家规 11 不施工；台账 $STATE/fin-analyse/mainline-blind-eval-20260904/） | 随用随记积累后 |
 | 旁路·使用触发 | 21 | 「断供 fallback 画像」开工凭证：真实断供发生或 owner 主动想用（届时从全库语料重编，不复用 guo:v0 快照——D-038 否决项） | 使用触发 |
-| 旁路·时间（10-04） | 20 | BUG-031 档位口径复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）；finqa-x 恢复后补发 codex 腿探针（探针题与判据在 BUGS 条目；台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/；09-05 午后复查 finqa-x 仍 429）；双验闭环当日按序撤单腿披露行（BUGS BUG-031 撤行顺序） | 10-04 满月或样本先到；finqa-x 恢复即补发 |
+| 旁路·时间（10-04） | 20 | BUG-031 档位口径样本复核：≥20 档位样本或满月先到先复核（凭 finq 记账与会话记录，只随证据改）。双验已闭环（09-05：CC 腿 + cmd 腿接力探针均 PASS，台账 $STATE/fin-analyse/bug031-band-freeze-probe-20260904/，撤行当日执行毕）；遗留跟踪：两腿档位数值分歧（CC 36.0~36.8 vs cmd ≈35.3，同结构不同 print）入样本复核 | 10-04 满月或样本先到 |
 | 旁路·owner | 22 | meta 设施家规10 自审（D-043/C5）：决策日志 v1、run-design-gate、switch-codex-open-provider、manage-zsxq-capture、manage-zsxq-article-retirement、book-shared-brain-learning、外部审视链（codex_open.sh+双 profile）——无真实使用记录者入休眠候选清单 | 2026-09-18 |
 | 旁路·随手 | 24 | 版本强势英雄补列进 G（D-044①）：source_contract 白名单补列走 45 天 G 窗口；09-05 审查实证 331 篇零车道，验收=该栏新帖进 G manifest | D3 建造静默结束后 |
 | 旁路·随手 | 25 | 老师 Q&A 放行 reference 车道（D-044②）：reference 候选源照 ready_evidence 的 _QA_COLUMNS 闭集放行，zsxq_reference_windows.json 三窗口键复活；09-05 审查实证 18 篇零车道 | D3 建造静默结束后 |
@@ -138,7 +143,6 @@ Daily 四班推送 2026-09-01 起停用（D-030，8 个 systemd timer 已 disabl
 | 旁路·时间（09-07） | 28 | BUG-041 竞价窗口观测：盘前班次看 overview 诊断 JSONL，INDEX_TRADE_DATE_MISMATCH 整链拒坐实即按 BUGS 修 | 09-07 盘前班次 |
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
 | 旁路·随手 | 31 | 日线第三源施工：短设计已备（docs/design/daily-bar-third-source.md，候选源待实弹核验，owner 09-05 拍板立项）；施工前跑设计门 | D3 建造静默结束后 |
-| 旁路·P5 前 | 32 | ZSXQ Windows 采集腿源真身迁移老仓→fin-core（owner 09-05 立项）：设计稿 v2 已过设计门（codex-glm 605s，9 发现 2P1+6P2+1P3 全采纳落稿；[设计稿](../design/zsxq-windows-capture-migration.md)、台账 $STATE/fin-analyse/design-gate/zsxq-capture-migration-20260905/）；2 脚本+4 测试件（含 consistency 跨语言门补迁、scheduler fixture 整组修复）+manage-zsxq-capture skill 切新仓+consumer@ 模板退役；纯平移零新逻辑，一个会话可清。**D3 静默豁免：owner 09-05 11:0x 明示「开工」，即刻施工** | 施工中（owner 09-05 豁免） |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
