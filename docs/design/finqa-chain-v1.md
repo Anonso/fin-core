@@ -30,14 +30,14 @@ nodes:
     harness: claude
     model: glm-5.3
     enabled: true
+  - id: codex             # codex CLI + opencode-go（现 finqa-codex，暂关）
+    harness: codex
+    model: deepseek-v4-pro
+    enabled: false         # 429 长期故障在案；恢复翻 true 即回第二位
   - id: commandcode       # Command Code + ds-pro（现 finqa-commandcode）
     harness: commandcode
     model: deepseek/deepseek-v4-pro
     enabled: true
-  - id: codex             # codex CLI + opencode-go（现 finqa-codex，暂关）
-    harness: codex
-    model: deepseek-v4-pro
-    enabled: false         # 429 长期故障在案；恢复翻 true 即回声明位
 ```
 
 - 不存秘钥：各 harness 认证维持现状（claude=CLAUDE_CODE_CONFIG_DIR /
@@ -61,7 +61,7 @@ nodes:
 - `--node <id>`：单腿钉定（探针/对照/调试），跳过链；
 - session 语义：**无状态无头**——一律 no-reserve/no-resume，每轮自足；
   fallback 换腿重发同参，丢的是上一腿会话（per-backend thread 本就不可跨腿）。
-- 无熔断/TTL（人频次，现探现走，设计门口径）；timeout 每节点固定
+- 无熔断/TTL（见 §3；人频次现探现走，设计门口径）；timeout 每节点固定
   （900s，env 可覆盖）。
 
 ### 2.3 bashrc 收编（薄别名，函数体删除）
@@ -79,6 +79,12 @@ finqa-codex      → finqa_chain.py --node codex "$@"
 
 ## 3. 契约与边界
 
+- **无熔断的含义**：链不记录节点失败状态。熔断器（提取链在用）是「节点连挂
+  N 次后开闸冷却一段时间，期间直接跳过、连试都不试」——省的是每次调用先撞
+  一次失败的延迟，代价是要维护状态（存哪/多久过期/恢复后会不会被旧状态误
+  跳过）。本链每次调用都从首位真试起：故障期间每次多付几秒失败延迟，换来
+  零状态、节点恢复即刻回位、无旧状态误判。人/机器低频问询下这笔交换划算；
+  将来真有高频消费方再按提取链形态加熔断，不预置。
 - 对调用方：stdin/argv 问题进 → stdout 答案出，rc 语义 0/78；横幅只走
   stderr 不污染答案。
 - **codex_routes.yaml 本期不动**：其现役消费方（效果评估追问轮）依赖
@@ -93,8 +99,8 @@ finqa-codex      → finqa_chain.py --node codex "$@"
 
 0. 消费方迁移进验收：盲评 runner（state 台账脚本）改调 `finqa` 链入口——
    链自第一天起有真实读方，防家规 10 空转；fallback.tsv 即使用证据。
-1. 三腿实弹各一发（enabled 全 true 时链序 claude→commandcode→codex，
-   codex 演练期 disabled 跳过）。
+1. 三腿实弹各一发（enabled 全 true 时链序 claude→codex→commandcode；
+   现状 codex disabled，有效链序 claude→commandcode，恢复即自动回插第二位）。
 2. fallback 演练：首位节点注入坏认证（临时 yaml）→ 自动落次位，stderr
    横幅 + tsv 行 + 答案仍出，rc=0。
 3. 双挂演练：全部 enabled 节点坏认证 → exit 78 + 各腿失败列。
