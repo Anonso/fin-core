@@ -71,6 +71,9 @@ class _RawCapture:
     revision: str
     captured_at: datetime
     stale_cache: bool = False
+    #: 回放原因码（MARGIN_EVIDENCE_HTTP_RESPONSE_INVALID / TRANSPORT_UNAVAILABLE），
+    #: 由 read() 与 STALE_CACHE 叠加成两个 gap，保留故障类型归因（BUG-040）。
+    stale_reason: str = ""
 
 
 class EastmoneyMarginEvidenceSource:
@@ -126,6 +129,8 @@ class EastmoneyMarginEvidenceSource:
                 capture = self._capture_market(venue, request=request)
                 markets[venue] = _parse_market(capture)
                 if capture.stale_cache:
+                    if capture.stale_reason:
+                        gaps.append(f"{capture.stale_reason}:{venue}")
                     gaps.append(f"MARGIN_EVIDENCE_STALE_CACHE:{venue}")
             except EastmoneyMarginEvidenceError as error:
                 gaps.append(f"{error.code}:{venue}")
@@ -146,6 +151,8 @@ class EastmoneyMarginEvidenceSource:
                 kline_capture = self._capture_stock_kline(symbol, request=request)
                 denominators = _parse_stock_kline(kline_capture)
                 if kline_capture.stale_cache:
+                    if kline_capture.stale_reason:
+                        gaps.append(f"{kline_capture.stale_reason}:{symbol}")
                     gaps.append(f"MARGIN_EVIDENCE_STALE_CACHE:{symbol}")
             except EastmoneyMarginEvidenceError as error:
                 denominators = {}
@@ -161,6 +168,8 @@ class EastmoneyMarginEvidenceSource:
             except EastmoneyMarginEvidenceError as error:
                 gaps.append(f"{error.code}:{symbol}")
             if margin_capture.stale_cache:
+                if margin_capture.stale_reason:
+                    gaps.append(f"{margin_capture.stale_reason}:{symbol}")
                 gaps.append(f"MARGIN_EVIDENCE_STALE_CACHE:{symbol}")
         return MarginEvidenceSourceResult(
             markets=markets,
@@ -293,22 +302,43 @@ class EastmoneyMarginEvidenceSource:
                 or not isinstance(raw_payload, bytes)
                 or len(raw_payload) > _MAX_RAW_BYTES
             ):
-                raise EastmoneyMarginEvidenceError("MARGIN_EVIDENCE_HTTP_RESPONSE_INVALID")
+                # BUG-040：HTTP 非 200（恰是反爬 403/5xx 形态）与传输异常同走
+                # stale 回放；失败原因码经 stale_reason 保留，回放时与
+                # STALE_CACHE 叠加成两个 gap，不再随故障类型漂移。
+                return self._replay_or_raise(
+                    scope, reason="MARGIN_EVIDENCE_HTTP_RESPONSE_INVALID"
+                )
             return self._store.capture(
                 scope, raw_payload=raw_payload, captured_at=_aware_now(self._clock)
             )
         except EastmoneyMarginEvidenceError:
             raise
         except Exception as error:
-            cached = self._store.load_latest(scope)
-            if cached is not None:
-                return _RawCapture(
-                    raw_payload=cached.raw_payload,
-                    revision=cached.revision,
-                    captured_at=cached.captured_at,
-                    stale_cache=True,
-                )
-            raise EastmoneyMarginEvidenceError("MARGIN_EVIDENCE_TRANSPORT_UNAVAILABLE") from error
+            return self._replay_or_raise(
+                scope,
+                reason="MARGIN_EVIDENCE_TRANSPORT_UNAVAILABLE",
+                cause=error,
+            )
+
+    def _replay_or_raise(
+        self,
+        scope: tuple[str, str],
+        *,
+        reason: str,
+        cause: BaseException | None = None,
+    ) -> _RawCapture:
+        cached = self._store.load_latest(scope)
+        if cached is not None:
+            return _RawCapture(
+                raw_payload=cached.raw_payload,
+                revision=cached.revision,
+                captured_at=cached.captured_at,
+                stale_cache=True,
+                stale_reason=reason,
+            )
+        if cause is not None:
+            raise EastmoneyMarginEvidenceError(reason) from cause
+        raise EastmoneyMarginEvidenceError(reason)
 
 
 def _margin_headers() -> dict[str, str]:

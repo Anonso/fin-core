@@ -157,3 +157,61 @@ def test_source_merges_same_day_free_float_cap_from_stock_quote(tmp_path: Path) 
     [stock] = result.instruments["600519.SH"]
     # 反推路径(50000)被当日 f117 覆盖为 400000
     assert stock.free_float_market_cap == Decimal("400000")
+
+
+def test_http_403_replays_stale_cache_with_reason_gaps(tmp_path: Path) -> None:
+    """BUG-040：HTTP 非 200（反爬 403/5xx）与传输异常同走 stale 回放。
+
+    回放成功时同时保留原因码 gap 与 STALE_CACHE gap，不随故障类型漂移。
+    """
+    warm_transport = _Transport()
+    captured_at = datetime(2026, 8, 8, 9, 30, tzinfo=CN_TZ)
+    artifact_root = tmp_path / "margin-artifacts"
+    warm_source = EastmoneyMarginEvidenceSource(
+        artifact_root=artifact_root,
+        http_get=warm_transport,
+        evidence_origin=ObservationEvidenceOrigin.TEST_ONLY,
+        clock=lambda: captured_at,
+    )
+    request = MarginEvidenceRequest(instruments=("600519.SH",), as_of=captured_at)
+    warm_source.read(request)
+
+    def blocked_get(url, *, params, headers, timeout, allow_redirects):
+        return _Response(b"blocked", status_code=403)
+
+    blocked_source = EastmoneyMarginEvidenceSource(
+        artifact_root=artifact_root,
+        http_get=blocked_get,
+        evidence_origin=ObservationEvidenceOrigin.TEST_ONLY,
+        clock=lambda: captured_at,
+    )
+    result = blocked_source.read(request)
+
+    assert result.markets, "回放后仍应提供市场级陈旧数据"
+    assert "MARGIN_EVIDENCE_HTTP_RESPONSE_INVALID:SH" in result.data_gaps
+    assert "MARGIN_EVIDENCE_STALE_CACHE:SH" in result.data_gaps
+    assert "MARGIN_EVIDENCE_HTTP_RESPONSE_INVALID:600519.SH" in result.data_gaps
+    assert "MARGIN_EVIDENCE_STALE_CACHE:600519.SH" in result.data_gaps
+
+
+def test_http_403_without_cache_reports_http_invalid_gap(tmp_path: Path) -> None:
+    """无缓存可回放时，原因码照旧上抛为 typed gap（不伪造数据）。"""
+
+    def blocked_get(url, *, params, headers, timeout, allow_redirects):
+        return _Response(b"blocked", status_code=403)
+
+    source = EastmoneyMarginEvidenceSource(
+        artifact_root=tmp_path / "margin-artifacts-cold",
+        http_get=blocked_get,
+        evidence_origin=ObservationEvidenceOrigin.TEST_ONLY,
+        clock=lambda: datetime(2026, 8, 8, 9, 30, tzinfo=CN_TZ),
+    )
+    result = source.read(
+        MarginEvidenceRequest(
+            instruments=("600519.SH",),
+            as_of=datetime(2026, 8, 8, 9, 30, tzinfo=CN_TZ),
+        )
+    )
+
+    assert "MARGIN_EVIDENCE_HTTP_RESPONSE_INVALID:SH" in result.data_gaps
+    assert not any(gap.startswith("MARGIN_EVIDENCE_STALE_CACHE") for gap in result.data_gaps)
