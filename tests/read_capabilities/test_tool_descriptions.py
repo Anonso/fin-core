@@ -112,3 +112,105 @@ def test_record_decision_description_pins_confirmation_bound() -> None:
     assert "nag" in text
     # headless/one-shot 只 preview 不 apply。
     assert "headless/one-shot" in text
+
+
+#: NOW #30 / BUG-029 防复发：每个 MCP 工具的 handler 参数被显式表格钉死。
+#: 工具描述会主动指示 agent 传参——BUG-029 事故即「描述让传 date_from、
+#: 通用 handler 签名没有，pydantic extra=ignore 在 MCP 面静默丢参」。
+#: 描述承诺的参数与 handler 签名的对账在此强制：改任何工具参数必须同改本表。
+_TOOL_PARAM_TABLE: dict[str, set[str]] = {
+    # 通用只读面（_make_tool_handler）
+    **{
+        name: {
+            "question",
+            "instruments",
+            "article_id",
+            "as_of",
+            "deadline_seconds",
+            "session_hint",
+        }
+        for name in (
+            "read_g_context",
+            "read_actual_portfolio",
+            "read_market_snapshot",
+            "read_market_overview",
+            "read_margin_evidence",
+            "read_ready_evidence",
+            "read_instrument_scores",
+            "read_article",
+            "read_macro_brain",
+            "read_shared_brain",
+            "read_user_watchlist",
+        )
+    },
+    # 唯一带日期枚举的检索工具（custom handler，BUG-029 修复面）
+    "read_article_search": {
+        "question",
+        "instruments",
+        "article_id",
+        "as_of",
+        "date_from",
+        "date_to",
+        "deadline_seconds",
+        "session_hint",
+    },
+    # 写缝与 journal 读（各自 custom handler）
+    "update_user_watchlist": {"action", "operations", "question", "session_hint", "token"},
+    "read_decision_journal": {
+        "question",
+        "symbol",
+        "decision_type",
+        "date_from",
+        "date_to",
+        "limit",
+        "session_hint",
+    },
+    "record_decision": {
+        "question",
+        "action",
+        "symbol",
+        "decision_type",
+        "decision_date",
+        "rationale",
+        "note",
+        "revert_of",
+        "date_from",
+        "date_to",
+        "limit",
+        "token",
+        "session_hint",
+    },
+}
+
+
+def test_handler_signatures_match_pinned_param_table() -> None:
+    """描述承诺的参数 ⊆ handler 签名，逐工具对账（NOW #30）。"""
+    import inspect
+
+    from fin_analyse.read_capabilities.server import (
+        _make_article_search_handler,
+        _make_decision_journal_read_handler,
+        _make_record_decision_handler,
+        _make_tool_handler,
+        _make_watchlist_handler,
+    )
+
+    factories = {
+        "update_user_watchlist": _make_watchlist_handler,
+        "read_decision_journal": _make_decision_journal_read_handler,
+        "record_decision": _make_record_decision_handler,
+        "read_article_search": _make_article_search_handler,
+    }
+
+    assert set(_TOOL_PARAM_TABLE) == set(_TOOL_DESCRIPTIONS), (
+        "工具清单与参数表不同步：新增/删除工具必须同改 _TOOL_PARAM_TABLE"
+    )
+
+    for tool, expected in _TOOL_PARAM_TABLE.items():
+        factory = factories.get(tool)
+        handler = factory() if factory is not None else _make_tool_handler(tool)
+        actual = set(inspect.signature(handler).parameters)
+        assert actual == expected, (
+            f"{tool}: handler 参数 {sorted(actual)} 与钉死表格 {sorted(expected)} 不一致——"
+            "若描述新增承诺参数，handler 签名与本表必须同步（BUG-029 教训）"
+        )
