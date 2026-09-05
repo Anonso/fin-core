@@ -159,7 +159,7 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 | 旁路·owner | 22 | meta 设施家规10 自审（D-043/C5）：决策日志 v1、run-design-gate、switch-codex-open-provider、manage-zsxq-capture、manage-zsxq-article-retirement、book-shared-brain-learning、外部审视链（codex_open.sh+双 profile）——无真实使用记录者入休眠候选清单 | 2026-09-18 |
 | 旁路·随手 | 24 | 版本强势英雄补列进 G（D-044①）：source_contract 白名单补列走 45 天 G 窗口；09-05 审查实证 331 篇零车道，验收=该栏新帖进 G manifest | D3 建造静默结束后 |
 | 旁路·随手 | 25 | 老师 Q&A 放行 reference 车道（D-044②）：reference 候选源照 ready_evidence 的 _QA_COLUMNS 闭集放行，zsxq_reference_windows.json 三窗口键复活；09-05 审查实证 18 篇零车道 | D3 建造静默结束后 |
-| 旁路·随手 | 26 | instrument_scores 增量接线（D-044③）：ingest 尾部对 saved_ids 调 parse_article_records+upsert_records；工具描述诚实化已随审落盘（09-05）；owner 09-05 记需求（家规10 用户条款）+门开后第一顺位，过渡期手动 backfill 即使用证据（09-05 夜补跑 +33 条）；短设计 [../design/instrument-score-incremental-ingest.md](../design/instrument-score-incremental-ingest.md) 已冻结，施工前过设计门 | D3 建造静默结束后 |
+| 旁路·随手 | 26 | instrument_scores 增量接线（D-044③）：ingest 尾部对 saved_ids 调 parse_article_records+upsert_records；工具描述诚实化已随审落盘（09-05）；owner 09-05 记需求（家规10 用户条款）+门开后第一顺位，过渡期手动 backfill 即使用证据（09-05 夜补跑 +33 条）；短设计 [../design/instrument-score-incremental-ingest.md](../design/instrument-score-incremental-ingest.md) 已冻结，施工前过设计门；**施工前置（BUG-047 B2-P1③ P2，09-05 夜裁决）：六仓已停写（535a067），解析读面必须从 zsxq_sources.jsonl 改读工件或 md 正文（backfill 同批改），否则 09-05 后新文章图像评分载体静默丢失** | D3 建造静默结束后 |
 | 旁路·随手 | 27 | run_ledger/alert 面量裁（D-044④）：补写入或按规则 12 废除，随 D-031 设计一并定；落定前 alert 链不可作为故障信号依赖 | 随 D-031 |
 | 旁路·时间（09-07） | 28 | BUG-041 竞价窗口观测：盘前班次看 overview 诊断 JSONL，INDEX_TRADE_DATE_MISMATCH 整链拒坐实即按 BUGS 修 | 09-07 盘前班次 |
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
