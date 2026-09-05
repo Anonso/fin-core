@@ -262,6 +262,8 @@ class ProductionReadCapabilityProvider:
                     now=request.as_of.isoformat() if request.as_of is not None else "",
                 )
             )
+        except TimeoutError:
+            raise
         except Exception:
             return ProductionReadResult(
                 value=_g_context_value([]),
@@ -384,6 +386,8 @@ class ProductionReadCapabilityProvider:
         _bounded_inputs(request)
         try:
             result = self._ready_evidence_reader.read(request)
+        except TimeoutError:
+            raise
         except Exception:
             return ProductionReadResult(
                 value={
@@ -451,6 +455,8 @@ class ProductionReadCapabilityProvider:
                         deadline_at=request.deadline_at,
                     )
                 )
+            except TimeoutError:
+                raise
             except Exception:
                 return ProductionReadResult(
                     value=_on_demand_market_snapshot_value(None),
@@ -566,6 +572,8 @@ class ProductionReadCapabilityProvider:
                     deadline_at=request.deadline_at,
                 )
             )
+        except TimeoutError:
+            raise
         except Exception:
             return ProductionReadResult(
                 value=_margin_evidence_value(None),
@@ -627,6 +635,8 @@ class ProductionReadCapabilityProvider:
                     deadline_at=request.deadline_at,
                 )
             )
+        except TimeoutError:
+            raise
         except Exception:
             return ProductionReadResult(
                 value=_external_evidence_value(None),
@@ -680,6 +690,8 @@ class ProductionReadCapabilityProvider:
                     deadline_at=deadline_at,
                 )
             )
+        except TimeoutError:
+            raise
         except Exception:
             return ProductionReadResult(
                 value=_market_overview_value(None),
@@ -767,6 +779,8 @@ class ProductionReadCapabilityProvider:
             )
         try:
             result = self._actual_portfolio.read()
+        except TimeoutError:
+            raise
         except Exception:
             return ProductionReadResult(
                 value=_actual_portfolio_value(None),
@@ -799,6 +813,8 @@ class ProductionReadCapabilityProvider:
             )
         try:
             result = self._user_watchlist.list()
+        except TimeoutError:
+            raise
         except Exception:
             return ProductionReadResult(
                 value=_user_watchlist_value(None),
