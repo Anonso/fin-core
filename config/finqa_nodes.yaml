@@ -13,8 +13,8 @@
 # 使用实况(owner 2026-09-06 定调):owner 真实问询=有头手动(终端 CC/Windows
 # ZCode 连 WSL),无头链流量≈测试——生产链序仅 commandcode 一条,其余皆测试腿。
 # 测试腿名册(flash 非生产;弱腿=服从性/回归探针用;--node 钉腿可达):
-#   A zcode             = glm-5.3-flash(弱腿第一,owner 2026-09-07 拍板启用;单旋钮锚定 flash,无逐次模型机制)
-#   B commandcode-flash = ds-flash(弱腿第二;人格回归探针 persona_regression.sh 钉本腿不随序)
+#   A zcode             = glm-5.3-flash(弱腿第一+人格回归探针钉腿,owner 2026-09-07 拍板;单旋钮锚定 flash,无逐次模型机制)
+#   B commandcode-flash = ds-flash(弱腿第二,同日启用入链)
 #   C claude(备用)      = glm-5.3-flash(CC --model 逐次指定,实测生效)
 # 测试腿原则(owner 2026-09-05 拍板):flash 非生产、仅测试用,FAIL 先分辨
 # 执行方差与人格回归。
@@ -33,11 +33,10 @@ nodes:
   - id: zcode             # 弱腿第一:zcode 无头 glm-5.3-flash(单旋钮锚定;无 TUI 交互形态)
     conn_ref: zcode
     enabled: true         # owner 2026-09-07 拍板启用,位 cmd 弱腿前
-  - id: commandcode-flash # 弱腿第二:同 commandcode 连接,仅换 ds-flash
+  - id: commandcode-flash # 弱腿第二:同 commandcode 连接,仅换 ds-flash(owner 2026-09-07 启用入链)
     conn_ref: commandcode-flash
-    enabled: false
-    session: discard      # 测试/探针腿不留 cmd 会话档(不 resume;tsv=provenance);
-                          # 人格回归探针 persona_regression.sh 钉本腿(--node,不随序)
+    enabled: true
+    session: discard      # 测试/探针腿不留 cmd 会话档(不 resume;tsv=provenance)
   - id: claude             # 备用测试腿:CC 无头 glm-5.3-flash(--model 逐次指定)
     conn_ref: claude-cc-flash
     enabled: false
