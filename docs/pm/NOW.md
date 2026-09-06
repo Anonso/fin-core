@@ -149,6 +149,7 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 | 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+主指数日线 lane（09-04，96f8fcd）+细分板块 lane（09-05，ff372bd）均施工全清，剩 owner 实弹验「线层现工具序列或诚实标注」；09-07 收盘后另核板块 lane 当日 bar 即时性（评审 Q2-P2，见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前+盘后 |
 | 旁路·owner | 2 | finq 记账（D-043/C3）：y 记一字、n 必须一句原因（owner 纪律，不加校验）；存量 3 条历史缺口接受（不回填 append-only 台账），自 D3 起新账强制 | owner 随用 |
 | 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；09-05 夜核对：registry 1695 条、parser v3+增量接线落地（#26 出队）、首篇 [6,7) 边界样本已入册（603629@09-05 能量 6.8）——分级行为核对仍待做；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
+| 旁路·时间（09-06 起） | 30 | 评分增量接线实弹首验：首个采集 tick 后核日志 `[INSTRUMENT-SCORES]` 行与 registry 增长（2c8b3cf 接线+4e93495 v4 守卫；探针已幂等 added=0/updated=0；静默失败=注册表回淤，正是本次修的病） | 09-06 首个采集 tick 后 |
 | 旁路·使用触发 | 28 | 语义查询（混合召回）评估已核（09-06）：trace 全量（08-27 起 1415 调用）read_article_search 184 次零 `article_search_no_match`、read_shared_brain 1/85、read_instrument_scores 3/66（已确诊=BUG-048 格式病非语义缺口）——现状无立项凭证；开工凭证=同义/换说法型零召回在 trace 或 finq 真实复发，届时首选 read_article_search embedding 召回+TF-IDF 精排（语料 1425 篇建库成本可忽略），g_context/ready_evidence 确定性分层不动 | 使用触发 |
 | 旁路·使用触发 | 12 | 标签检索缝开工凭证：首条真实抱怨「翻星球内容而不得」（finq 记账） | 使用触发 |
 | 旁路·P5 前 | 13 | Hermes 问询 agent 同源化设计（D-032 方案 A）：人格/工具/记忆三缝同源 + P1 六题级验收；飞书传输复用既有 gateway，不新建 | D3 之后、P5 前 |
