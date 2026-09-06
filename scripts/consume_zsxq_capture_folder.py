@@ -639,6 +639,7 @@ def _reconcile_g_annotation_batch_inbox(
     scan_result: dict[str, object],
     *,
     annotation_path: Path,
+    today: object = None,
 ) -> None:
     """G 标注批次真相同步（best-effort producer，D-051 v0.1）。
 
@@ -647,11 +648,14 @@ def _reconcile_g_annotation_batch_inbox(
     库内有更新老师文章——只报数量/跨度，不提名具体文章（普通栏不进机器
     提名闭集，复核权留 owner）；as_of 随批次完成滚动 → 自动消项。
     SKIPPED（as_of 缺失/index 不可读）真相未知，不碰 inbox。
+    ``today`` 注入缝：生产缺省走真实时钟，测试显式钉日期（6f09fc8 留痕的
+    两例时间炸弹根因=测试断言依赖 date.today()，跨日失真）。
     """
 
     batch = scan_annotation_batch(
         annotation_path=annotation_path,
         index_path=default_knowledge_base_root() / "index.json",
+        today=today,  # type: ignore[arg-type]
     )
     if batch.disposition != "SCANNED":
         return

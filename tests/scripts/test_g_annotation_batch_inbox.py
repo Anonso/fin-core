@@ -84,6 +84,7 @@ def test_reconcile_opens_batch_item_when_lag_meets_threshold(
     _reconcile_g_annotation_batch_inbox(
         {"disposition": "SCANNED", "nominated": 0, "draft_path": None},
         annotation_path=kb / _ANNOTATION,
+        today=date(2026, 9, 6),
     )
     from fin_analyse.adjudication.inbox import open_default_inbox
 
@@ -107,6 +108,7 @@ def test_reconcile_composes_nomination_info_into_title(
     _reconcile_g_annotation_batch_inbox(
         {"disposition": "SCANNED", "nominated": 1, "draft_path": "/tmp/draft.md"},
         annotation_path=kb / _ANNOTATION,
+        today=date(2026, 9, 6),
     )
     from fin_analyse.adjudication.inbox import open_default_inbox
 
@@ -132,7 +134,9 @@ def test_reconcile_resolves_after_as_of_rolls(
     # owner 完成批次：as_of 滚到 9/06（覆盖 9/05 文章）→ lag=0 → auto-resolve
     (kb / _ANNOTATION).write_text("as_of=2026-09-06\n", encoding="utf-8")
     _reconcile_g_annotation_batch_inbox(
-        {"disposition": "SCANNED", "nominated": 0}, annotation_path=kb / _ANNOTATION
+        {"disposition": "SCANNED", "nominated": 0},
+        annotation_path=kb / _ANNOTATION,
+        today=date(2026, 9, 6),
     )
     row = inbox.get("g.annotation_batch")
     assert row is not None
@@ -149,7 +153,9 @@ def test_reconcile_below_threshold_keeps_inbox_untouched(
         tmp_path, monkeypatch, as_of="2026-09-05", articles=[_article("2026-09-06 09:00")]
     )
     _reconcile_g_annotation_batch_inbox(
-        {"disposition": "SCANNED", "nominated": 0}, annotation_path=kb / _ANNOTATION
+        {"disposition": "SCANNED", "nominated": 0},
+        annotation_path=kb / _ANNOTATION,
+        today=date(2026, 9, 6),
     )
     assert open_default_inbox().get("g.annotation_batch") is None  # lag=1 < 2
 
@@ -168,7 +174,9 @@ def test_threshold_configurable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
         tmp_path, monkeypatch, as_of="2026-09-04", articles=[_article("2026-09-05 14:34")]
     )
     _reconcile_g_annotation_batch_inbox(
-        {"disposition": "SCANNED", "nominated": 0}, annotation_path=kb / _ANNOTATION
+        {"disposition": "SCANNED", "nominated": 0},
+        annotation_path=kb / _ANNOTATION,
+        today=date(2026, 9, 6),
     )
     from fin_analyse.adjudication.inbox import open_default_inbox
 
