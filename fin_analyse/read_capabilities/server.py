@@ -324,10 +324,15 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "server-side. preview is zero-write and returns a confirmation "
         "phrase containing every substantive field; apply appends only "
         "after the user explicitly confirms that exact phrase. ONLY record "
-        "decisions the user actually stated; NEVER invent, embellish, or "
-        "proactively remind/nag the user to record decisions (one unconfirmed "
-        "proposal is never followed up); in headless/one-shot sessions only "
-        "preview, never apply."
+        "decisions the user actually stated; NEVER invent or embellish. "
+        "Exception (owner 2026-09-06): when this session's answer gives a "
+        "concrete position-operation recommendation (explicit buy/sell/trim/"
+        "add/hold-change on a named instrument), proactively attach exactly "
+        "ONE record_decision preview draft at the end of the answer, with "
+        "rationale quoted from the answer; after one unconfirmed proposal, "
+        "never follow up, nag, or re-propose. Outside that scenario do not "
+        "proactively remind the user to record decisions. In "
+        "headless/one-shot sessions only preview, never apply."
     ),
 }
 

@@ -107,9 +107,13 @@ def test_record_decision_description_pins_confirmation_bound() -> None:
     assert "apply" in text
     assert "owner_stated" in text
     assert "single use" in text
-    # 不催记录（anti-nag 纪律）。
+    # 不催记录（anti-nag 纪律；D-049 窄口例外不放宽其余面）。
     assert "NEVER" in text
     assert "nag" in text
+    # 2026-09-06 D-049 窄口例外：持仓操作建议答案尾部恰好一条 preview 草稿，
+    # 未确认永不追问/重提。
+    assert "ONE record_decision preview draft" in text
+    assert "never follow up" in text
     # headless/one-shot 只 preview 不 apply。
     assert "headless/one-shot" in text
 

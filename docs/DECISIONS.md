@@ -500,3 +500,10 @@
 - 否决了什么：①三 harness 统一 API 路由表（要发明适配层，无消费方举证）；②熔断/TTL 状态机（人频次现探现走够，不预置）；③问询链做 --resume 续问（与可丢语义冲突，效果评估续问留在 codex_routes）；④finqa-codex 改名/旧函数废除（owner 收敛：不改名、暂时关闭）。
 - 功能面： finqa-chain
 - 状态：active · 证据：config/finqa_nodes.yaml + scripts/finqa_chain.py（0cd0b27）；设计门 cmd·ds-pro ≈250s 采纳 11 不采纳 1（台账 design-gate/finqa-chain-v1-20260905/）；演练绿（fallback/双挂 78/disabled 跳过），在用判定=盲评 runner CC 腿迁移后首次真实运行。
+
+## D-049 · 2026-09-06 · 决策日志不催纪律窄口修订：持仓操作建议答案尾部自动附一条 record_decision preview 草稿（owner 拍板「按推荐处理」）
+- 决策：问询答案给出具体持仓操作建议（明确买卖/加减/持有调整且落到具体标的）时，答案尾部自动附恰好一条 record_decision preview 草稿（动作/标的/决策日照答案、理由引答案原文），owner 确认才 apply，未确认不追问不重复出草稿；纯事实/行情/不涉操作的判断不附。改动=两处文本：consult-agent CLAUDE.md 规则 8 修订注 + server record_decision 描述窄口例外（测试钉子 test_record_decision_description_pins_confirmation_bound 同步加断言）。
+- 为什么：「问询→持仓变化」现无关联记录（快照覆盖写无历史、journal 本机空置、trace 问题只存 digest），留账靠 owner 想起来才记；自动递草稿把「记不记」的决定权留给 owner、把「想起来记」的成本降为零。D-042 不催纪律其余面（一次未确认不追问、不代 owner 陈述、headless 只 preview）全部保留。
+- 否决了什么：①自动/免确认 apply（journal 是 owner-stated 事实史，助手代陈述即污染账本）；②发布流追加变更日志（durable 新状态，按家规 10 等草稿机制真实使用后再评估，本轮不做）；③server trace 落问题原文（digest 是有意的隐私取向，不动）。
+- 功能面： 决策日志
+- 状态：active · 证据：fin_analyse/read_capabilities/server.py record_decision 描述 + ~/fin-data/consult-agent/CLAUDE.md 规则 8（2026-09-06 修订注）；效果判定=留账率与噪音感受，随 finq 记账观察一至两周。
