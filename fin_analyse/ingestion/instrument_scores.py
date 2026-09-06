@@ -837,6 +837,16 @@ def update_instrument_scores(
     )
 
 
+# 6 位代码核心须带数字边界（防 "6005190" 长数字串误截）；持仓快照规范
+# 格式是 601899.SH 形态，查询词可能带后缀抵达，匹配一律取 6 位核心。
+_INSTRUMENT_CODE_RE = re.compile(r"(?<![0-9])[0-9]{6}(?![0-9])")
+
+
+def _instrument_code_key(instrument: str) -> str | None:
+    match = _INSTRUMENT_CODE_RE.search(instrument)
+    return match.group(0) if match else None
+
+
 _HISTORY_HINT_TOKENS = frozenset(
     {
         "历史",
@@ -973,9 +983,11 @@ class InstrumentScoreQueryReader:
             )
             if instruments:
                 for instrument in instruments:
-                    if instrument.isdigit() and code == instrument:
-                        return True
-                    if not instrument.isdigit() and instrument in name:
+                    code_key = _instrument_code_key(instrument)
+                    if code_key is not None:
+                        if code == code_key:
+                            return True
+                    elif instrument in name:
                         return True
                 return False
             return (

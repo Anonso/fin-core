@@ -117,6 +117,18 @@ def test_reader_code_filter_and_needs_review_count(tmp_path: Path) -> None:
     assert "instrument_scores_no_match" in result.data_gaps
 
 
+def test_reader_matches_suffixed_portfolio_symbols(tmp_path: Path) -> None:
+    """持仓快照规范格式是 002156.SZ 形态，带后缀查询须按 6 位代码核心匹配。"""
+    _write_store(tmp_path)
+    reader = _reader(tmp_path)
+    result = reader.read(
+        _request("持仓评分", instruments=("002156.SZ", "601138.SH"))
+    )
+    assert result.value["counts"]["matched"] == 3  # 002156 两条例证 + 601138 一条
+    assert result.value["counts"]["ok"] == 2  # 60 天窗口内
+    assert result.data_gaps == ()
+
+
 def test_reader_missing_store_gap(tmp_path: Path) -> None:
     reader = _reader(tmp_path)
     result = reader.read(_request("通富微电 评分"))
