@@ -11,13 +11,14 @@
 # 旋钮:session: keep|discard(仅 commandcode;discard=无头 --no-session,交互式
 # 报错)、effort=launcher 单点 max。
 # 使用实况(owner 2026-09-06 定调):owner 真实问询=有头手动(终端 CC/Windows
-# ZCode 连 WSL),无头链流量≈测试——生产链序仅 commandcode 一条,其余皆测试腿。
-# 测试腿名册(flash 非生产;弱腿=服从性/回归探针用;--node 钉腿可达):
+# ZCode 连 WSL),无头链流量≈测试。
+# 生产链序 = commandcode(ds-pro)→ claude(CC·glm-5.3 备用,owner 2026-09-07 启用);
+#   codex 池禁休眠自动跳过。flash 腿不入生产链序(测试腿原则 2026-09-05)。
+# 弱腿名册(enabled:false 不入链序,--node 钉腿可达;flash 非生产):
 #   A zcode             = glm-5.3-flash(弱腿第一+人格回归探针钉腿,owner 2026-09-07 拍板;单旋钮锚定 flash,无逐次模型机制)
-#   B commandcode-flash = ds-flash(弱腿第二,同日启用入链)
-#   C claude(备用)      = glm-5.3-flash(CC --model 逐次指定,实测生效)
+#   B commandcode-flash = ds-flash(弱腿第二)
 # 弱双腿测试(owner 2026-09-07 拍板)=A+B 并跑:zcode 与 commandcode-flash 两条
-#   --node 钉腿各一发,用于执行方差分辨/对照评估;claude 不入弱双腿。
+#   --node 钉腿各一发,用于执行方差分辨/对照评估;CC·glm-5.3 备用不入弱双腿。
 # 测试腿原则(owner 2026-09-05 拍板):flash 非生产、仅测试用,FAIL 先分辨
 # 执行方差与人格回归。
 schema_version: fin.finqa-nodes/v2
@@ -31,14 +32,14 @@ nodes:
   - id: codex             # codex CLI + opencode-go(休眠:池条目 codex-opencode enabled=false)
     conn_ref: codex-opencode
     enabled: true         # 恢复语义:只翻池条目 enabled 一处,本节点常态 true
-  # —— 弱腿/测试腿(flash 非生产;声明序=弱腿优先序;--node 钉腿可达;出题自测/对照评估)——
+  # —— 弱腿(flash 非生产:enabled=false 不入链序,--node 钉腿可达;弱双腿=A+B 并跑)——
   - id: zcode             # 弱腿第一:zcode 无头 glm-5.3-flash(单旋钮锚定;无 TUI 交互形态)
     conn_ref: zcode
-    enabled: true         # owner 2026-09-07 拍板启用,位 cmd 弱腿前
-  - id: commandcode-flash # 弱腿第二:同 commandcode 连接,仅换 ds-flash(owner 2026-09-07 启用入链)
+    enabled: false        # owner 2026-09-07 拍板:弱腿不入生产链序,仅钉腿
+  - id: commandcode-flash # 弱腿第二:同 commandcode 连接,仅换 ds-flash
     conn_ref: commandcode-flash
-    enabled: true
-    session: discard      # 测试/探针腿不留 cmd 会话档(不 resume;tsv=provenance)
-  - id: claude             # 备用测试腿:CC 无头 glm-5.3-flash(--model 逐次指定)
-    conn_ref: claude-cc-flash
     enabled: false
+    session: discard      # 测试/探针腿不留 cmd 会话档(不 resume;tsv=provenance)
+  - id: claude             # 生产备用:CC 无头 glm-5.3(非 flash;--model 逐次指定)
+    conn_ref: claude-cc
+    enabled: true         # owner 2026-09-07 拍板启用为生产链备用
