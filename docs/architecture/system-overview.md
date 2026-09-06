@@ -1,14 +1,16 @@
 # FIN 系统概览（一页纸）
 
 > 定位：给新读者、新 AI 会话的 5 分钟理解面。术语逐条见 [GLOSSARY](../GLOSSARY.md)；
+> LLM/链路/入口拓扑见 [llm-route-topology](llm-route-topology.md)；
 > 当前状态/队列见 [NOW](../pm/NOW.md)——本文**无状态**，只在模块或链路结构变化时更新。
 
 ## FIN 是什么
 
 面向 A 股决策辅助的自用 AI 投研系统（家规定位 1–5 人，当前单人）。两个产品面：
 
-1. **顾问咨询**：在终端经 codex / CC 客户端向 FIN 顾问 Agent 提问；FIN 装配老师认知（G）、
-   行情、持仓与可追溯证据注入，强 Agent 负责理解、反证、综合与表达。一切 advisory-only。
+1. **顾问咨询**：经 finqa 入口（launcher，owner 与机器共用同一链）向 FIN 顾问 Agent 提问；
+   FIN 装配老师认知（G）、行情、持仓与可追溯证据注入，强 Agent 负责理解、反证、综合与
+   表达。一切 advisory-only。
 2. **Daily 简报**：每交易日四班（盘前 9:20 / 早盘 10:00 / 收盘 14:20 / 盘后 15:30）自动生成，
    经 Hermes 消息通道投递飞书，durable 状态机保证不丢不重。
 

@@ -1,5 +1,6 @@
 # LLM 能力映射（不保存 key 或 URL 实值）
 # 实值统一来自 FIN_LLM_ENV_FILE 指向的 owner-only 环境文件。
+# 拓扑投影=docs/architecture/llm-route-topology.md：改本表链序/增删条目须同步该页。
 
 models:
   # GLM-5.3 (官方 bigmodel coding plan，CC 同款凭据) - 难题质量锚（T0）
