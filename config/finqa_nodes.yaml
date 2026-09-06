@@ -16,6 +16,8 @@
 #   A zcode             = glm-5.3-flash(弱腿第一+人格回归探针钉腿,owner 2026-09-07 拍板;单旋钮锚定 flash,无逐次模型机制)
 #   B commandcode-flash = ds-flash(弱腿第二,同日启用入链)
 #   C claude(备用)      = glm-5.3-flash(CC --model 逐次指定,实测生效)
+# 弱双腿测试(owner 2026-09-07 拍板)=A+B 并跑:zcode 与 commandcode-flash 两条
+#   --node 钉腿各一发,用于执行方差分辨/对照评估;claude 不入弱双腿。
 # 测试腿原则(owner 2026-09-05 拍板):flash 非生产、仅测试用,FAIL 先分辨
 # 执行方差与人格回归。
 schema_version: fin.finqa-nodes/v2
