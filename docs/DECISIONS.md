@@ -520,3 +520,10 @@
 - 否决了什么：①B 保守方案（bashrc 交互函数保持现状=病根不动，权威仍无 diff 史）；②`--leg` 与 `--node` 并存（两钉腿旗标=新分叉）；③-e/-m 自由参数面（现实消费者全有节点，规则 6 不预建）。**本条反转 D-048 否决项④**（「finqa-codex 改名/旧函数废除被否」）——分叉事故实证后 owner 改拍板废除。
 - 功能面： finqa-chain
 - 状态：active · 证据：设计门台账 design-gate/finqa-cli-unify-20260906/（cmd·ds-pro 两次发射:attempt1 输出夭折[BUG-055 假成功形态]、attempt2 角色混淆但 3 发现全采纳驳回 0）；zcode-flash/commandcode-flash 钉腿实答 + tsv success 行；switch-codex-open-provider/run-design-gate 两 SKILL.md 活引用同步修订。
+
+## D-051 · 2026-09-06 · 裁决收件箱立项：跨功能「待 owner 裁决」统一清单 + 每日飞书摘要（owner 会话拍板「按推荐处理，飞书就用 hermes 那个」）
+- 决策：新增 `fin_analyse/adjudication` 薄层（SQLite WAL，`$STATE/fin-analyse/adjudication-inbox-v1/`；reconcile producer 真相同步 / CLI `fin-adjudication` list|show|done|add|push / sent_log 指纹幂等）+ systemd timer 工作日 09:00 经既有 Hermes fin profile 推摘要（无项不发；积压>3 天标 ⚠，config/adjudication.yaml）。v0 只接 producer：G 主线候选提名（consume scan 结果分支后独立挂点）；**portfolio 持仓面砍出 v0**——核实其唯一生产入口=旧 gateway 咨询面（2026-08-27 停用），挂休眠路径是死 producer，接线单列后续项等持仓写路径回生产。注册协议=设计门清单判据「新增 preview→确认/提名→扫批/需人工确认的警告面 → 必须接 reconcile seam」。
+- 为什么：全库扫描出 8 个「等 owner 裁决」面各自为政（主线提名/回放提名/持仓 preview/决策警告/研究建议/标签边界/宏观排除/NOW-BUGS 文档行），零清单零提醒，owner 靠记忆——治「忘记主动问」只有推送可靠（拉模式都得先想起来）。硬边界 2 定时外发由 owner 本次明确授权。
+- 否决了什么：①飞书入站裁决回复（咨询入口停用+写副作用必须回各功能确认面）；②统一裁决执行（特性内聚，收件箱只做清单+状态+触达）；③恢复 Daily 四班（D-030 维持）；④JSONL 侧车/轮询 producer（三进程并发需真串行化点）；⑤AGENTS.md 硬条款与未注册 producer 自动扫描（owner 未选/无普遍判据）。
+- 功能面： 裁决收件箱
+- 状态：active · 证据：设计门两轮（r1 619s cmd·ds-pro 5P1/2P2/1P3；r2 1477s 替补 claudecode·glm-5.3——cmd 两次 rc=3 自动 fallback 落账 fallback.tsv，2P1/5P2/5P3，判定「修订后可施工」；全部裁决折入 r3，台账 `$STATE/fin-analyse/design-gate/adjudication-inbox-20260906{,-r2}/`）；tests/adjudication 33 绿 + 全仓 2662+639 绿（2 skip=无 Hermes 既有）；冒烟=真发一条 + 同指纹 already_sent 去重 + service 单元实跑 no_open_items + timer 已 enable（下班次周一 09:00）。

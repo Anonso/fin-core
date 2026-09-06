@@ -20,9 +20,11 @@ from hashlib import sha256
 from io import StringIO
 from pathlib import Path
 
+from fin_analyse.adjudication import AdjudicationInbox, AdjudicationItem
 from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import rebuild_if_stale
 from fin_analyse.guo_teacher_research.mainline_candidates import scan_mainline_candidates
 from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
+from fin_analyse.runtime.state_roots import adjudication_inbox_state_root
 from fin_analyse.scraper.capture_ingest import main as import_capture
 
 _SCHEMA_VERSION = "fin.zsxq-capture-folder-consumer/v1"
@@ -519,8 +521,9 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
         _append_rebuild_audit(result_dict, state_root / "fin-analyse")
 
     # 设计门 g-mainline-growth-v1 部件1：候选扫描与 rebuild 同位触发；纯读
-    # index/KB，唯一写出是 state 下的候选草稿（0600 幂等重写）；typed、
-    # 永不阻断 ingest、不改 rebuild 结果。
+    # index/KB，唯一写出是 state 下的候选草稿（0600 幂等重写）+ 裁决收件箱
+    # SQLite（best-effort，adjudication-inbox 设计页）；typed、永不阻断
+    # ingest、不改 rebuild 结果。
     try:
         scan = scan_mainline_candidates(
             annotation_path=annotation,
@@ -541,7 +544,47 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
             state_root / "fin-analyse",
             filename=_CANDIDATES_AUDIT_NAME,
         )
+    # 裁决收件箱 producer 真相同步：钉在 scan try/except 之外、audit 同层、
+    # 独立 suppress+logging——inbox 异常不得被误记为 scan_invocation_failed。
+    try:
+        _reconcile_mainline_nomination_inbox(scan_dict)
+    except Exception:  # noqa: BLE001 - inbox 挂点永不阻断 ingest
+        logging.getLogger(__name__).warning(
+            "adjudication inbox reconcile failed", exc_info=True
+        )
     return result_dict
+
+
+def _reconcile_mainline_nomination_inbox(scan_result: dict[str, object]) -> None:
+    """主线提名真相同步（best-effort producer，adjudication-inbox 设计页）。
+
+    pending = SCANNED 且 nominated>0（owner 扫批入档即完成路径，nominated 清零
+    干净）；same_article 清空只随 as_of 锚滚动，只作 title 信息性计数，不作
+    pending 依据（r2-P1-1）。SKIPPED/FAILED 真相未知，不碰 inbox；SCANNED 且
+    归零 → producer auto-resolve。
+    """
+
+    if scan_result.get("disposition") != "SCANNED":
+        return
+    nominated = scan_result.get("nominated")
+    same_article = scan_result.get("same_article")
+    draft_path = scan_result.get("draft_path")
+    title = f"G 主线候选提名：{nominated if isinstance(nominated, int) else 0} 条待勾选"
+    if isinstance(same_article, int) and same_article:
+        title += f"，另有 {same_article} 条同文待核"
+    AdjudicationInbox(state_root=adjudication_inbox_state_root()).reconcile(
+        AdjudicationItem(
+            item_id="mainline.nomination",
+            kind="g-mainline-nomination",
+            title=title,
+            payload_ref=str(draft_path) if isinstance(draft_path, str) else None,
+            resolution_hint=(
+                "勾选→起草协议→verify_mainline_annotation.py 机验→手工归档标注文档；"
+                "完成后 fin-adjudication done mainline.nomination"
+            ),
+        ),
+        pending=isinstance(nominated, int) and nominated > 0,
+    )
 
 
 def _append_rebuild_audit(

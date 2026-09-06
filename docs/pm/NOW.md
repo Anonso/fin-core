@@ -186,6 +186,7 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 | 产品面 | 状态 | 验收手段 | 指针 |
 | --- | --- | --- | --- |
 | Daily 简报 | 问询验收中（**09-01 起 D-030 停推**，复验并入 D-031；带伤班次主因 BUG-015/016/017 已修并经 09-01 morning 真实班 gaps=[] 确认；盘前概览 gap 已随 BUG-002 09-04 闭环消解〔盘前形态=设计内 PARTIAL〕；更早施工叙事入 Git/BUGS） | 四班交付记录 + B1 盲评 | 【最后】D-031（最后9）；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008/015/016/017 |
+| 裁决收件箱 | 运行态（09-06 建〔D-051〕：`fin-adjudication` CLI + SQLite 收件箱 + 工作日 09:00 飞书摘要 timer；首推冒烟真发+指纹去重过；v0 producer=主线提名，首个真实项随下一采集 tick 落箱；裁决执行留在各功能原确认面） | `fin-adjudication list`；`journalctl --user -u fin-adjudication-digest` | 短设计按规则 5 归档（git 史 adjudication-inbox）；D-051；数据=$STATE/fin-analyse/adjudication-inbox-v1/ |
 
 ## 待办队列（只放未决项）
 
@@ -214,6 +215,8 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 | 旁路·时间（09-07） | 28 | BUG-041 竞价窗口观测：盘前班次看 overview 诊断 JSONL，INDEX_TRADE_DATE_MISMATCH 整链拒坐实即按 BUGS 修 | 09-07 盘前班次 |
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
 | 旁路·随手 | 31 | 日线第三源施工：短设计已备（docs/design/daily-bar-third-source.md，候选源待实弹核验，owner 09-05 拍板立项）；施工前跑设计门 | D3 建造静默结束后 |
+| 旁路·使用触发 | 32 | 裁决收件箱 portfolio 接线（D-051 v0 砍出项）：持仓写路径回生产时挂 `save`/`confirm` 挂点，终态映射按 ConfirmStatus 8 值闭集（PUBLISHED/UNCHANGED→resolve，NO_PENDING_REVIEW/BUSY→no-op，其余不动） | 持仓写路径回生产时 |
+| 旁路·owner | 33 | run-design-gate skill §0 增一行注册协议判据（D-051：新增 preview→确认/提名→扫批/需人工确认警告面必须接裁决收件箱 seam）——skill 文件本机未定位到（workspace/用户 skills 均无），owner 指认实际落点后补 | owner 指认 skill 位置 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）

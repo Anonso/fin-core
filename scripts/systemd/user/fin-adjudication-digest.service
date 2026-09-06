@@ -1,0 +1,13 @@
+[Unit]
+Description=FIN adjudication inbox daily digest (push pending owner adjudications)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=HOME=/home/ypk
+EnvironmentFile=/home/ypk/.config/fin-analyse/daily-workspace-target.env
+Environment=PYTHONSAFEPATH=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ypk/fin-core/.venv/bin/fin-adjudication push

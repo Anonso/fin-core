@@ -52,6 +52,7 @@ dev = [
 
 [project.scripts]
 fin-cognition = "fin_analyse.cognition.cli:main"
+fin-adjudication = "fin_analyse.adjudication.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

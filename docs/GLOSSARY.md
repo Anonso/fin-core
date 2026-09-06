@@ -66,6 +66,7 @@
 | **vision chain** | 识图链：mimo-token-plan → glm53_flash → glm-vision → vision(Qwen3-VL) → mimo，全败落 OCR 终兜底；`vision.chain` 段配置化。 | [config/llm.yaml](../config/llm.yaml) `vision.chain` 段 |
 | **复评第一层** | `/review`（实名 skill，自固定比较点）；Spec 轴源指向 docs/design/、NOW.md、commit message，不依赖 issue tracker。 | [AGENTS.md](../AGENTS.md) 复评第一层节 |
 | **外部审视** | 统一外部评审机制，CC 与 ZCode 会话同等执行：评审者固定 scripts/codex_open.sh（评审者链 D-045：cmd·deepseek-v4-pro 主 → glm·glm-5.3 替补，自动 fallback 横幅+fallback.tsv；换规格只改脚本 profile 表）；三触发各一次=设计门/吓人 diff/外援；packet 冻结四问（骨架与落盘约定见 [packet 模板](design-gate-packet-template.md)）；评审只产发现、裁决归执行会话；裁决记录=时长/发现/采纳/驳回+实际评审者。codex-open 不设设计门/外部审计，全部自己完成。 | [AGENTS.md](../AGENTS.md) 审查机制归属 |
+| **裁决收件箱** | 跨功能「待 owner 裁决」统一清单+触达薄层（D-051）：producer 在真相处一次 `reconcile` 登记（只存元数据与指针，不复制内容），owner 经 `fin-adjudication` CLI list/show/done/add，systemd timer 工作日 09:00 经 Hermes fin profile 推摘要（无项不发、指纹幂等）；裁决执行留在各功能自己的确认面，新「preview→确认/提名→扫批/需人工确认警告面」动代码前必须接 seam。 | [system-overview](architecture/system-overview.md) 交付与运行面；NOW 板 B |
 
 ## 运行与发布
 

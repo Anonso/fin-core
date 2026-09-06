@@ -59,6 +59,18 @@ def project_sync_report_root(
     return _state_home(home=home, environ=environ) / "fin-analyse" / "project-sync"
 
 
+def adjudication_inbox_state_root(
+    *,
+    home: Path | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> Path:
+    """Return the adjudication inbox owner root without creating it."""
+
+    return _state_home(home=home, environ=environ) / "fin-analyse" / (
+        "adjudication-inbox-v1"
+    )
+
+
 def ensure_private_state_directory(path: Path) -> Path:
     """Create or tighten one FIN-owned state directory to owner-only access."""
 

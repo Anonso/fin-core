@@ -1,0 +1,4 @@
+schema_version: fin.adjudication-config/v1
+digest:
+  # 积压超过该天数在推送摘要中标 ⚠（可调项进配置，家规 6）。
+  escalate_after_days: 3

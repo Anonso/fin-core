@@ -1,0 +1,9 @@
+[Unit]
+Description=FIN adjudication digest weekday schedule (static unit, manual maintenance)
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 09:00:00
+Persistent=false
+
+[Install]
+WantedBy=timers.target

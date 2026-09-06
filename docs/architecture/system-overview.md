@@ -71,7 +71,7 @@ Agent-as-Product」节）：
 | 认知与深化 | `cognition`（deep-read 工件与可用性）、`guo_teacher_research`（G 工作集）、`knowledge`、`knowledge_brain` | 索引、深化、G 工作集与认知追溯 | [deepen](../design/deepen.md)、[g-cognition](../design/g-cognition.md) |
 | 咨询与上下文 | `consultation`、`context`、`read_capabilities`、薄 server 装配 | 解析意图、装配可信上下文、驱动强 Agent | [module catalog](internal-module-catalog.md) P0 节 |
 | 市场与账户事实 | `market`、`margin`、`official_records`、`portfolio`、`paper` | 行情/两融/公告/持仓的只读事实供给 | [market-data](../design/market-data.md)、[portfolio](../design/portfolio.md) |
-| 交付与运行面 | `gateway`（飞书 WS 集成）、`operations`（Daily 生成/投递）、`runtime` | Daily 四班生成投递、运行证据与对账 | [daily-delivery](../design/daily-delivery.md) |
+| 交付与运行面 | `gateway`（飞书 WS 集成）、`operations`（Daily 生成/投递）、`runtime`、`adjudication`（裁决收件箱：跨功能「待 owner 裁决」清单+每日飞书摘要，D-051） | Daily 四班生成投递、运行证据与对账、待裁决统一触达 | [daily-delivery](../design/daily-delivery.md) |
 | 工程与验证 | `validation`、`engineering_validation`、`dataflow`、`claims`（配置加载） | 契约校验、连通性探针、预检 | [module catalog](internal-module-catalog.md) P2 节 |
 
 其余包（`moa`、`graph`、`signals`、`backtest`、`vision` 等）为支撑或待归档面；
