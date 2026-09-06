@@ -50,6 +50,23 @@ def _write_stub(bin_dir: Path, name: str, body: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
 
 
+def _cmd_version_pin() -> str:
+    """stub --version 跟随 launcher 的版本钉单源（config/finqa_nodes.yaml 顶层
+    cmd_version_pin；键缺失时兜底 1.49.1，兼容钉单源入 config 前的 HEAD）。"""
+    import re
+
+    config = Path(__file__).resolve().parents[2] / "config" / "finqa_nodes.yaml"
+    if config.exists():
+        found = re.search(
+            r'^cmd_version_pin:\s*"?([^"\s]+)"?\s*(?:#.*)?$',
+            config.read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+        if found:
+            return found.group(1)
+    return "1.49.1"
+
+
 def _run_launcher(
     tmp_path: Path, stub_mode: str, *args: str
 ) -> subprocess.CompletedProcess[str]:
@@ -60,7 +77,7 @@ def _run_launcher(
         "cmd",
         f'''
 case "$1" in
-  --version) echo "1.49.1"; exit 0 ;;
+  --version) echo "{_cmd_version_pin()}"; exit 0 ;;
   status) echo "Authenticated"; exit 0 ;;
 esac
 [[ "$*" == *"-p"* ]] || {{ echo "stub: unexpected args" >&2; exit 64; }}
