@@ -61,7 +61,11 @@ glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路�
 `scripts/finqa_chain.py`（无头自动 fallback、横幅/tsv/exit78 设计门语义、
 session 可丢、无熔断；设计门 cmd·ds-pro ≈250s 采纳 11 不采纳 1）；盲评
 runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评估（resume
-语义不同）两链并存，合并等真实需求。
+语义不同）两链并存，合并等真实需求。2026-09-06 CLI 收口（D-050）：唯一
+入口 `finqa`（--node 钉腿 + -i 交互），launcher=起腿知识唯一权威；测试腿
+zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_version_pin
+单源 + bashrc 六函数退役（finqa-c/-cmd 过渡别名）；设计门 3 发现全采纳
+（台账 design-gate/finqa-cli-unify-20260906/）。
 
 ## 板 A · 重构阶段（对齐 rebaseline §6）
 
@@ -72,7 +76,7 @@ runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评�
 | W2 原地手术（备份/部署/Daily 脱钩/归档/L1 池） | ✅ 完成：生产 release `319faf62` | — |
 | 路由重排 D-018/019/021 | ✅ 完成（文件层 + 运行态） | [../DECISIONS.md](../DECISIONS.md) |
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
-| 外部项目吸收 | ⏳ 盘点+举证机制已闭环（09-03）；**吸收 0 项**——09-05 二轮专业标准对照（ai-berkshire 镜子+5 题动态）：候选 1/5 缺口缩窄（承重拷问/三重检已有同构）、候选 4 动态零命中、管理层维度→知识脑新候选，测试暴露是否够闸②举证待 owner 裁决；cmd·flash 腿元叙述泄漏已记录；A2 typed 数据源未开 | [scope 09-03](research/2026-09-03-external-analysis-absorption-scope.md)、[盲评 pilot](research/2026-09-03-consult-blind-eval-pilot.md)、[gap 探查 09-05](research/2026-09-05-professional-standards-gap-hunt.md) |
+| 外部项目吸收 | ⏳ 盘点+举证机制已闭环（09-03）；**吸收 0 项**——09-05 二轮专业标准对照（ai-berkshire 镜子+5 题动态）：候选 1/5 缺口缩窄（承重拷问/三重检已有同构）、候选 4 动态零命中、管理层维度→知识脑新候选，测试暴露是否够闸②举证待 owner 裁决；cmd·flash 腿元叙述泄漏已记录；A2 typed 数据源未开；09-06 专业人设评审（判者=ds-pro 四人设重评盲评存量）实证自评判宽松偏置，六案立案 BUG-049~054 + 人格 r19 同日施工+回归收口，评审方法定常设第二判者 | [scope 09-03](research/2026-09-03-external-analysis-absorption-scope.md)、[盲评 pilot](research/2026-09-03-consult-blind-eval-pilot.md)、[gap 探查 09-05](research/2026-09-05-professional-standards-gap-hunt.md)、[人设评审 09-06](research/2026-09-06-persona-judge-review.md) |
 | W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点已恢复（D-028 解除，9a0320f） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
 | D3 三天真实使用门 | ⏳ **owner 09-05 改自选窗口**：继续准备期（基础功能深化），首个自然三日段（每日 ≥1 条真实 finq）即算开考、事后追认；09-30 仍无自然三日段=回方向文档重议；PASS 判据不变（日 ≥1 记账+无整链不可用过夜+第 3 日「明天还用吗=是」）；owner 09-05 宣布 23:00 起用（窗口起点） | D-043（取代 D-020 门语义）；供数 = finq usage.jsonl |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步）；P5 路线已定候选方案 A：Hermes 直接当问询 agent（D-032） | rebaseline §6；D-032 |
