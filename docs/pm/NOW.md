@@ -106,7 +106,7 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 | W2' 新仓移植（`~/fin-core`） | ✅ 完成：07 七步全清（2026-08-29，cutover 见 [../migration-manifest.md](../migration-manifest.md) 步4/5/6/7 记录） | ~~new-repo-migration~~（设计稿随老仓归档入 Git 史） |
 | 外部项目吸收 | ⏳ 盘点+举证机制已闭环（09-03）；**吸收 0 项**——09-05 二轮专业标准对照（ai-berkshire 镜子+5 题动态）：候选 1/5 缺口缩窄（承重拷问/三重检已有同构）、候选 4 动态零命中、管理层维度→知识脑新候选，测试暴露是否够闸②举证待 owner 裁决；cmd·flash 腿元叙述泄漏已记录；A2 typed 数据源未开；09-06 专业人设评审（判者=ds-pro 四人设重评盲评存量）实证自评判宽松偏置，六案立案 BUG-049~054 + 人格 r19 同日施工+回归收口，评审方法定常设第二判者 | [scope 09-03](research/2026-09-03-external-analysis-absorption-scope.md)、[盲评 pilot](research/2026-09-03-consult-blind-eval-pilot.md)、[gap 探查 09-05](research/2026-09-05-professional-standards-gap-hunt.md)、[人设评审 09-06](research/2026-09-06-persona-judge-review.md) |
 | W3-4 深化调优 | ✅ 完成：二轮复盲评 7.59>7 闭环（08-31，55/56 票；GLM 缺票最坏 7.48）；01/03/05 调优已随二轮闭环收口；GLM 三节点已恢复（D-028 解除，9a0320f） | 台账 `$STATE/fin-analyse/deepen-blind-eval-20260901-b2-2/` |
-| D3 三天真实使用门 | ⏳ **owner 09-05 改自选窗口**：继续准备期（基础功能深化），首个自然三日段（每日 ≥1 条真实 finq）即算开考、事后追认；09-30 仍无自然三日段=回方向文档重议；PASS 判据不变（日 ≥1 记账+无整链不可用过夜+第 3 日「明天还用吗=是」）；owner 09-05 宣布 23:00 起用（窗口起点）；09-06 owner 定 **09-07 09:00 正式开考**（r19 人格同日收口，考试即 pro 腿首次真实受考） | D-043（取代 D-020 门语义）；供数 = finq usage.jsonl |
+| D3 三天真实使用门 | ❌ **取消**（owner 09-06 拍板「取消考试门」，09-07 09:00 开考作废，D-043 门语义废止）；真实使用证据回归家规 10 口径：finq usage.jsonl 使用日志即准入队列 | ~~D-043~~；供数 = finq usage.jsonl（继续） |
 | P4 纯使用 / P5 飞书家人 | ⏳ 之后（KB/188M 根收拢 = P5 前独立步）；P5 路线已定候选方案 A：Hermes 直接当问询 agent（D-032） | rebaseline §6；D-032 |
 
 ## 板 B · 能力地图（影响问询结果的每个接线点）
