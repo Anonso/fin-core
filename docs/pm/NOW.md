@@ -69,7 +69,15 @@ codex_routes 交互路由链（glm-official enabled / opencode-go disabled，
 改挂退役候选（考后处置；`codex-routes/codex-glm/` 认证/模型目录为 codex_open.sh
 评审替补腿资产，退役时保留）。09-05「生产问询路由单腿 codex-glm」的考试风险
 提示作废——考试链路走 finqa，与 codex_routes 无关。
-**退役已执行（2026-09-06 owner 令「现在退役」）**：闭包定论后移出
+**GLM 无头统一 zcode（2026-09-06 owner 拍板）**：问询链 claude 腿（CC·glm-5.3）
+退出，换 zcode 腿（glm-5.3，config 单旋钮 zhipu/glm-5.3）；评审链 glm 替补从
+codex-glm home 换 zcode（codex_open.sh glm profile 重写，precheck=旋钮防漂移）；
+zcode-flash 测试腿随之取消（单旋钮已让位 glm-5.3，弱腿测试由 commandcode-flash
+承担）。harness 本体（claude/codex 二进制）与 codex-glm 资产保留不删，有头 CLI
+不动；CC 无头接线位置未定位之谜随腿退出不再阻塞问询链。影响：同模型换 harness
+（答案风格可能微变，人格/MCP 不变）；zcode 腿生产使用记录从零起（冒烟+对比探针
+补证）；评审者 harness 漂移（packet 缓存失效）；交互 zcode 默认模型 flash→5.3。
+**codex_routes 退役已执行（2026-09-06 owner 令「现在退役」）**：闭包定论后移出
 codex_routes.yaml + codex-proxy 三脚本 + codex-proxy-a/b-manual 状态目录
 （含 sqlite 会话档，无运行进程/无 crontab/systemd 指向，静止态 mv）→
 备份 `/home/ypk/fin-backups/codex-routes-retirement-20260906/`（0700/0600，

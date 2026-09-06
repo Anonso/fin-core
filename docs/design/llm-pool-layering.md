@@ -64,10 +64,11 @@ L2 消费层  只声明「引用哪些连接别名 + 顺序 + 本层旋钮」
 
 ## 4. 施工步（四步，每步独立可验；顺序即依赖）
 
-1. **池补全**：llm.yaml models 增 harness 型 6 条——`commandcode-pro`（cmd login 会话）、
-   `commandcode-flash`（deepseek-v4-flash）、`zcode-flash`（zhipu/glm-5.3-flash）、
-   `claude-cc`（managed: self，无 enabled 键）、`glm-review`（codex-glm 资产，glm-5.3）、
-   `codex-opencode`（codex CLI + consult-agent/.codex）。
+1. **池补全**：llm.yaml models 增 harness 型 5 条——`commandcode-pro`（cmd login 会话）、
+   `commandcode-flash`（deepseek-v4-flash）、`zcode`（zhipu/glm-5.3，问询腿+评审替补
+   共用单旋钮）、`codex-opencode`（codex CLI + consult-agent/.codex）。
+   （2026-09-06 追记：owner 拍板 GLM 无头统一 zcode——原列 `claude-cc` 条目删除
+   〔CC 退出无头问询〕、`glm-review` 并入 `zcode` 单旋钮，池条目由 6 并为 5。）
 1.5 **校验器豁免**：`claims/config_loader.py` `compile_backend_plan` 对 `type: harness`
    条目跳过 provider/adapter/闭集校验（登记性条目不进 backend plan），配套单测钉死
    「api 型校验不放松、harness 型不入 plan」。

@@ -24,11 +24,11 @@
 
 ## A. 问询链（finqa，唯一问询入口，owner 与机器共用）
 
-- 腿序形状：**claude → (codex) → commandcode**；测试腿不入链序：zcode-flash、commandcode-flash（钉腿可达）。括号 = 可禁用腿，现值看节点表。
-- 各腿模型旋钮：cmd/zcode = 节点表 `model` 字段与 `~/.zcode/cli/config.json`；**claude 腿 = CC 自管**（`~/.claude.json` bigmodel 接线，launcher 不传模型，实产 glm-5.3 有盲评佐证）；effort = launcher 单点 max。
+- 腿序形状：**zcode → (codex) → commandcode**；测试腿不入链序：commandcode-flash（钉腿可达）。括号 = 可禁用腿，现值看节点表。GLM 无头统一走 zcode（owner 2026-09-06 拍板，claude 腿退出问询链；harness 本体保留）。
+- 各腿模型旋钮：zcode = `~/.zcode/cli/config.json` 全局单旋钮（现 zhipu/glm-5.3，无逐次旗标，precheck 与节点 model 防漂移）；cmd = 节点表 `model` 字段；effort = launcher 单点 max。
 - 会话语义：默认 keep；`discard`（无头不留档）；`-i` 交互形态保留。
 - 人格与工具面：`~/fin-data/consult-agent/`（CLAUDE.md 人格 + .mcp.json 13 只读+2 受限写），cwd 即身份。
-- 消费者：owner 单发、agent 会话钉腿（盲评/探针/回归）、`persona_regression.sh`（flash 腿）、D3 考试。
+- 消费者：owner 单发、agent 会话钉腿（盲评/探针/回归）、`persona_regression.sh`（flash 腿）。
 
 ## B. 提取链（LLM 直调池，无问询语义；供给面 = 代码拥有控制流）
 
@@ -39,16 +39,15 @@
 
 ## C. 评审链（codex_open.sh，按需动词，无常驻）
 
-- 评审者：**cmd·deepseek-v4-pro 主 → glm·glm-5.3 替补**（自动 fallback，横幅+fallback.tsv 落账）；cmd 版本钉读 finqa_nodes.yaml `cmd_version_pin`。
-- glm 替补腿资产 = `~/fin-data/codex-routes/codex-glm/`（auth.json+models.json，退役后保留）。
+- 评审者：**cmd·deepseek-v4-pro 主 → zcode·glm-5.3 替补**（自动 fallback，横幅+fallback.tsv 落账）；cmd 版本钉读 finqa_nodes.yaml `cmd_version_pin`；zcode 模型单旋钮与问询链共用（precheck 防漂移）。
 - 触发：设计门 / 吓人 diff / 同题两修未果外援；packet 骨架 [design-gate-packet-template](../design-gate-packet-template.md)。
 
 ## 模型身份对照（同名多身份，防混淆）
 
 | 模型 | 问询链身份 | 提取链身份 | 评审链身份 |
 | --- | --- | --- | --- |
-| glm-5.3 | claude 腿（CC 自管） | t0 头（glm53） | glm 替补（codex-glm 资产） |
-| glm-5.3-flash | zcode-flash 测试腿 | cognition 头 + t1 头 + 识图第 2 位 | — |
+| glm-5.3 | zcode 腿（config 单旋钮） | t0 头（glm53） | glm 替补（zcode 同旋钮） |
+| glm-5.3-flash | （原 zcode-flash 测试腿随单旋钮让位取消） | cognition 头 + t1 头 + 识图第 2 位 | — |
 | deepseek-v4-pro | commandcode 腿（节点表默认） | deepseek（legacy 池位） | cmd 主评审者 |
 | deepseek-v4-flash | commandcode-flash 测试腿 | DS 槽位两渠道节点 | — |
 
