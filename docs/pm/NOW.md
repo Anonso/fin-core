@@ -186,7 +186,7 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 | 产品面 | 状态 | 验收手段 | 指针 |
 | --- | --- | --- | --- |
 | Daily 简报 | 问询验收中（**09-01 起 D-030 停推**，复验并入 D-031；带伤班次主因 BUG-015/016/017 已修并经 09-01 morning 真实班 gaps=[] 确认；盘前概览 gap 已随 BUG-002 09-04 闭环消解〔盘前形态=设计内 PARTIAL〕；更早施工叙事入 Git/BUGS） | 四班交付记录 + B1 盲评 | 【最后】D-031（最后9）；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008/015/016/017 |
-| 裁决收件箱 | 运行态（09-06 建〔D-051〕：`fin-adjudication` CLI + SQLite 收件箱 + 工作日 09:00 飞书摘要 timer；首推冒烟真发+指纹去重过；v0.1 producer=G 标注批次（owner 09-06 晚拍板定位：只放裁决入库生效类；主线提名并入批次标题，BUG 待办类不入箱）；首个真实项已落箱（09-06 晚，落后 2 天/3 篇）；裁决执行留在各功能原确认面） | `fin-adjudication list`；`journalctl --user -u fin-adjudication-digest` | 短设计按规则 5 归档（git 史 adjudication-inbox）；D-051；数据=$STATE/fin-analyse/adjudication-inbox-v1/ |
+| 裁决收件箱 | 运行态（09-06 建〔D-051〕：`fin-adjudication` CLI + SQLite 收件箱 + 工作日 09:00 飞书摘要 timer；首推冒烟真发+指纹去重过；v0.2 producer×2=G 标注批次 + 回放线提名（09-06 深夜 D-051 追记 #2；owner 定位=只放裁决入库生效类，全项目同类面清点收官无漏网）；首个真实项已落箱（G 批次落后 2 天/3 篇；回放批 20260904 已落账正确不开项）；裁决执行留在各功能原确认面） | `fin-adjudication list`；`journalctl --user -u fin-adjudication-digest` | 短设计按规则 5 归档（git 史 adjudication-inbox）；D-051；数据=$STATE/fin-analyse/adjudication-inbox-v1/ |
 
 ## 待办队列（只放未决项）
 

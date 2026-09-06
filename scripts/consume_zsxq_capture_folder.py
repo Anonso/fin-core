@@ -552,11 +552,49 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
     # 独立 suppress+logging——inbox 异常不得被误记为 scan_invocation_failed。
     try:
         _reconcile_g_annotation_batch_inbox(scan_dict, annotation_path=annotation)
+        _reconcile_replay_nomination_inbox(annotation_path=annotation)
     except Exception:  # noqa: BLE001 - inbox 挂点永不阻断 ingest
         logging.getLogger(__name__).warning(
             "adjudication inbox reconcile failed", exc_info=True
         )
     return result_dict
+
+
+def _reconcile_replay_nomination_inbox(*, annotation_path: Path) -> None:
+    """回放线提案真相同步（best-effort producer，D-051 追记 #2）。
+
+    只读消费 cognition-replay 公开工件（evidence 目录 + 标注文档），不碰
+    回放模块；最新批次未落账 → open，已落账 → auto-resolve；无提名/SKIPPED
+    → 不碰 inbox。
+    """
+
+    from fin_analyse.adjudication.producers import scan_replay_nominations
+
+    evidence_root = adjudication_inbox_state_root().parent / "cognition-replay-evidence"
+    scan = scan_replay_nominations(
+        evidence_root=evidence_root, annotation_path=annotation_path
+    )
+    if scan.disposition != "SCANNED":
+        return
+    pending = not scan.landed
+    title = (
+        f"回放线提案待扫批：批次 {scan.batch}，{scan.proposals} 条提案"
+        if pending
+        else f"回放线提案：批次 {scan.batch} 已落账"
+    )
+    AdjudicationInbox(state_root=adjudication_inbox_state_root()).reconcile(
+        AdjudicationItem(
+            item_id="replay.nomination",
+            kind="replay-nomination",
+            title=title,
+            payload_ref=scan.nominations_path,
+            resolution_hint=(
+                "扫批：逐提案核对后落标注文档回放线/独立证据补充节 + "
+                "verify_mainline_annotation.py 机验；落账后本项自动消项"
+            ),
+        ),
+        pending=pending,
+    )
 
 
 def _reconcile_g_annotation_batch_inbox(
