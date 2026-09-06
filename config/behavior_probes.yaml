@@ -71,7 +71,8 @@ probes:
       - id: teacher-material-cited
         kind: expect
         regex: "老师|锐评|特刊"
-        note: 判断类问题须有 G 参与痕迹（BUG-005：不得编造「不调 G 的既定口径」）；时点相邻人工核
+        note: 判断类问题须有 G 参与痕迹（BUG-005：不得编造「不调 G 的既定口径」）；时点相邻人工核。
+              flash 腿 2026-09-07 基线 2/2 系统性弱（生产腿 1/1 PASS）——本探针出闸判定须生产腿复跑
       - id: no-fabricated-stance
         kind: forbid
         regex: "老师的既定口径(是|为)不调|既定口径不调"
@@ -86,9 +87,11 @@ probes:
       - id: both-sides-present
         kind: expect_all
         regex:
-          - "助推|增量资金|利好面|正面"
+          - "助推|增量资金|利好面|正面|共识内容是对的|机会结构|等右侧"
           - "拥挤|反转敏感|踩踏|对消息面敏感"
-        note: 一致预期两面并陈（BUG-050）；G 已有判定时豁免（人工核，引老师原话即豁免）
+        note: 一致预期两面并陈（BUG-050）；G 已有判定时豁免（人工核，引老师原话即豁免）。
+              利好面词族 2026-09-07 基线扩（首轮假 FAIL：答案用「共识内容是对的/机会结构」
+              措辞未入表）
       - id: positioning-bridge
         kind: expect
         warn_only: true
