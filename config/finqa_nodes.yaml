@@ -12,9 +12,9 @@
 # 报错)、effort=launcher 单点 max。
 # 使用实况(owner 2026-09-06 定调):owner 真实问询=有头手动(终端 CC/Windows
 # ZCode 连 WSL),无头链流量≈测试——生产链序仅 commandcode 一条,其余皆测试腿。
-# 测试腿名册(enabled:false,--node 钉腿可达):
-#   A commandcode-flash = ds-flash(最弱腿=最严苛服从性测试,人格回归探针用)
-#   B zcode             = glm-5.3-flash(zcode 单旋钮锚定 flash,无逐次模型机制)
+# 测试腿名册(flash 非生产;弱腿=服从性/回归探针用;--node 钉腿可达):
+#   A zcode             = glm-5.3-flash(弱腿第一,owner 2026-09-07 拍板启用;单旋钮锚定 flash,无逐次模型机制)
+#   B commandcode-flash = ds-flash(弱腿第二;人格回归探针 persona_regression.sh 钉本腿不随序)
 #   C claude(备用)      = glm-5.3-flash(CC --model 逐次指定,实测生效)
 # 测试腿原则(owner 2026-09-05 拍板):flash 非生产、仅测试用,FAIL 先分辨
 # 执行方差与人格回归。
@@ -29,15 +29,15 @@ nodes:
   - id: codex             # codex CLI + opencode-go(休眠:池条目 codex-opencode enabled=false)
     conn_ref: codex-opencode
     enabled: true         # 恢复语义:只翻池条目 enabled 一处,本节点常态 true
-  # —— 测试腿(enabled:false 不入链序,仅 --node 钉腿可达;出题自测/对照评估)——
-  - id: commandcode-flash # 测试腿 A:同 commandcode 连接,仅换模型
+  # —— 弱腿/测试腿(flash 非生产;声明序=弱腿优先序;--node 钉腿可达;出题自测/对照评估)——
+  - id: zcode             # 弱腿第一:zcode 无头 glm-5.3-flash(单旋钮锚定;无 TUI 交互形态)
+    conn_ref: zcode
+    enabled: true         # owner 2026-09-07 拍板启用,位 cmd 弱腿前
+  - id: commandcode-flash # 弱腿第二:同 commandcode 连接,仅换 ds-flash
     conn_ref: commandcode-flash
     enabled: false
     session: discard      # 测试/探针腿不留 cmd 会话档(不 resume;tsv=provenance);
-                          # 人格回归探针 persona_regression.sh 亦走本腿
-  - id: zcode             # 测试腿 B:zcode 无头,glm-5.3-flash(config 单旋钮锚定)
-    conn_ref: zcode
-    enabled: false        # 无交互形态(zcode 本机无 TUI)
-  - id: claude             # 测试腿 C(备用):CC 无头,glm-5.3-flash(--model 逐次指定)
+                          # 人格回归探针 persona_regression.sh 钉本腿(--node,不随序)
+  - id: claude             # 备用测试腿:CC 无头 glm-5.3-flash(--model 逐次指定)
     conn_ref: claude-cc-flash
     enabled: false
