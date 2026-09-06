@@ -61,7 +61,14 @@ glm·glm-5.3 替补（此「外部审视入口 codex-open」与生产问询路�
 `scripts/finqa_chain.py`（无头自动 fallback、横幅/tsv/exit78 设计门语义、
 session 可丢、无熔断；设计门 cmd·ds-pro ≈250s 采纳 11 不采纳 1）；盲评
 runner CC 腿已迁移（验收 0）。codex_routes.yaml 冻结服务效果评估（resume
-语义不同）两链并存，合并等真实需求。2026-09-06 CLI 收口（D-050）：唯一
+语义不同）两链并存，合并等真实需求。
+2026-09-06 owner 澄清用法：问询唯一真实入口 = `finqa` 无头单发（launcher 唯一
+权威，双活腿 claude+commandcode 自动兜底），TTY 交互形态 owner 不自用——
+codex_routes 交互路由链（glm-official enabled / opencode-go disabled，
+读方 = codex-proxy 三件套 + guo_teacher_research 默认路径）**无真实使用者**，
+改挂退役候选（考后处置；`codex-routes/codex-glm/` 认证/模型目录为 codex_open.sh
+评审替补腿资产，退役时保留）。09-05「生产问询路由单腿 codex-glm」的考试风险
+提示作废——考试链路走 finqa，与 codex_routes 无关。2026-09-06 CLI 收口（D-050）：唯一
 入口 `finqa`（--node 钉腿 + -i 交互），launcher=起腿知识唯一权威；测试腿
 zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_version_pin
 单源 + bashrc 六函数退役（finqa-c/-cmd 过渡别名）；设计门 3 发现全采纳
