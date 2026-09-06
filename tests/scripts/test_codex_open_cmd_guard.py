@@ -93,7 +93,7 @@ exit 0
     )
     _write_stub(
         bin_dir,
-        "zcode",
+        "claude",
         '''[ "${1:-}" = "-p" ] || { echo "stub: expected -p" >&2; exit 64; }
 echo "GLM REVIEW OK"
 ''',

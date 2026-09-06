@@ -24,8 +24,10 @@
 
 ## A. 问询链（finqa，唯一问询入口，owner 与机器共用）
 
-- 腿序形状：**zcode → (codex) → commandcode**；测试腿不入链序：commandcode-flash（钉腿可达）。括号 = 可禁用腿，现值看节点表。GLM 无头统一走 zcode（owner 2026-09-06 拍板，claude 腿退出问询链；harness 本体保留）。
-- 各腿模型旋钮：zcode = `~/.zcode/cli/config.json` 全局单旋钮（现 zhipu/glm-5.3，precheck 与池条目 model 防漂移）；cmd = 节点表 `model` 字段；effort = launcher 单点 max。**zcode 机制边界（2026-09-06 实测钉死）**：无逐次模型旗标；帮助文本所列 `--settings` 在 0.16.5 未实现（parser 拒绝）；`ZCODE_HOME` 仅遥测、不重定位配置；模型在会话创建时钉定（全局证伪：假模型名 rc=1）——故 zcode 不存在 flash 弱测试腿，GLM 家族弱腿测试暂由提取链 glm53_flash（API 直调）承担，harness 级弱腿=commandcode-flash。
+- 使用实况（owner 2026-09-06 定调）：真实问询=有头手动（终端 CC / Windows ZCode 连 WSL），无头链流量≈测试——**生产链序仅 commandcode（ds-pro）一条**，其余皆测试腿。
+- 腿序形状（生产）：**commandcode** 单腿；测试腿（enabled:false，仅 --node 钉腿可达）：**A** commandcode-flash（ds-flash，人格回归探针）、**B** zcode（glm-5.3-flash，单旋钮锚定）、**C** claude（glm-5.3-flash，备用，`--model` 逐次指定实测生效）。
+- 各腿模型旋钮：zcode = `~/.zcode/cli/config.json` 全局单旋钮（现 zhipu/glm-5.3-flash）。**zcode 机制边界（2026-09-06 实测钉死）**：无逐次模型旗标；帮助文本所列 `--settings` 在 0.16.5 未实现（parser 拒绝）；`ZCODE_HOME` 仅遥测、不重定位配置；模型在会话创建时钉定（全局证伪：假模型名 rc=1）。claude/CC = `--model` 逐次指定（实测 served 实证），接线自管。
+- effort = launcher 单点 max。
 - 会话语义：默认 keep；`discard`（无头不留档）；`-i` 交互形态保留。
 - 人格与工具面：`~/fin-data/consult-agent/`（CLAUDE.md 人格 + .mcp.json 13 只读+2 受限写），cwd 即身份。
 - 消费者：owner 单发、agent 会话钉腿（盲评/探针/回归）、`persona_regression.sh`（flash 腿）。
@@ -39,15 +41,15 @@
 
 ## C. 评审链（codex_open.sh，按需动词，无常驻）
 
-- 评审者：**cmd·deepseek-v4-pro 主 → zcode·glm-5.3 替补**（自动 fallback，横幅+fallback.tsv 落账）；cmd 版本钉读 finqa_nodes.yaml `cmd_version_pin`；zcode 模型单旋钮与问询链共用（precheck 防漂移）。
+- 评审者：**cmd·deepseek-v4-pro 主 → claudecode·glm-5.3 替补**（自动 fallback，横幅+fallback.tsv 落账）；两者模型/开关自连接池解析（commandcode-pro / claude-cc），池禁=评审者不可用传导；cmd 版本钉读 finqa_nodes.yaml `cmd_version_pin`。
 - 触发：设计门 / 吓人 diff / 同题两修未果外援；packet 骨架 [design-gate-packet-template](../design-gate-packet-template.md)。
 
 ## 模型身份对照（同名多身份，防混淆）
 
 | 模型 | 问询链身份 | 提取链身份 | 评审链身份 |
 | --- | --- | --- | --- |
-| glm-5.3 | zcode 腿（config 单旋钮） | t0 头（glm53） | glm 替补（zcode 同旋钮） |
-| glm-5.3-flash | （原 zcode-flash 测试腿随单旋钮让位取消） | cognition 头 + t1 头 + 识图第 2 位 | — |
+| glm-5.3 | （harness 层让位；提取链 glm53 仍在） | t0 头（glm53） | glm 替补（claudecode） |
+| glm-5.3-flash | zcode 测试腿 B + claude 测试腿 C（单旋钮/--model） | cognition 头 + t1 头 + 识图第 2 位 | — |
 | deepseek-v4-pro | commandcode 腿（节点表默认） | deepseek（legacy 池位） | cmd 主评审者 |
 | deepseek-v4-flash | commandcode-flash 测试腿 | DS 槽位两渠道节点 | — |
 

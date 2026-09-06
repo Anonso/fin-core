@@ -173,6 +173,8 @@ def _launch_argv(
         argv = [str(Path.home() / ".local" / "bin" / "claude")]
         if not interactive:
             argv.append("-p")
+        if model:
+            argv += ["--model", model]  # 2026-09-06 实测：CC 逐次模型生效（served 实证）
         argv += [*questions, "--strict-mcp-config", "--mcp-config", str(_CONSULT_WORKSPACE / ".mcp.json")]
         return argv
     if harness == "commandcode":

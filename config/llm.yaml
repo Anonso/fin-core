@@ -121,7 +121,6 @@ models:
   #    豁免）；池 enabled=false ⇒ 所有消费链序跳过（fail-visible），钉腿=拒绝 ——
   commandcode-pro:
     type: harness
-    _probe: true
     harness: commandcode
     model: deepseek/deepseek-v4-pro
     auth_note: "cmd login 账号会话"
@@ -134,10 +133,21 @@ models:
     enabled: true
   zcode:
     type: harness
-    _probe: true
     harness: zcode
-    model: zhipu/glm-5.3
-    auth_note: "llm.env GLM_API_KEY→ZHIPU_API_KEY + ~/.zcode/cli/config.json 单旋钮（与评审 glm 替补共用）"
+    model: zhipu/glm-5.3-flash
+    auth_note: "llm.env GLM_API_KEY→ZHIPU_API_KEY + ~/.zcode/cli/config.json 单旋钮；owner 2026-09-06 拍板锚定 flash=测试腿 B（真实问询走有头手动，无头链测试为主）"
+    enabled: true
+  claude-cc:
+    type: harness
+    harness: claude
+    model: glm-5.3
+    auth_note: "CC 接线自管（ambient，glm-5.3 实跑实证）；模型经 launcher --model 逐次指定；凭据不在本仓"
+    enabled: true
+  claude-cc-flash:
+    type: harness
+    harness: claude
+    model: glm-5.3-flash
+    auth_note: "同 claude-cc，备用测试腿 C 档位"
     enabled: true
   codex-opencode:
     type: harness

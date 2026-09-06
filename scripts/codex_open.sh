@@ -19,7 +19,7 @@ WORKSPACE="/home/ypk/fin-core"
 DEFAULT_PROFILE="${GATE_PROFILE:-cmd}"   # 环境覆盖：GATE_PROFILE=glm（测试/运维用）
 
 CMD_BIN="$(command -v cmd || true)"
-# CMD_MODEL/ZCODE_MODEL 自连接池解析（pool_harness_model，见下）——池禁/悬空/池
+# CMD_MODEL/GLM_MODEL 自连接池解析（pool_harness_model，见下）——池禁/悬空/池
 # 不可读时为空串，对应 precheck 失败走 fallback/双挂（fail-closed，不猜模型）。
 # 版本钉单源=finqa_nodes.yaml 顶层 cmd_version_pin(2026-09-06 收口,双记账废止);
 # 读不到 fail-closed——版本钉是安全闸(闭源客户端升级先落替补),不许空值放行。
@@ -28,13 +28,14 @@ CMD_VERSION_PIN="$(sed -n 's/^cmd_version_pin:[[:space:]]*"\{0,1\}\([^"[:space:]
 [[ -n "$CMD_VERSION_PIN" ]] || { printf 'codex-open: %s\n' \
     "cmd_version_pin missing/unreadable in config/finqa_nodes.yaml" >&2; exit 78; }
 
-# glm 替补 = zcode 无头·glm-5.3（模型单旋钮 ~/.zcode/cli/config.json，与问询链
-# zcode 腿共用；harness 本体 codex/codex-glm 资产保留不删，仅退出评审链）。
+# glm 替补 = claudecode 无头·glm-5.3（owner 2026-09-06 拍板：评审替补从 zcode
+# 换 CC——CC 支持 --model 逐次指定（实测 served 实证）；zcode 单旋钮锚定 flash
+# 让位测试腿。CC 接线自管（ambient），凭据不在本仓。harness 本体 zcode 保留）。
 # 连接池分层（docs/design/llm-pool-layering.md）：评审者=池条目别名
-# （commandcode-pro / zcode），模型与开关自 llm.yaml 解析；池禁/悬空/yaml 异常
+# （commandcode-pro / claude-cc），模型与开关自 llm.yaml 解析；池禁/悬空/yaml 异常
 # 一律视为该评审者不可用（fail-closed，走 fallback 或双挂 rc 78）。
-ZCODE_BINARY="$(command -v zcode || true)"
-ZCODE_CONFIG="$HOME/.zcode/cli/config.json"
+CODEX_GLM_LEGACY_REMOVED="$(command -v zcode || true)"
+CLAUDE_BINARY="$(command -v claude || true)"
 JQ_BINARY="$(command -v jq || true)"
 FIN_PY="$WORKSPACE/.venv/bin/python"
 
@@ -55,7 +56,7 @@ print(e.get("model") or "")
 }
 
 CMD_MODEL="$(pool_harness_model commandcode-pro)" || CMD_MODEL=""
-ZCODE_MODEL="$(pool_harness_model zcode)" || ZCODE_MODEL=""
+GLM_MODEL="$(pool_harness_model claude-cc)" || GLM_MODEL=""
 
 FALLBACK_TSV="${XDG_STATE_HOME:-$HOME/.local/state}/fin-analyse/design-gate/fallback.tsv"
 DIE_FLAG_RE='^(--yolo|--dangerously-skip-permissions|--tools-all|--tools-enable|--permission-mode)(=.*)?$'
@@ -76,11 +77,8 @@ precheck_cmd() {
 }
 
 precheck_glm() {
-    [[ -n "$ZCODE_BINARY" && -x "$ZCODE_BINARY" ]] || return 1
-    [[ -n "$JQ_BINARY" && -x "$JQ_BINARY" ]] || return 1
-    [[ -n "$ZCODE_MODEL" ]] || return 1   # 池禁/悬空/池不可读 → 替补不可用（fail-closed）
-    # 模型旋钮防漂移：zcode 配置须与池条目一致（与问询链 zcode 腿共用单旋钮）
-    "$JQ_BINARY" -er --arg m "$ZCODE_MODEL" '.model == $m' "$ZCODE_CONFIG" >/dev/null || return 1
+    [[ -n "$CLAUDE_BINARY" && -x "$CLAUDE_BINARY" ]] || return 1
+    [[ -n "$GLM_MODEL" ]] || return 1   # 池禁/悬空/池不可读 → 替补不可用（fail-closed）
     return 0
 }
 
@@ -157,7 +155,7 @@ PRIMARY="$DEFAULT_PROFILE"
 if [[ $PRIMARY == cmd ]]; then SECONDARY=glm; else SECONDARY=cmd; fi
 
 note "reviewer=${PRIMARY} ($(
-    [[ $PRIMARY == cmd ]] && echo "${CMD_MODEL:-池未解析}" || echo "${ZCODE_MODEL:-池未解析}"
+    [[ $PRIMARY == cmd ]] && echo "${CMD_MODEL:-池未解析}" || echo "${GLM_MODEL:-池未解析}"
 )) fallback=${SECONDARY}"
 
 # —— TTY 交互：仅 precheck 阶段可 fallback，运行期不劫持 TUI ——
@@ -170,12 +168,12 @@ if [[ $HEADLESS -eq 0 ]]; then
         fi
         if [[ $PRE_GLM == ok ]]; then
             note_fallback "cmd" "glm" "pre" "tui"
-            exec "$ZCODE_BINARY" "$@"
+            exec "$CLAUDE_BINARY" "$@"
         fi
         die78 "两个评审者都不可用（cmd: $PRE_CMD / glm: $PRE_GLM）"
     else
         [[ $PRE_GLM == ok ]] || die78 "glm precheck 失败（$PRE_GLM）"
-        exec "$ZCODE_BINARY" "$@"
+        exec "$CLAUDE_BINARY" "$@"
     fi
 fi
 
@@ -224,22 +222,19 @@ run_cmd_capture() {
 run_glm_capture() {
     local out="$1"
     shift
-    # zcode 凭据注入（与 finqa_chain.py _launch_env 同源同语义：llm.env GLM_API_KEY
-    # → ZHIPU_API_KEY；缺失时 zcode 自己失败，走 fail-visible）
-    local glm_key
-    glm_key="$(grep -E '^GLM_API_KEY=' "$HOME/.config/fin-analyse/llm.env" | cut -d= -f2-)" || true
-    [[ -n "$glm_key" ]] && export ZHIPU_API_KEY="$glm_key"
-    unset glm_key
-    # zcode 无头：提示词只收参数（无 stdin 提示词形态，2026-09-06 实测）——
-    # '-' stdin 形态先缓冲为单参数；args 形态原样透传。
+    # claudecode 无头：提示词参数形态为主（'-' stdin 形态先缓冲为单参数）；
+    # --model 逐次指定（池条目 claude-cc.model）；plan 模式=只读评审；
+    # --strict-mcp-config 跳过工作区 MCP 发现（评审不需要）。
     local pkt=""
     if [[ -z $STDIN_NULL ]]; then
         pkt=$(cat)
     fi
     if [[ -n $STDIN_NULL ]]; then
-        "$ZCODE_BINARY" -p "$@" < "$STDIN_NULL" > "$out"
+        "$CLAUDE_BINARY" -p --model "$GLM_MODEL" --permission-mode plan \
+            --strict-mcp-config "$@" < "$STDIN_NULL" > "$out"
     else
-        "$ZCODE_BINARY" -p "$pkt" > "$out"
+        "$CLAUDE_BINARY" -p --model "$GLM_MODEL" --permission-mode plan \
+            --strict-mcp-config "$pkt" > "$out"
     fi
 }
 

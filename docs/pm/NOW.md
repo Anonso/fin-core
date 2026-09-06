@@ -69,6 +69,13 @@ codex_routes 交互路由链（glm-official enabled / opencode-go disabled，
 改挂退役候选（考后处置；`codex-routes/codex-glm/` 认证/模型目录为 codex_open.sh
 评审替补腿资产，退役时保留）。09-05「生产问询路由单腿 codex-glm」的考试风险
 提示作废——考试链路走 finqa，与 codex_routes 无关。
+**腿角色重排（2026-09-06 owner 二次拍板）**：owner 真实问询=有头手动（终端 CC/
+Windows ZCode 连 WSL），无头链流量≈测试——生产链序仅 commandcode（ds-pro）；
+测试腿名册 A=commandcode-flash、B=zcode（glm-5.3-flash 单旋钮锚定）、C=claude
+（glm-5.3-flash，`--model` 逐次指定实测 served 实证）。评审链 glm 替补再换
+claudecode·glm-5.3（`--model` 逐次指定；zcode 退出评审链回测试腿）。zcode 机制
+边界实测钉死：无逐次旗标、--settings 0.16.5 未实现、ZCODE_HOME 仅遥测、模型
+会话创建时钉定（全局证伪 rc=1）——zcode 家族 flash 弱腿不可行即因单旋钮。
 **GLM 无头统一 zcode（2026-09-06 owner 拍板）**：问询链 claude 腿（CC·glm-5.3）
 退出，换 zcode 腿（glm-5.3，config 单旋钮 zhipu/glm-5.3）；评审链 glm 替补从
 codex-glm home 换 zcode（codex_open.sh glm profile 重写，precheck=旋钮防漂移）；
