@@ -60,6 +60,7 @@ _MODEL_KEYS = {
     "timeout",
 }
 _ENDPOINT_KEYS = {"name", "api_key", "base_url", "model", "reasoning_effort"}
+_HARNESS_MODEL_KEYS = {"type", "harness", "model", "auth_note", "managed", "enabled"}
 _REASONING_EFFORTS = frozenset({"low", "medium", "high", "xhigh", "max", "ultra"})
 _STATIC_ADAPTER_IDS = frozenset({"openai_compatible", "anthropic", "hermes"})
 
@@ -347,6 +348,25 @@ def compile_backend_plan(config: Mapping[str, object]) -> tuple[BackendPlan, ...
     for name, raw_model in models.items():
         if not isinstance(name, str) or not name or not isinstance(raw_model, Mapping):
             raise LLMConfigError("LLM model entry is invalid")
+        if raw_model.get("type") == "harness":
+            # harness 型连接条目：登记与总开关（LLM 连接池分层，docs/design/
+            # llm-pool-layering.md）。登记性条目不进 backend plan——提取/识图
+            # 消费方只经 priorities/vision.chain 引用 api 型；问询/评审经别名
+            # 直读本表。校验：字段闭集 + pool 型必须带布尔 enabled（managed:self
+            # 无 enabled 键=登记可见、开关不存在）。
+            if not set(raw_model).issubset(_HARNESS_MODEL_KEYS):
+                raise LLMConfigError(f"LLM harness entry '{name}' contains unknown keys")
+            if not isinstance(raw_model.get("harness"), str) or not raw_model["harness"]:
+                raise LLMConfigError(f"LLM harness entry '{name}' requires a harness name")
+            managed = raw_model.get("managed", "pool")
+            if managed == "pool":
+                if not isinstance(raw_model.get("enabled"), bool):
+                    raise LLMConfigError(
+                        f"LLM harness entry '{name}' requires a boolean enabled flag"
+                    )
+            elif managed != "self":
+                raise LLMConfigError(f"LLM harness entry '{name}' has unknown managed kind")
+            continue
         if not set(raw_model).issubset(_MODEL_KEYS):
             raise LLMConfigError(f"LLM model '{name}' contains unknown keys")
         enabled = raw_model.get("enabled")

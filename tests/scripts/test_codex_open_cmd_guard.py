@@ -93,8 +93,10 @@ exit 0
     )
     _write_stub(
         bin_dir,
-        "codex",
-        'echo "GLM REVIEW OK"\n',
+        "zcode",
+        '''[ "${1:-}" = "-p" ] || { echo "stub: expected -p" >&2; exit 64; }
+echo "GLM REVIEW OK"
+''',
     )
     env = {
         **os.environ,

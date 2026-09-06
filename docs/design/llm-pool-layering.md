@@ -117,3 +117,13 @@ L2 消费层  只声明「引用哪些连接别名 + 顺序 + 本层旋钮」
 - P3 conn_ref 悬空语义 / 交叉版本窗口 / 闭包清单两小件 / 交互钉腿语义 → 采纳：传导规则补悬空=跳过+横幅、§6 窗口声明（家规 9 成套部署下无支持场景；旧 launcher 读新表 zcode 校验静默失效属未声明退化面，随步 2 消除）、交互钉腿同拒绝；
 - S1 钉腿拒绝语义正确（补 -i 覆盖）；S2 .venv python + fail-closed 对齐；S3 managed:self **不提供 enabled 键**（无开关=无错觉，优于「有开关不生效」）——三条全按建议改稿。
 施工前置：等并行会话 finqa_nodes/finqa_chain/codex_open.sh/persona_regression 未提交改动落稿后再动工（§6 对撞风险）。
+
+## 8. 施工记录（2026-09-06 当日落地，设计门后同日施工）
+
+- 步1 池补全：llm.yaml models 增 harness 型 4 条（commandcode-pro/commandcode-flash/zcode/codex-opencode）——较原稿 6 条的变化见 §7 追记（claude-cc 删、glm-review 并入 zcode、zcode-flash 取消）。
+- 步1.5 豁免：`config_loader.py` `compile_backend_plan` 对 `type: harness` 条目跳过闭集/provider 校验（`_HARNESS_MODEL_KEYS` 闭集 + managed 语义），不进 backend plan；tests/test_llm_config.py +3 测试。
+- 步2 问询链：finqa_chain.py `_load_pool`/`_resolve_node`（悬空与池禁区分失败原因）、链序池禁=横幅跳过、**钉腿拒绝含 -i（rc=2）**；zcode 防漂移 precheck 经池条目 model；finqa_nodes.yaml 迁移 v2（节点=conn_ref+旋钮，schema_version/v2）。**活体探针抓到回归**：池禁生产腿后节点级 enabled:false 测试腿混入链序接生产流量——修复+回归钉子测试（test_chain_never_lets_test_leg_carry_production_traffic）。
+- 步3 评审链：codex_open.sh `pool_harness_model()`（FIN_PY 读池，fail-closed）——CMD_MODEL/ZCODE_MODEL 池解析、precheck 池禁传导、横幅显示解析值；cmd_guard 夹具 glm stub 从 codex 换 zcode。
+- 步4 同步：GLOSSARY 问询腿条目、llm-route-topology.md A/C 节+模型对照表；switch-codex-open-provider skill 的双记账指导待其落稿时一并改（该文件有并行未提交改动）。
+- 验收（§5）：P1 传导✓（三腿 skip 横幅+rc78，flash 不接生产流量）P2 钉腿拒绝✓（rc=2，单测+活体双证）P3 回归 920+ 测试绿（抓到并修复 cmd_guard 1 处后全绿）P4 双挂 rc78✓ P5 三冒烟✓。
+- 净账：+池解析/传导/拒绝三机制、+llm.yaml 4 条目、节点表 −harness/−model 字段；−跨表双记账一处。无新进程。

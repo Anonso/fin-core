@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """finqa:唯一问询入口——链兜底 + 节点钉腿 + 交互透传(config-driven launcher 唯一权威)。
 
-设计:docs/design/finqa-cli-unify-v1.md(设计稿随合入归档;本注释为权威摘要)。
+设计:docs/design/finqa-cli-unify-v1.md(设计稿随合入归档;本注释为权威摘要);
+LLM 连接池分层:docs/design/llm-pool-layering.md(连接=llm.yaml models harness 型
+条目,消费者经 conn_ref 引用;池禁传导+钉腿拒绝,2026-09-06 设计门过闸)。
 起法知识唯一声明位=本文件 launcher 层(_PRECHECKS/_launch_argv/_launch_env);
 bashrc 旧六函数已退役(finqa-c/-cmd 为过渡别名),README 平行文本已改指路。
-节点表 config/finqa_nodes.yaml:声明序=优先序,每节点独立 enabled,增删/排序/
-开关只改 yaml。旋钮:model(节点级)、session: keep|discard(仅 commandcode;
-discard=无头加 --no-session)、effort 维持 launcher 单点 max。
+节点表 config/finqa_nodes.yaml(v2):声明序=优先序;节点=「连接引用(conn_ref)
++ 本层旋钮」,连接(harness/模型/auth 位置/总开关)在 llm.yaml models 池——
+池 enabled=false ⇒ 链序跳过该腿(fail-visible+横幅);钉腿(--node,含 -i)遇池禁
+= 拒绝执行(rc=2,钉腿是显式意图,静默换腿污染对照实验)。session/effort 旋钮
+不变(effort 维持 launcher 单点 max)。
 
 调用:
   finqa "问题"...                 # 走链(enabled 腿兜底;stdin 非 TTY 时读 stdin)
@@ -38,6 +42,7 @@ from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_NODES_FILE = _PROJECT_ROOT / "config" / "finqa_nodes.yaml"
+_LLM_POOL_FILE = _PROJECT_ROOT / "config" / "llm.yaml"
 _CONSULT_WORKSPACE = Path.home() / "fin-data" / "consult-agent"
 _LLM_ENV_FILE = Path.home() / ".config" / "fin-analyse" / "llm.env"
 _EXIT_USAGE = 2
@@ -284,6 +289,55 @@ def _run_interactive(node: dict, forward: list[str]) -> int:
         return _EXIT_USAGE
 
 
+def _load_pool() -> dict[str, dict]:
+    """LLM 连接池:llm.yaml models 段的 harness 型条目(别名→连接)。
+
+    只读 harness/model/enabled/managed 四个执行键;api 型条目不进本池
+    (提取/识图走 config_loader)。读失败=连接层不可用,所有 conn_ref 悬空。
+    """
+
+    import yaml
+
+    pool_file = Path(os.environ.get("FINQA_POOL_FILE") or _LLM_POOL_FILE)
+    try:
+        payload = yaml.safe_load(pool_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise SystemExit(f"finqa-chain: llm pool unreadable ({pool_file}): {error}")
+    models = (payload or {}).get("models")
+    if not isinstance(models, dict):
+        raise SystemExit(f"finqa-chain: llm pool malformed: {pool_file}")
+    pool: dict[str, dict] = {}
+    for alias, entry in models.items():
+        if isinstance(entry, dict) and entry.get("type") == "harness":
+            pool[alias] = entry
+    return pool
+
+
+def _resolve_node(entry: dict, pool: dict[str, dict]) -> tuple[dict | None, str]:
+    """节点→运行时腿:v2 节点只有 conn_ref+旋钮,连接(harness/model/开关)在池。
+
+    Returns (runtime_node, "") 或 (None, 失败原因)——失败原因区分
+    conn_ref 悬空(池缺别名)与池禁(enabled=false),两者对链序同义(跳过)、
+    对钉腿同义(拒绝)。
+    """
+
+    conn_ref = entry.get("conn_ref")
+    if not conn_ref:
+        return None, "conn_ref missing(node schema v2)"
+    conn = pool.get(conn_ref)
+    if conn is None:
+        return None, f"conn_ref unresolved: {conn_ref}"
+    if conn.get("managed", "pool") == "pool" and conn.get("enabled") is not True:
+        return None, f"pool disabled: {conn_ref}"
+    harness = conn.get("harness")
+    if harness not in _PRECHECKS:
+        return None, f"unknown harness in pool: {harness!r}"
+    runtime = dict(entry)
+    runtime["harness"] = harness
+    runtime["model"] = conn.get("model")
+    return runtime, ""
+
+
 def _load_nodes() -> list[dict]:
     import yaml
 
@@ -296,10 +350,10 @@ def _load_nodes() -> list[dict]:
         raise SystemExit(f"finqa-chain: nodes config malformed: {nodes_file}")
     nodes = []
     for entry in payload["nodes"]:
-        if not isinstance(entry, dict) or not entry.get("id") or not entry.get("harness"):
-            raise SystemExit(f"finqa-chain: node entry malformed: {entry!r}")
-        if entry["harness"] not in _PRECHECKS:
-            raise SystemExit(f"finqa-chain: unknown harness: {entry['harness']!r}")
+        if not isinstance(entry, dict) or not entry.get("id") or not entry.get("conn_ref"):
+            raise SystemExit(
+                f"finqa-chain: node entry malformed(needs id+conn_ref, schema v2): {entry!r}"
+            )
         nodes.append(entry)
     return nodes
 
@@ -357,14 +411,21 @@ def main() -> int:
         timeout_seconds = _DEFAULT_TIMEOUT_SECONDS
 
     nodes = _load_nodes()
+    pool = _load_pool()
 
     if args.node is not None:
-        node = next(
-            (entry for entry in nodes if args.node in (entry["id"], entry.get("alias"))),
+        entry = next(
+            (item for item in nodes if args.node in (item["id"], item.get("alias"))),
             None,
         )
-        if node is None:
+        if entry is None:
             print(f"finqa-chain: unknown node: {args.node}", file=sys.stderr)
+            return _EXIT_USAGE
+        node, failure = _resolve_node(entry, pool)
+        if node is None:
+            # 钉腿是显式意图:池禁/悬空一律拒绝(无头与 -i 同语义),不静默换腿——
+            # 静默换腿会把「池禁」伪装成「腿失败」,污染对照实验归因。
+            print(f"finqa-chain: pinned leg refused: {args.node}: {failure}", file=sys.stderr)
             return _EXIT_USAGE
         if args.interactive:
             return _run_interactive(node, args.payload)
@@ -381,8 +442,18 @@ def main() -> int:
     if questions is None:
         parser.print_usage(sys.stderr)
         return _EXIT_USAGE
-    enabled = [entry for entry in nodes if entry.get("enabled")]
-    return _answer_via_legs(enabled, questions, timeout_seconds)
+    chain: list[dict] = []
+    for entry in nodes:
+        node, failure = _resolve_node(entry, pool)
+        if node is None:
+            # 池禁/悬空:链序 fail-visible 跳过 + 横幅(不尝试、不伪装成腿失败)
+            if entry.get("enabled"):
+                _banner(f"POOL-DISABLED skip {entry['id']}({failure})")
+            continue
+        if not entry.get("enabled"):
+            continue  # 节点级 enabled:false(测试腿)维持现状:静默不入链
+        chain.append(node)
+    return _answer_via_legs(chain, questions, timeout_seconds)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # 外部审视评审者入口（设计门/吓人 diff/外援三触发共用）—— D-045
-# 评审者链：cmd（Command Code · deepseek-v4-pro，主）→ glm（codex-glm·glm-5.3，替补）。
+# 评审者链：cmd（Command Code · deepseek-v4-pro，主）→ glm（zcode 无头·glm-5.3，替补）。
 # 调用语法（跨评审者稳定，翻译层按 profile 吸收/拒绝，详见 docs/design/d045-*.md）：
 #   codex-open exec [--skip-git-repo-check] [-C <path>] "<packet>"   # 无头评审
 #   codex-open "<prompt>"                                            # TTY 交互
 #   stdin 无参或 '-' 传 prompt；非 TTY 自动补 exec；首参 exec|e|review 同义
 # cmd profile：吸收 --sandbox/-C/--skip-git-repo-check；权限放大旗标与未识别
-#   旗标 fail-closed（exit 78）。glm profile：codex 参数原样透传（现行为）。
+#   旗标 fail-closed（exit 78）。glm profile：zcode 无头（owner 2026-09-06 拍板
+#   换替——codex-glm 路由退役后 GLM 无头统一走 zcode；harness 本体保留）。
 # fallback：主评审者 precheck 失败或运行非零 → stdout 横幅 + fallback.tsv 落账
 #   → 替补重发同参。换主评审者改 DEFAULT_PROFILE 一行。
 # tsv 行语义 = fallback 事件（非最终结论；双挂时 glm 的失败 rc 见 stderr）。
@@ -18,7 +19,8 @@ WORKSPACE="/home/ypk/fin-core"
 DEFAULT_PROFILE="${GATE_PROFILE:-cmd}"   # 环境覆盖：GATE_PROFILE=glm（测试/运维用）
 
 CMD_BIN="$(command -v cmd || true)"
-CMD_MODEL="deepseek/deepseek-v4-pro"
+# CMD_MODEL/ZCODE_MODEL 自连接池解析（pool_harness_model，见下）——池禁/悬空/池
+# 不可读时为空串，对应 precheck 失败走 fallback/双挂（fail-closed，不猜模型）。
 # 版本钉单源=finqa_nodes.yaml 顶层 cmd_version_pin(2026-09-06 收口,双记账废止);
 # 读不到 fail-closed——版本钉是安全闸(闭源客户端升级先落替补),不许空值放行。
 CMD_VERSION_PIN="$(sed -n 's/^cmd_version_pin:[[:space:]]*"\{0,1\}\([^"[:space:]#]*\)"\{0,1\}.*/\1/p' \
@@ -26,12 +28,34 @@ CMD_VERSION_PIN="$(sed -n 's/^cmd_version_pin:[[:space:]]*"\{0,1\}\([^"[:space:]
 [[ -n "$CMD_VERSION_PIN" ]] || { printf 'codex-open: %s\n' \
     "cmd_version_pin missing/unreadable in config/finqa_nodes.yaml" >&2; exit 78; }
 
-CODEX_GLM_AUTH_FILE="/home/ypk/fin-data/codex-routes/codex-glm/auth.json"
-# 模型目录：复用问询链 codex-glm 路由的目录（glm-5.3 带 instructions_template
-# 与 effort 枚举 low/high/max，2026-09-04 验证）。
-MODEL_CATALOG="/home/ypk/fin-data/codex-routes/codex-glm/models.json"
-CODEX_BINARY="$(command -v codex || true)"
+# glm 替补 = zcode 无头·glm-5.3（模型单旋钮 ~/.zcode/cli/config.json，与问询链
+# zcode 腿共用；harness 本体 codex/codex-glm 资产保留不删，仅退出评审链）。
+# 连接池分层（docs/design/llm-pool-layering.md）：评审者=池条目别名
+# （commandcode-pro / zcode），模型与开关自 llm.yaml 解析；池禁/悬空/yaml 异常
+# 一律视为该评审者不可用（fail-closed，走 fallback 或双挂 rc 78）。
+ZCODE_BINARY="$(command -v zcode || true)"
+ZCODE_CONFIG="$HOME/.zcode/cli/config.json"
 JQ_BINARY="$(command -v jq || true)"
+FIN_PY="$WORKSPACE/.venv/bin/python"
+
+pool_harness_model() {  # $1=别名 → stdout=该连接 model（仅启用时）；非零=禁用/悬空/池不可读
+    "$FIN_PY" -c '
+import os, sys, yaml
+from pathlib import Path
+alias = sys.argv[1]
+p = Path(os.environ.get("FINQA_POOL_FILE") or "/home/ypk/fin-core/config/llm.yaml")
+d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+e = (d.get("models") or {}).get(alias) or {}
+if e.get("type") != "harness":
+    raise SystemExit(3)
+if e.get("managed", "pool") == "pool" and e.get("enabled") is not True:
+    raise SystemExit(3)
+print(e.get("model") or "")
+' "$1" 2>/dev/null
+}
+
+CMD_MODEL="$(pool_harness_model commandcode-pro)" || CMD_MODEL=""
+ZCODE_MODEL="$(pool_harness_model zcode)" || ZCODE_MODEL=""
 
 FALLBACK_TSV="${XDG_STATE_HOME:-$HOME/.local/state}/fin-analyse/design-gate/fallback.tsv"
 DIE_FLAG_RE='^(--yolo|--dangerously-skip-permissions|--tools-all|--tools-enable|--permission-mode)(=.*)?$'
@@ -41,6 +65,7 @@ die78() { printf 'codex-open: %s\n' "$*" >&2; exit 78; }
 # —— profile precheck（两个评审者启动前都查，替补不可用要提前暴露）——
 precheck_cmd() {
     [[ -n "$CMD_BIN" && -x "$CMD_BIN" ]] || return 1
+    [[ -n "$CMD_MODEL" ]] || return 1   # 池禁/悬空/池不可读 → 评审者不可用（传导）
     local v
     v="$("$CMD_BIN" --version 2>/dev/null | head -1)" || return 1
     [[ "$v" == "$CMD_VERSION_PIN" ]] || return 1   # 版本钉定：闭源客户端升级先落替补
@@ -51,26 +76,12 @@ precheck_cmd() {
 }
 
 precheck_glm() {
-    [[ -n "$CODEX_BINARY" && -x "$CODEX_BINARY" ]] || return 1
+    [[ -n "$ZCODE_BINARY" && -x "$ZCODE_BINARY" ]] || return 1
     [[ -n "$JQ_BINARY" && -x "$JQ_BINARY" ]] || return 1
-    if [[ -L "$CODEX_GLM_AUTH_FILE" || ! -f "$CODEX_GLM_AUTH_FILE" ]]; then
-        return 1
-    fi
-    if [[ "$(stat -c '%u:%a:%h' "$CODEX_GLM_AUTH_FILE")" != "$(id -u):600:1" ]]; then
-        return 1
-    fi
-    [[ -r "$MODEL_CATALOG" ]] || return 1
-    "$JQ_BINARY" -er '.glm_api_key | strings | select(length > 0)' \
-        "$CODEX_GLM_AUTH_FILE" >/dev/null || return 1
+    [[ -n "$ZCODE_MODEL" ]] || return 1   # 池禁/悬空/池不可读 → 替补不可用（fail-closed）
+    # 模型旋钮防漂移：zcode 配置须与池条目一致（与问询链 zcode 腿共用单旋钮）
+    "$JQ_BINARY" -er --arg m "$ZCODE_MODEL" '.model == $m' "$ZCODE_CONFIG" >/dev/null || return 1
     return 0
-}
-
-export_cmd_glm_key() {
-    CODEX_GLM_KEY_VALUE="$($JQ_BINARY -er \
-        '.glm_api_key | strings | select(length > 0)' \
-        "$CODEX_GLM_AUTH_FILE")" || die78 "codex-glm credential is invalid"
-    export CODEX_GLM_API_KEY="$CODEX_GLM_KEY_VALUE"
-    unset CODEX_GLM_KEY_VALUE
 }
 
 # —— cmd 翻译层（只对 cmd profile；glm 原样透传）——
@@ -146,7 +157,7 @@ PRIMARY="$DEFAULT_PROFILE"
 if [[ $PRIMARY == cmd ]]; then SECONDARY=glm; else SECONDARY=cmd; fi
 
 note "reviewer=${PRIMARY} ($(
-    [[ $PRIMARY == cmd ]] && echo "$CMD_MODEL" || echo "glm-5.3"
+    [[ $PRIMARY == cmd ]] && echo "${CMD_MODEL:-池未解析}" || echo "${ZCODE_MODEL:-池未解析}"
 )) fallback=${SECONDARY}"
 
 # —— TTY 交互：仅 precheck 阶段可 fallback，运行期不劫持 TUI ——
@@ -159,34 +170,12 @@ if [[ $HEADLESS -eq 0 ]]; then
         fi
         if [[ $PRE_GLM == ok ]]; then
             note_fallback "cmd" "glm" "pre" "tui"
-            export_cmd_glm_key
-            exec "$CODEX_BINARY" \
-                -c model_provider=codex_glm_review \
-                -c 'model_providers.codex_glm_review.name=GLM Review' \
-                -c model_providers.codex_glm_review.base_url=https://open.bigmodel.cn/api/v1 \
-                -c model_providers.codex_glm_review.env_key=CODEX_GLM_API_KEY \
-                -c model_providers.codex_glm_review.wire_api=responses \
-                -c "model_catalog_json=${MODEL_CATALOG}" \
-                -c model_reasoning_effort=max \
-                -m glm-5.3 \
-                --sandbox read-only \
-                "$@"
+            exec "$ZCODE_BINARY" "$@"
         fi
         die78 "两个评审者都不可用（cmd: $PRE_CMD / glm: $PRE_GLM）"
     else
         [[ $PRE_GLM == ok ]] || die78 "glm precheck 失败（$PRE_GLM）"
-        export_cmd_glm_key
-        exec "$CODEX_BINARY" \
-            -c model_provider=codex_glm_review \
-            -c 'model_providers.codex_glm_review.name=GLM Review' \
-            -c model_providers.codex_glm_review.base_url=https://open.bigmodel.cn/api/v1 \
-            -c model_providers.codex_glm_review.env_key=CODEX_GLM_API_KEY \
-            -c model_providers.codex_glm_review.wire_api=responses \
-            -c "model_catalog_json=${MODEL_CATALOG}" \
-            -c model_reasoning_effort=max \
-            -m glm-5.3 \
-            --sandbox read-only \
-            "$@"
+        exec "$ZCODE_BINARY" "$@"
     fi
 fi
 
@@ -235,31 +224,22 @@ run_cmd_capture() {
 run_glm_capture() {
     local out="$1"
     shift
-    export_cmd_glm_key
+    # zcode 凭据注入（与 finqa_chain.py _launch_env 同源同语义：llm.env GLM_API_KEY
+    # → ZHIPU_API_KEY；缺失时 zcode 自己失败，走 fail-visible）
+    local glm_key
+    glm_key="$(grep -E '^GLM_API_KEY=' "$HOME/.config/fin-analyse/llm.env" | cut -d= -f2-)" || true
+    [[ -n "$glm_key" ]] && export ZHIPU_API_KEY="$glm_key"
+    unset glm_key
+    # zcode 无头：提示词只收参数（无 stdin 提示词形态，2026-09-06 实测）——
+    # '-' stdin 形态先缓冲为单参数；args 形态原样透传。
+    local pkt=""
+    if [[ -z $STDIN_NULL ]]; then
+        pkt=$(cat)
+    fi
     if [[ -n $STDIN_NULL ]]; then
-        "$CODEX_BINARY" exec \
-            -c model_provider=codex_glm_review \
-            -c 'model_providers.codex_glm_review.name=GLM Review' \
-            -c model_providers.codex_glm_review.base_url=https://open.bigmodel.cn/api/v1 \
-            -c model_providers.codex_glm_review.env_key=CODEX_GLM_API_KEY \
-            -c model_providers.codex_glm_review.wire_api=responses \
-            -c "model_catalog_json=${MODEL_CATALOG}" \
-            -c model_reasoning_effort=max \
-            -m glm-5.3 \
-            --sandbox read-only \
-            "$@" < "$STDIN_NULL" > "$out"
+        "$ZCODE_BINARY" -p "$@" < "$STDIN_NULL" > "$out"
     else
-        "$CODEX_BINARY" exec \
-            -c model_provider=codex_glm_review \
-            -c 'model_providers.codex_glm_review.name=GLM Review' \
-            -c model_providers.codex_glm_review.base_url=https://open.bigmodel.cn/api/v1 \
-            -c model_providers.codex_glm_review.env_key=CODEX_GLM_API_KEY \
-            -c model_providers.codex_glm_review.wire_api=responses \
-            -c "model_catalog_json=${MODEL_CATALOG}" \
-            -c model_reasoning_effort=max \
-            -m glm-5.3 \
-            --sandbox read-only \
-            "$@" > "$out"
+        "$ZCODE_BINARY" -p "$pkt" > "$out"
     fi
 }
 

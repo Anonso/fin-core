@@ -1,40 +1,38 @@
-# finqa-chain 机器问询链节点表(fin.finqa-nodes/v1)。
-# 声明序 = 优先序(提取链 llm.yaml 语义);每节点独立 enabled;新增/删除/
-# 排序/开关只改本文件(同 harness 加节点零代码)。秘钥不入本文件——各腿认证
-# 维持各自现状(cmd=cmd login 账号会话、codex=auth.json + llm.env 环境键、
-# zcode=llm.env GLM_API_KEY→ZHIPU_API_KEY),起法基线 = scripts/finqa_chain.py
-# launcher(唯一权威,2026-09-06 收口;旧 bashrc finqa-* 函数已退役,只余
-# finqa-c/-cmd 过渡别名)。设计稿随合入归档。
-# 旋钮:model(节点级)、session: keep|discard(仅 commandcode;discard=无头
-# --no-session,交互式报错)、effort=launcher 单点 max。
+# finqa-chain 机器问询链节点表(fin.finqa-nodes/v2 · 连接池分层)。
+# v2(2026-09-06,设计 docs/design/llm-pool-layering.md 设计门过闸):节点=「连接
+# 引用(conn_ref)+ 本层旋钮」——harness/模型/连接总开关在 L1 连接池
+# config/llm.yaml models 段(harness 型条目,别名全局唯一);本表只管
+# 消费顺序/本层 enabled/session/别名。传导语义:池 enabled=false ⇒ 链序跳过
+# 该腿(fail-visible+横幅);钉腿(--node,含 -i)遇池禁=拒绝(rc=2)。
+# 声明序=优先序(提取链 llm.yaml 语义);新增节点=加一行 conn_ref 引用。
+# 秘钥不入本文件——各腿认证位置见池条目 auth_note。
+# 起法基线 = scripts/finqa_chain.py launcher(唯一权威,2026-09-06 收口;
+# 旧 bashrc finqa-* 函数已退役,只余 finqa-c/-cmd 过渡别名)。设计稿随合入归档。
+# 旋钮:session: keep|discard(仅 commandcode;discard=无头 --no-session,交互式
+# 报错)、effort=launcher 单点 max。
 # 测试腿原则(owner 2026-09-05 拍板):测试/探针用低一档模型——最弱腿=最严苛
 # 服从性测试;flash 非生产、仅测试用,FAIL 先分辨执行方差与人格回归。
 # GLM 腿 = zcode 无头(owner 2026-09-06 拍板:zcode 替代其他 harness 的无头
 # GLM 用法——claude 腿退出问询链、评审替补同步换 zcode;harness 本体与
 # codex-glm 资产保留不删,有头 CLI 不动)。zcode 模型=全局单旋钮
-# (~/.zcode/cli/config.json,无逐次旗标),precheck 与节点 model 比对防漂移;
-# zcode-flash 测试腿随之不可存在(单旋钮已让位 glm-5.3),弱腿测试由
-# commandcode-flash 独立承担。
-schema_version: fin.finqa-nodes/v1
+# (~/.zcode/cli/config.json),池条目 model 与其一致(precheck 防漂移)。
+schema_version: fin.finqa-nodes/v2
 cmd_version_pin: "1.49.1"  # cmd 客户端版本钉单源;读方=codex_open.sh + persona_regression.sh
                            # (闭源客户端升级先落替补,读不到 fail-closed)
 nodes:
-  - id: zcode             # zcode CLI 无头 + glm-5.3(coding-plan 渠道,替 claude 腿)
-    harness: zcode
+  - id: zcode             # zcode CLI 无头 + glm-5.3(coding-plan 渠道;替 claude 腿)
+    conn_ref: zcode
     enabled: true
-    model: zhipu/glm-5.3  # 与 ~/.zcode/cli/config.json 一致(precheck 防漂移)
-  - id: codex             # codex CLI + opencode-go(暂关)
-    harness: codex
-    enabled: false        # opencode-go 429 长期故障(owner 2026-09-05 拍板);
-                          # 恢复翻 true 即回第二位,无其他改动
+  - id: codex             # codex CLI + opencode-go(暂关:池条目 codex-opencode enabled=false)
+    conn_ref: codex-opencode
+    enabled: true         # 恢复语义:只翻池条目 enabled 一处,本节点常态 true
   - id: commandcode       # Command Code + ds-pro
-    harness: commandcode
+    conn_ref: commandcode-pro
     alias: cmd            # 短打别名(--node cmd 等效);tsv/横幅仍落规范 id
     enabled: true
   # —— 测试腿(enabled:false 不入链序,仅 --node 钉腿可达;出题自测/对照评估)——
-  - id: commandcode-flash # 同 commandcode harness,仅换模型(节点级 model 字段覆盖默认)
-    harness: commandcode
+  - id: commandcode-flash # 同 commandcode 连接,仅换模型(池条目级别 model 区分)
+    conn_ref: commandcode-flash
     enabled: false
-    model: deepseek/deepseek-v4-flash
     session: discard      # 测试/探针腿不留 cmd 会话档(不 resume;tsv=provenance);
                           # 人格回归探针 persona_regression.sh 亦走本腿

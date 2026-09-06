@@ -368,6 +368,89 @@ def test_backend_plan_rejects_unknown_provider_and_dead_keys(model_config) -> No
         compile_backend_plan({"models": {"bad": model_config}})
 
 
+def test_harness_entries_register_but_stay_out_of_backend_plan() -> None:
+    """LLM 连接池分层（docs/design/llm-pool-layering.md）：harness 型条目只登记
+    连接与总开关，不进 backend plan——提取/识图消费方零感知。"""
+    plan = compile_backend_plan(
+        {
+            "models": {
+                "api_model": {
+                    "provider": "openai_compatible",
+                    "model": "api-v1",
+                    "api_key": "sk-test",
+                    "enabled": True,
+                },
+                "zcode": {
+                    "type": "harness",
+                    "harness": "zcode",
+                    "model": "zhipu/glm-5.3",
+                    "auth_note": "llm.env GLM_API_KEY→ZHIPU_API_KEY",
+                    "enabled": True,
+                },
+                "codex-opencode": {
+                    "type": "harness",
+                    "harness": "codex",
+                    "model": "deepseek-v4-pro",
+                    "auth_note": "consult-agent/.codex",
+                    "enabled": False,
+                },
+            }
+        }
+    )
+
+    assert [p.name for p in plan] == ["api_model"]
+
+
+def test_harness_entry_pool_kind_requires_boolean_enabled() -> None:
+    with pytest.raises(LLMConfigError):
+        compile_backend_plan(
+            {
+                "models": {
+                    "zcode": {
+                        "type": "harness",
+                        "harness": "zcode",
+                        "model": "zhipu/glm-5.3",
+                        "auth_note": "x",
+                    }
+                }
+            }
+        )
+
+
+def test_harness_entry_managed_self_omits_enabled_and_rejects_unknown_kind() -> None:
+    ok = compile_backend_plan(
+        {
+            "models": {
+                "claude-cc": {
+                    "type": "harness",
+                    "harness": "claude",
+                    "model": "glm-5.3",
+                    "auth_note": "CC 内部",
+                    "managed": "self",
+                }
+            }
+        }
+    )
+
+    assert ok == ()  # 登记条目不进 plan，仅校验通过
+
+    with pytest.raises(LLMConfigError):
+        compile_backend_plan(
+            {
+                "models": {
+                    "bad": {
+                        "type": "harness",
+                        "harness": "zcode",
+                        "model": "x",
+                        "auth_note": "x",
+                        "managed": "mystery",
+                        "enabled": True,
+                    }
+                }
+            }
+        )
+
+
 def test_kimi_looking_key_does_not_override_declared_adapter(tmp_path) -> None:
     config_path = tmp_path / "llm.yaml"
     config_path.write_text(

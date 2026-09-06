@@ -114,6 +114,38 @@ models:
     base_url: ${SILICONFLOW_BASE_URL}
     enabled: true
 
+  # —— harness 型连接（无头 harness 登记与总开关；分层管理
+  #    docs/design/llm-pool-layering.md，owner 2026-09-06 拍板）。别名=全局
+  #    唯一，消费者（问询链 conn_ref / 评审链 profile）经别名引用；auth 留在
+  #    各 harness 家（auth_note 纯文档）；不进 backend plan（config_loader
+  #    豁免）；池 enabled=false ⇒ 所有消费链序跳过（fail-visible），钉腿=拒绝 ——
+  commandcode-pro:
+    type: harness
+    _probe: true
+    harness: commandcode
+    model: deepseek/deepseek-v4-pro
+    auth_note: "cmd login 账号会话"
+    enabled: true
+  commandcode-flash:
+    type: harness
+    harness: commandcode
+    model: deepseek/deepseek-v4-flash
+    auth_note: "cmd login 账号会话"
+    enabled: true
+  zcode:
+    type: harness
+    _probe: true
+    harness: zcode
+    model: zhipu/glm-5.3
+    auth_note: "llm.env GLM_API_KEY→ZHIPU_API_KEY + ~/.zcode/cli/config.json 单旋钮（与评审 glm 替补共用）"
+    enabled: true
+  codex-opencode:
+    type: harness
+    harness: codex
+    model: deepseek-v4-pro
+    auth_note: "consult-agent/.codex + llm.env OPENCODE_GO_*（模型实际由该 home config 决定）"
+    enabled: false   # opencode-go 429 长期故障（owner 2026-09-05 拍板）；恢复只翻此处
+
 # 消费方候选顺序（家规规则 6：会变的选择进配置不写死代码）。
 # t0 = 难题质量锚（先用 glm5.3）；t1 = 简单任务吞吐（先用 glm5.3-flash）。
 # 名字必须是 models 下的条目；段缺失/非法时消费方回退各自硬编码缺省序。
