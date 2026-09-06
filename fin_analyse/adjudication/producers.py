@@ -9,6 +9,10 @@ nominations-<batch>.json`` + 标注文档），**不改回放模块任何代码/
   已出现在标注文档（任一满足即 landed——前者覆盖「提案被 owner 裁决为不落」
   的整批处理形态）。
 - 解析失败 = 真相未知（SKIPPED），不碰 inbox（不猜、不误报）。
+
+同文件承载评分记录 needs_review 闭环扫描（D-051 追记 #3）：复用
+``ingestion.instrument_scores`` 规范化 loader 只读计数，title 只含计数不含
+标的名（硬边界 3，详情走本地 ``manage_instrument_scores.py list``）。
 """
 
 from __future__ import annotations
@@ -17,7 +21,12 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-__all__ = ["ReplayNominationScanResult", "scan_replay_nominations"]
+__all__ = [
+    "ReplayNominationScanResult",
+    "NeedsReviewScanResult",
+    "scan_replay_nominations",
+    "scan_needs_review",
+]
 
 
 @dataclass(frozen=True)
@@ -87,4 +96,45 @@ def scan_replay_nominations(
         proposals=len(unit_ids),
         landed=landed,
         nominations_path=str(path),
+    )
+
+
+@dataclass(frozen=True)
+class NeedsReviewScanResult:
+    """Count-only view of pending instrument-score records (no instrument data)."""
+
+    disposition: str  # SCANNED | SKIPPED
+    reason: str | None = None
+    pending: int = 0
+    total: int = 0
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "disposition": self.disposition,
+            "reason": self.reason,
+            "pending": self.pending,
+            "total": self.total,
+        }
+
+
+def scan_needs_review(*, registry_path: Path) -> NeedsReviewScanResult:
+    """Count ``needs_review`` score records via the canonical loader (read-only).
+
+    registry 文件不存在 = 还没有任何评分记录（真相明确 = 无待决），SCANNED 且
+    pending=0；解析层容错由 ``load_records`` 既有语义承担（坏行跳过）。
+    """
+
+    from fin_analyse.ingestion.instrument_scores import load_records
+
+    if not Path(registry_path).exists():
+        return NeedsReviewScanResult(disposition="SCANNED", pending=0, total=0)
+    try:
+        records = load_records(Path(registry_path))
+    except OSError:
+        return NeedsReviewScanResult(disposition="SKIPPED", reason="registry_unreadable")
+    pending = sum(
+        1 for row in records.values() if row.get("status") == "needs_review"
+    )
+    return NeedsReviewScanResult(
+        disposition="SCANNED", pending=pending, total=len(records)
     )

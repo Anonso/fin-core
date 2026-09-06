@@ -553,11 +553,49 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
     try:
         _reconcile_g_annotation_batch_inbox(scan_dict, annotation_path=annotation)
         _reconcile_replay_nomination_inbox(annotation_path=annotation)
+        _reconcile_instrument_needs_review_inbox()
     except Exception:  # noqa: BLE001 - inbox 挂点永不阻断 ingest
         logging.getLogger(__name__).warning(
             "adjudication inbox reconcile failed", exc_info=True
         )
     return result_dict
+
+
+def _reconcile_instrument_needs_review_inbox() -> None:
+    """评分记录 needs_review 闭环真相同步（D-051 追记 #3）。
+
+    needs_review（字段缺失/评分非法/跨源冲突）不计入问询读面，owner
+    confirm/drop 后才定命运=裁决才生效。title 只含计数（硬边界 3，标的
+    明细走本地 manage_instrument_scores.py list）。
+    """
+
+    from fin_analyse.adjudication.producers import scan_needs_review
+    from fin_analyse.ingestion.instrument_scores import instrument_scores_path
+
+    scan = scan_needs_review(
+        registry_path=instrument_scores_path(default_knowledge_base_root())
+    )
+    if scan.disposition != "SCANNED":
+        return
+    pending = scan.pending > 0
+    title = (
+        f"评分记录待人工闭环：{scan.pending} 条 needs_review"
+        if pending
+        else "评分记录 needs_review 已清零"
+    )
+    AdjudicationInbox(state_root=adjudication_inbox_state_root()).reconcile(
+        AdjudicationItem(
+            item_id="instrument.needs_review",
+            kind="instrument-needs-review",
+            title=title,
+            payload_ref=None,
+            resolution_hint=(
+                "manage_instrument_scores.py list 看明细；confirm 收编 / drop 剔除；"
+                "清零后本项自动消项"
+            ),
+        ),
+        pending=pending,
+    )
 
 
 def _reconcile_replay_nomination_inbox(*, annotation_path: Path) -> None:
