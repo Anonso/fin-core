@@ -36,6 +36,8 @@
 | **主导 G / G 采用关系 / 认知模式** | Agent 对当前问题选定的主认知线索 / `adopted·not_applicable·not_used·no_g_available` / 单元的语义角色。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（认知底座节、时间与采用关系节，权威） |
 | **线（点线面）** | 方法论中间层：带时点的点在时间/因果上的连接；面的定性决定线怎么读，线的走向决定点的轻重。 | [点线面 survey](pm/research/2026-09-03-point-line-plane-survey.md) |
 | **时间线（禁裸用，三义）** | 评分时间线（`read_instrument_scores`，最新=当前锚）/ 长认知时间线（mainline evolution，`guo:v0` 不是它）/ 消息时间线视图（待建 B1）。 | [UBIQUITOUS_LANGUAGE](../UBIQUITOUS_LANGUAGE.md)（线与时间线节，权威） |
+| **回放线（市场实践）** | 标注文档里 G 认知的市场验证台账（分维度 supports/diverges，非 G 正误裁决）；事实层快照由 cognition-replay-facts 两个手动 CLI 自动生长，owner 扫批追加正文。 | [design/cognition-replay-facts](design/cognition-replay-facts.md)（Git 史归档） |
+| **黑话对照表** | G 圈内代称→语义的唯一词表（36 词条、三档 confidence），语义消费与回放量化映射（组/代码/角色）的共同源。 | [config/zsxq_jargon.json](../config/zsxq_jargon.json) + [zsxq_jargon.py](../fin_analyse/common/zsxq_jargon.py) |
 
 ## 采集与数据
 

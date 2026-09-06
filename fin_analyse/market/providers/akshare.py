@@ -151,6 +151,39 @@ class AKShareProvider(BaseMarketProvider):
         except Exception:
             return []
 
+    # ── Index history ─────────────────────────────────────
+
+    def get_index_history(self, ticker: str, start: str, end: str) -> list[OHLCV]:
+        """指数日线（新浪源，ticker 形如 sh000001/sz399986）。
+
+        与 ``get_history``（个股）分列：个股路径对 6 位代码会落到
+        ``stock_zh_a_hist``（000001=平安银行），喂指数代码会静默拿错标的，
+        故指数必须走 ``stock_zh_index_daily``。指数无复权概念，返回即 raw。
+        取数失败返回空列表（typed gap 由调用方落账），不 raise。
+        """
+        try:
+            import akshare as ak
+
+            df = ak.stock_zh_index_daily(symbol=ticker)
+        except Exception:
+            return []
+        results: list[OHLCV] = []
+        for _, row in df.iterrows():
+            date = str(row.get("date", ""))[:10]
+            if date < start or date > end:
+                continue
+            results.append(
+                OHLCV(
+                    date=date,
+                    open=float(row.get("open", 0)),
+                    close=float(row.get("close", 0)),
+                    high=float(row.get("high", 0)),
+                    low=float(row.get("low", 0)),
+                    volume=float(row.get("volume", 0)),
+                )
+            )
+        return results
+
     # ── Financials ────────────────────────────────────────
 
     def get_financials(self, ticker: str) -> dict:
