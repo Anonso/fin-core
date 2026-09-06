@@ -219,7 +219,7 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 | 旁路·随手 | 31 | 日线第三源施工：短设计已备（docs/design/daily-bar-third-source.md，候选源待实弹核验，owner 09-05 拍板立项）；施工前跑设计门 | D3 建造静默结束后 |
 | 旁路·使用触发 | 32 | 裁决收件箱 portfolio 接线（D-051 v0 砍出项）：持仓写路径回生产时挂 `save`/`confirm` 挂点，终态映射按 ConfirmStatus 8 值闭集（PUBLISHED/UNCHANGED→resolve，NO_PENDING_REVIEW/BUSY→no-op，其余不动） | 持仓写路径回生产时 |
 | 旁路·owner | 33 | run-design-gate skill §0 增一行注册协议判据（D-051：新增 preview→确认/提名→扫批/需人工确认警告面必须接裁决收件箱 seam）——skill 文件本机未定位到（workspace/用户 skills 均无），owner 指认实际落点后补 | owner 指认 skill 位置 |
-| 旁路·owner | 34 | 行为纪律优化设计对落稿：BUG→行为探针集 v1（非核心：config 题集+runner，测逐条纪律遵守率，待施工）+ 问询答案事后审计 v1（核心：finqa 无头 F1 泄漏词表 fail-open 旁路落账，施工前走设计门）；[../design/behavior-probe-set-v1.md](../design/behavior-probe-set-v1.md) / [../design/consult-answer-audit-v1.md](../design/consult-answer-audit-v1.md) | owner 裁决后施工 |
+| 旁路·owner | 35 | 行为纪律优化施工全清（撞号注：立案时误编 34，与元认知画像条撞号，复号为 35——09-07）：①BUG→行为探针集（config/behavior_probes.yaml 11 探针判据锚预注册 + scripts/behavior_regression.py；运行态——smoke 首跑 09-06：bug053 四锚全 PASS、bug049 证据等级 WARN=判据锚词表待校准〔答案本身五字段基本齐〕、bug005 flash FAIL 经生产腿 ds-pro 复跑 PASS 判执行方差非回归；台账 $STATE/fin-analyse/behavior-regression/）②问询答案事后审计（设计门过：cmd·ds-pro ≈780s，7 发现 6 采纳 1 部分〔S2 驳回「推演值」/开场白入表〕，adjudication 在 $STATE/…/design-gate/consult-answer-audit-v1-20260906/；施工=answer_audit 纯函数+config/answer_audit.yaml F1 词表单源+finqa 无头 fail-open 旁路落 audit.tsv，10 单测+真腿冒烟过，命中≠处置；设计稿两份随 344e944 修订）| owner：裁决 WARN/锚校准、下轮人格修订收口跑 smoke、full 基线裁定 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
 
 ## 遗留观察（诊断/环境，上限 4 条）
