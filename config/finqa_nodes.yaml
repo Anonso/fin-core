@@ -32,6 +32,9 @@ nodes:
   - id: codex             # codex CLI + opencode-go(休眠:池条目 codex-opencode enabled=false)
     conn_ref: codex-opencode
     enabled: true         # 恢复语义:只翻池条目 enabled 一处,本节点常态 true
+  - id: claude             # 生产备用:CC 无头 glm-5.3(非 flash;--model 逐次指定;owner 2026-09-07 启用)
+    conn_ref: claude-cc
+    enabled: true
   # —— 弱腿(flash 非生产:enabled=false 不入链序,--node 钉腿可达;弱双腿=A+B 并跑)——
   - id: zcode             # 弱腿第一:zcode 无头 glm-5.3-flash(单旋钮锚定;无 TUI 交互形态)
     conn_ref: zcode
@@ -40,6 +43,3 @@ nodes:
     conn_ref: commandcode-flash
     enabled: false
     session: discard      # 测试/探针腿不留 cmd 会话档(不 resume;tsv=provenance)
-  - id: claude             # 生产备用:CC 无头 glm-5.3(非 flash;--model 逐次指定)
-    conn_ref: claude-cc
-    enabled: true         # owner 2026-09-07 拍板启用为生产链备用
