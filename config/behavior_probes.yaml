@@ -54,8 +54,9 @@ probes:
       - id: evidence-grade
         kind: expect
         warn_only: true
-        regex: "研报分析分|文章\\s*AI\\s*分|证据等级"
-        note: 评分引用随分标证据等级（BUG-049，r19 新案；flash 方差在案故 WARN 级）
+        regex: "研报分析分|研报\\s*AI\\s*分析|文章\\s*AI\\s*分|文章综合分|证据等级"
+        note: 评分引用随分标证据等级（BUG-049，r19 新案）。判级措辞三实锤变体已入表：
+              研报评分表/文章综合分（09-07 flash 基线）/研报 AI 分析（09-07 生产基线）
       - id: narrow-no-boilerplate
         kind: forbid
         warn_only: true
