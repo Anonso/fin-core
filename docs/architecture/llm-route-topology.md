@@ -25,7 +25,7 @@
 ## A. 问询链（finqa，唯一问询入口，owner 与机器共用）
 
 - 腿序形状：**zcode → (codex) → commandcode**；测试腿不入链序：commandcode-flash（钉腿可达）。括号 = 可禁用腿，现值看节点表。GLM 无头统一走 zcode（owner 2026-09-06 拍板，claude 腿退出问询链；harness 本体保留）。
-- 各腿模型旋钮：zcode = `~/.zcode/cli/config.json` 全局单旋钮（现 zhipu/glm-5.3，无逐次旗标，precheck 与节点 model 防漂移）；cmd = 节点表 `model` 字段；effort = launcher 单点 max。
+- 各腿模型旋钮：zcode = `~/.zcode/cli/config.json` 全局单旋钮（现 zhipu/glm-5.3，precheck 与池条目 model 防漂移）；cmd = 节点表 `model` 字段；effort = launcher 单点 max。**zcode 机制边界（2026-09-06 实测钉死）**：无逐次模型旗标；帮助文本所列 `--settings` 在 0.16.5 未实现（parser 拒绝）；`ZCODE_HOME` 仅遥测、不重定位配置；模型在会话创建时钉定（全局证伪：假模型名 rc=1）——故 zcode 不存在 flash 弱测试腿，GLM 家族弱腿测试暂由提取链 glm53_flash（API 直调）承担，harness 级弱腿=commandcode-flash。
 - 会话语义：默认 keep；`discard`（无头不留档）；`-i` 交互形态保留。
 - 人格与工具面：`~/fin-data/consult-agent/`（CLAUDE.md 人格 + .mcp.json 13 只读+2 受限写），cwd 即身份。
 - 消费者：owner 单发、agent 会话钉腿（盲评/探针/回归）、`persona_regression.sh`（flash 腿）。
