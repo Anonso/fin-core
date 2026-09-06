@@ -127,6 +127,13 @@ _TOOLS_REQUIRING_AS_OF = frozenset(
     {"read_ready_evidence", "read_instrument_scores", "read_macro_brain"}
 )
 
+# Tools with no zero-instrument reading. read_market_snapshot is per-instrument
+# tactical context (the market-level tool is read_market_overview); an empty
+# call used to return instruments_missing+unavailable gaps, which the
+# consultation agent then reported as a supply outage (BUG-055, two live-fire
+# incidents). Fail loudly as invalid_params so the model can correct the call.
+_TOOLS_REQUIRING_INSTRUMENTS = frozenset({"read_market_snapshot"})
+
 _READ_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=True,
     destructiveHint=False,
@@ -169,8 +176,13 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "names, or portfolio rules from memory."
     ),
     "read_market_snapshot": (
-        "Read on-demand tactical market context for up to 5 A-share instruments "
-        "(quotes, daily bars, technicals). Major indices are supported by exact "
+        "Read on-demand tactical market context for 1-5 A-share instruments "
+        "(quotes, daily bars, technicals). REQUIRES instruments: at least one "
+        "six-digit code, company name, or index/board alias — a call without "
+        "instruments is rejected as invalid params, it is NOT a data gap. For "
+        "holdings quotes, call read_actual_portfolio first and pass its codes; "
+        "do not fire this tool in parallel with it before the codes are known. "
+        "Major indices are supported by exact "
         "Chinese name or qualified symbol (上证指数/深成指/创业板指/科创50/深证综指, "
         "000688.SH etc.) and return index daily bars + technicals; bare six-digit "
         "codes resolve to equities only. Sector/concept boards are supported by "
@@ -459,6 +471,14 @@ def _invoke_tool(
         raise InvalidParamsError("invalid_params: instruments must be a list")
     if len(instruments) > 64:
         raise InvalidParamsError("invalid_params: too many instruments")
+    if tool in _TOOLS_REQUIRING_INSTRUMENTS and not any(
+        str(item).strip() for item in instruments
+    ):
+        raise InvalidParamsError(
+            f"invalid_params: {tool} requires at least one instrument "
+            "(six-digit code, company name, or index/board alias); "
+            "for holdings quotes take codes from read_actual_portfolio first"
+        )
 
     article_id = payload.get("article_id")
     if article_id is not None and (

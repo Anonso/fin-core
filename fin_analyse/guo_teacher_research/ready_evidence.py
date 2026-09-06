@@ -81,6 +81,10 @@ class RecentReferenceReadyEvidenceReader:
                     now=request.as_of.isoformat(),
                 )
             )
+        except TimeoutError:
+            # BUG-047 B1 P1③（BUG-046 同款）：TimeoutError 必须穿透到 server
+            # 的 *_deadline_exceeded 专码分支，否则 trace 里超时与故障不可分。
+            raise
         except Exception:
             return _empty_result(
                 (

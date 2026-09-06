@@ -25,6 +25,11 @@ from fin_analyse.portfolio.user_watchlist import (
     WatchlistRead,
 )
 from fin_analyse.portfolio.watchlist_state import require_production_watchlist_state
+from fin_analyse.read_capabilities.server import (
+    CallTrace,
+    InvalidParamsError,
+    _invoke_tool,
+)
 from fin_analyse.read_capabilities.types import ProductionReadRequest
 from fin_analyse.read_capabilities.wiring import (
     READ_TOOL_NAMES,
@@ -269,6 +274,71 @@ class TestHappyPaths:
             ProductionReadRequest(question="两融情况如何")
         )
         assert isinstance(result.value, dict)
+
+
+class TestSnapshotRequiresInstruments:
+    """BUG-055：read_market_snapshot 零 instruments 在 server 层 invalid_params。
+
+    两次实弹（09-04 CC e6a6ffbf、09-05 cmd 8ef37059）：agent 把 snapshot 与
+    read_actual_portfolio 并行发射、前者不带标的，provider 静默返回
+    instruments_missing+unavailable 双 gap，agent 据此误报「数据缺口/源故障」。
+    server 层必须响亮拒绝（invalid_params 可被模型读懂并改参重试），
+    provider 级双 gap 退为纵深防御（TestHappyPaths 同名测试仍护）。
+    """
+
+    def _invoke(
+        self,
+        kb_root: Path,
+        isolated_env: dict[str, str],
+        tmp_path: Path,
+        *,
+        tool: str,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        wiring = build_reader_wiring(kb_root, environ=isolated_env)
+        trace = CallTrace(tmp_path / "trace" / "calls.jsonl")
+        return _invoke_tool(wiring, trace, tool=tool, payload=payload)
+
+    def test_zero_instruments_rejected_as_invalid_params(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        with pytest.raises(InvalidParamsError, match="at least one instrument"):
+            self._invoke(
+                kb_root,
+                isolated_env,
+                tmp_path,
+                tool="read_market_snapshot",
+                payload={"question": "查看持仓标的最新行情快照", "session_hint": ""},
+            )
+
+    def test_whitespace_only_instruments_rejected_too(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        with pytest.raises(InvalidParamsError, match="at least one instrument"):
+            self._invoke(
+                kb_root,
+                isolated_env,
+                tmp_path,
+                tool="read_market_snapshot",
+                payload={
+                    "question": "看看行情",
+                    "instruments": ["  ", ""],
+                    "session_hint": "",
+                },
+            )
+
+    def test_other_tools_still_accept_zero_instruments(
+        self, kb_root: Path, isolated_env: dict[str, str], tmp_path: Path
+    ) -> None:
+        # 反例控制：无 instruments 合法的工具（margin 读缓存面）不得被误伤。
+        result = self._invoke(
+            kb_root,
+            isolated_env,
+            tmp_path,
+            tool="read_margin_evidence",
+            payload={"question": "两融情况如何", "session_hint": ""},
+        )
+        assert isinstance(result, dict)
 
 
 class _FakeWatchlistReader:

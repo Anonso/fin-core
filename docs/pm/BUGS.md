@@ -1376,6 +1376,11 @@
     S3 备案两则：重建口径精确化=工件重排免 LLM（payload 即完整提取产物），仅无工件
     最老条目需重提取；source_id 含文章路径属存量行为（路径迁移→ID 漂移，fresh 判定
     不看 ID），备案不修。
+- B1 P1③ 修复落账（2026-09-06，finq 复盘施工）：RecentReferenceReadyEvidenceReader
+  兜底 catch 补 TimeoutError 穿透（ready_evidence.py，BUG-046 同款模式），server 的
+  read_ready_evidence_deadline_exceeded 专码恢复可达，超时与故障在 trace 可分；回归
+  tests/read_capabilities/test_timeout_classification.py。B1 其余（P1①②⑤/P2×5/P3×5）
+  与 B2/B3 未修项仍按 D-043 静默期结束排期。
 
 ## BUG-048 read_instrument_scores 带后缀持仓代码零命中，问询误报「持仓三只评分注册表均无记录」
 
@@ -1449,3 +1454,28 @@
 - 根因：两层。①cmd CLI（1.49.1，闭源）`-p` 无头模式工具权限被拒时（本 packet 要求读工作区外 `~/fin-data/consult-agent/CLAUDE.md`，工作区外读需审批、无头无人批）**终止整个 run**，result 行 `subtype:"success"`+rc=0/9 不稳定，`stopReason:"permission_denied"` 是唯一真话；②`codex_open.sh` 信任 rc=0 即透传，无任何输出完整性校验。昨日同 launcher 成功（finqa-chain 门）系 packet 未引工作区外文件，非版本差异。
 - 修复：`run_cmd_capture` 固定 `--output-format json`，只认 result 行 `stopReason=="end_turn"` 且 finalText 非空；不完整（rc≠0 或假成功）按失败走既存 glm 替补+fallback.tsv，stderr 留痕改提取后半份文本（防 NDJSON 数 MB 灌入）。回归：`tests/scripts/test_codex_open_cmd_guard.py` 5 用例（stub cmd/codex：end_turn 透传/rc0 假成功/rc9 拒绝/garbage/empty）；真 CLI e2e 实测拒绝被拦、替补完成、tsv 落账。已知残余：cmd 无头读不了工作区外文件是 CLI 结构性圈界，遇域外引用即替补（能力弱于 glm read-only 沙箱，可接受）。
 - 状态：已修复（2026-09-06，24dd709 事故当日；commit 见 git log）。诊断证据：`design-gate/d049-anti-nag-narrow-audit-20260906/review.attempt{1,2}.md` + /tmp 探针（NDJSON `stopReason:"permission_denied"` 实锤，临时件已清）。
+
+## BUG-056 read_market_snapshot 零 instruments 静默返双 gap，agent 误报「行情数据缺口」（2026-09-06 finq 复盘立案，同日修复）
+
+- 发现：finq 不满意项复盘追认两次实弹。09-04 CC 腿（会话 e6a6ffbf）与 09-05 20:06
+  cmd 腿（会话 8ef37059，「看下我的持仓」）均把 read_market_snapshot 与
+  read_actual_portfolio 并行发射、前者不带 instruments（09-05 为 question=
+  「查看持仓标的最新行情快照」零参调用；09-04 问句写了「科创50、上证指数、紫金
+  矿业」但 instruments 未传），provider 零 instruments 分支
+  （production_capability_provider.py:423）直接返
+  market_snapshot_instruments_missing+market_snapshot_unavailable 双 gap
+  （latency 0，未触任何数据源）；agent 据此向 owner 误报「行情返回空（数据缺口）」，
+  owner finq 记 n（09-05 20:08）。trace 该行与真供给故障不可分，复盘初判曾误读
+  「瞬时故障」。同批复盘的 09-05 20:11 read_ready_evidence 无返回定性为契约内空
+  （当日 reference 车道无候选，D-044② 在案），非故障；BUG-047 B1 P1③ 吞超时
+  缺陷另行修复（见 BUG-047 落账行）。
+- 根因：server 层 instruments 完全可选，零值静默放行进 provider；双 gap 语义本意
+  是「传了标的但解析不出」的纵深防御，对「调用者根本没传」这一误用形态不可辨。
+- 修复（2026-09-06 同日）：server 层 `_TOOLS_REQUIRING_INSTRUMENTS` 校验——
+  read_market_snapshot 零/全空白 instruments 直接 InvalidParamsError（报错文本
+  指引：先 read_actual_portfolio 取码再传参，禁止与 portfolio 并行盲发）；工具
+  描述增补 REQUIRES instruments + 调用顺序禁令 + 「invalid params is NOT a data
+  gap」；provider 零 instruments 分支保留为纵深防御（wiring 直调仍可达，
+  TestHappyPaths 原测试继续护）。测试：wiring server 层 3 例（零参/全空白/
+  反例 margin 不误伤）+ 描述钉死 1 例。
+- 状态：已关闭（2026-09-06，全仓 3250 绿；审计门补跑进行中，裁决随 bug 记录）。
