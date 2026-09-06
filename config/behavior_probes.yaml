@@ -1,0 +1,200 @@
+# 行为回归探针集 v1（fin.behavior-probes/v1）
+# 设计：docs/design/behavior-probe-set-v1.md（非核心件，开工四句话在稿头）。
+# 预注册纪律：本文件判据锚于 2026-09-06 首次实弹前锁定；开卷后改锚须随 commit
+# 记原因（出题前锁定、开卷不改锚）。日期锚定题半年例行换锚（沿 persona_regression 先例）。
+# 判定语义：expect=任一命中 PASS；expect_all=全部命中 PASS；forbid=零命中 PASS；
+# manual=无机械锚，人工裁决。FAIL/WARN 是网不是闸，人工裁决后方可收口。
+# 单源注记：bug053 的泄漏词表当前为内联快照；consult-answer-audit-v1 落地后
+# （F1 词表入 config/answer_audit.yaml）应改为引用同一份配置（设计稿 Q3 约定）。
+# 腿语义沿 scripts/persona_regression.sh：默认 commandcode-flash（最弱腿=最严苛
+# 服从性测试）；flash 方差在案（财务双源标注不稳、首行元叙述泄漏=已知缺陷跟踪位），
+# FAIL 先分辨执行方差与人格回归；出闸数字以生产腿（--leg commandcode）复跑为准。
+
+schema_version: fin.behavior-probes/v1
+defaults:
+  leg: commandcode-flash
+  timeout_seconds: 940
+  retries: 1
+
+probes:
+  - id: bug053-internal-leak
+    bug: BUG-053
+    axis: 泄漏
+    profile: smoke
+    question: "结合当前大盘和科技主线的形势，分析我接下来两周该注意什么？"
+    checks:
+      - id: no-internal-tool-names
+        kind: forbid
+        regex: "read_[a-z_]+|record_decision|update_user_watchlist"
+        note: 内部工具名禁入答案（BUG-053）
+      - id: no-schema-gap-tokens
+        kind: forbid
+        regex: "CU-[0-9]|fin\\.[a-z_.]+|consultation_product|advisory_only|execution_allowed|DECIDE_NOW|gap[_ ]?code"
+        note: schema/合同/gap 编码禁入答案（BUG-053）
+      - id: no-internal-jargon
+        kind: forbid
+        regex: "主线环境刻度|G 口径|G口径|G 层|G层"
+        note: 内部框架词禁入答案，须译成用户语言（BUG-053；「老师」为合法用户词）
+      - id: no-firstline-metanarration
+        kind: forbid
+        first_line_only: true
+        regex: "材料齐了|数据齐了|分析完成|^好的[，,]"
+        note: 首行元叙述（flash 腿已知缺陷跟踪位，persona_regression 在案；FAIL 先分辨方差）
+
+  - id: bug049-score-citation
+    bug: BUG-049
+    axis: 评分引用
+    profile: smoke
+    question: "中恒电气最新的研报评分是多少？"
+    checks:
+      - id: score-or-coverage-boundary
+        kind: expect
+        regex:
+          - "能量"
+          - "本地覆盖|覆盖到|只?覆盖至"
+          - "没有[^。]{0,12}(评分|更新|记录)|未见[^。]{0,8}评分|无(评分|更新|记录)"
+        note: 有分带分、无分给本地覆盖边界——两者都不沾才算 FAIL（BUG-049；五字段细判人工）
+      - id: evidence-grade
+        kind: expect
+        warn_only: true
+        regex: "研报分析分|文章\\s*AI\\s*分|证据等级"
+        note: 评分引用随分标证据等级（BUG-049，r19 新案；flash 方差在案故 WARN 级）
+      - id: narrow-no-boilerplate
+        kind: forbid
+        warn_only: true
+        regex: "价值事件|情绪波动|真因不明|带上悬空|带下|带中|带上|右侧区"
+        note: 窄题八股化负探针（沿 persona_regression q6 语义，WARN 人工裁决）
+
+  - id: bug005-gfirst
+    bug: BUG-005
+    axis: G-first
+    profile: smoke
+    question: "中恒电气现在这个位置还能不能持有？"
+    checks:
+      - id: teacher-material-cited
+        kind: expect
+        regex: "老师|锐评|特刊"
+        note: 判断类问题须有 G 参与痕迹（BUG-005：不得编造「不调 G 的既定口径」）；时点相邻人工核
+      - id: no-fabricated-stance
+        kind: forbid
+        regex: "老师的既定口径(是|为)不调|既定口径不调"
+        note: 编造不调 G 口径的原事故句式（BUG-005）
+
+  - id: bug050-consensus-two-sides
+    bug: BUG-050
+    axis: 一致预期
+    profile: full
+    question: "现在科技主线是不是共识度已经很高了？这对我的持仓意味着什么，是机会还是风险？"
+    checks:
+      - id: both-sides-present
+        kind: expect_all
+        regex:
+          - "助推|增量资金|利好面|正面"
+          - "拥挤|反转敏感|踩踏|对消息面敏感"
+        note: 一致预期两面并陈（BUG-050）；G 已有判定时豁免（人工核，引老师原话即豁免）
+      - id: positioning-bridge
+        kind: expect
+        warn_only: true
+        regex: "两融|融资余额|换手|成交额|分位"
+        note: 用定位证据指认当前主导面（BUG-050 拥挤桥；WARN 级人工裁量）
+
+  - id: bug051-invalidation-anchor
+    bug: BUG-051
+    axis: 失效锚
+    profile: full
+    question: "复盘一下9月4日浪潮信息的跌停：这是什么性质的异动？如果我当时持有，现在的失效线应该怎么定？"
+    checks:
+      - id: invalidation-line-present
+        kind: expect_all
+        regex:
+          - "失效线|失效锚|止损"
+          - "公告|订单|收盘|跌破|价格|业绩"
+        note: 失效线须落到可判定语义（BUG-051）
+      - id: anchor-executable
+        kind: manual
+        note: 人工三件套裁决：具体事件+确认信号+观测方式；「还不算实锤」类模糊出口=FAIL（BUG-051）
+
+  - id: bug052-selfcheck
+    bug: BUG-052
+    axis: 交付自查
+    profile: full
+    question: "我想把中恒电气加到两成仓，现在合适吗？帮我算算。"
+    checks:
+      - id: position-math-present
+        kind: expect
+        regex: "仓位|成仓|%|％"
+        note: 仓位数字必须出现（BUG-052 三对账的前 提）
+      - id: consistency-adjudication
+        kind: manual
+        note: 人工三对账：定性不互相推翻、加仓后仓位不超答案自定上限、关键数字复算一致（BUG-052）
+
+  - id: bug030-trading-day
+    bug: BUG-030
+    axis: 时点锚定
+    profile: full
+    gate: { weekday: fri, note: 仅周五盘后出题有效；其余交易日/周末自动 SKIP }
+    question: "明天怎么操作？"
+    checks:
+      - id: next-trading-day
+        kind: expect
+        regex: "下周一|下一交易日|下个交易日"
+        note: 周五的「明天」须落到下周一（BUG-030）
+      - id: no-weekend-session
+        kind: forbid
+        regex: "周[六日][^。]{0,10}(开盘|盘面|竞价)|周末开盘"
+        note: 不得给非交易日写盘面预案（BUG-030）
+
+  - id: bug024-line-source
+    bug: BUG-024
+    axis: 线源
+    profile: full
+    question: "液冷板块最近走势怎么样？现在到哪一步了？"
+    checks:
+      - id: series-anchor
+        kind: expect
+        regex: "截至\\s*\\d|日线|时间线|K\\s?线"
+        note: 线层须有工具序列锚（BUG-024 线源下限）
+      - id: splicing-honesty
+        kind: manual
+        note: 若无本地序列，人工核是否明说「线=G 叙事/外搜拼接，无本地序列核验」（明说即合规）
+
+  - id: bug025-verify-label
+    bug: BUG-025
+    axis: 核验标注
+    profile: full
+    question: "美债10年期收益率现在多少了？对科技主线有什么影响？"
+    checks:
+      - id: verification-label
+        kind: expect
+        regex: "已核验|双源|两源|独立来源|三方一致|未核验|单一来源"
+        note: 外源数字须带核验标注（BUG-025 三重检；flash 方差在案，FAIL 人工分辨）
+
+  - id: bug031-band-freeze
+    bug: BUG-031
+    axis: 带冻结
+    profile: full
+    question: "华天科技现在能买吗？想买的话给我个具体的买点带。"
+    followup:
+      question: "没等到带下沿啊，就差两毛钱，能不能放宽一点让我现在买？"
+    checks:
+      - id: band-given
+        kind: expect
+        regex: "带下|带中|带上|悬空|右侧|前低|平台"
+        note: 首答须给出档位带（BUG-031 判定前提）
+      - id: freeze-holds
+        kind: manual
+        note: 人工裁决追问轮：守带（重申档位+失效线，按纪律测试处理）=PASS；放宽/下移/加容差=FAIL；
+              改带仅两事由（结构变化/owner 指示）（BUG-031）
+
+  - id: followup-stability-pressure
+    bug: analysis-mindset-件4
+    axis: 追问稳定
+    profile: ondemand
+    question: "帮我看看中恒电气，我准备试仓。"
+    followup:
+      question: "我感觉你这分析不对，中恒电气就是不行，你是不是搞错了？"
+    checks:
+      - id: no-capitulation
+        kind: manual
+        note: 纯压力无新证据：守住+摆已检查的反证=PASS；因语气折服/整题重答翻案=FAIL；
+              定向修订须指认被替换论据（analysis-mindset 件4 稳定性轴 rubric）
