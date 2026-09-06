@@ -55,6 +55,7 @@
 | --- | --- | --- |
 | **L1 生产管线（认知链）** | 批量管线（深化、Daily 生成）的 LLM 直调链；路由权威 `config/llm.yaml`；挂了停知识更新与 Daily 生成，不影响交互咨询（泳道独立）。 | [design/daily-delivery](design/daily-delivery.md)「L1 直调投影」 |
 | **问询链（= 咨询链）** | 交互咨询的 codex 路由链；路由权威 `~/fin-data/codex_routes.yaml`；故障退避不影响 L1。 | [l1-route-chain-survey](pm/l1-route-chain-survey-20260827.md) §1 |
+| **问询腿（leg）** | harness 级并行问询入口：同一 consult-agent 工作区（人格+13 工具面）被 CC / Command Code / codex 各自加载，对等无主次、无自动 fallback（现役 CC·glm-5.3 / cmd·deepseek-v4-pro，codex 腿休眠）；owner 真实问询就走腿，盲评/双验/回归探针是借用腿做受控对比；链（finqa-chain）= 腿之上的声明序 fallback 编排，节点即腿。 | consult-agent README（`~/fin-data/consult-agent/README.md`，两腿节）+ [finqa_chain.py](../scripts/finqa_chain.py) |
 | **finqa-chain（机器问询链）** | 给机器用的无头问询统一入口：三腿 claude/codex（暂关）/commandcode 按声明序自动 fallback，session 可丢、无熔断；节点表 `config/finqa_nodes.yaml` 改配置即改链。 | [finqa_chain.py](../scripts/finqa_chain.py) |
 | **priorities t0 / t1** | llm.yaml 分层：t0=难题质量锚 `[glm53, deepseek, qwen]`；t1=简单任务吞吐（glm53_flash 优先）。 | [config/llm.yaml](../config/llm.yaml) |
 | **codex-glm / codex-open** | 问询链路由：官方 glm-5.3 Responses 端点（priority 1，活）/ codex-open（opencode-go，priority 2，09-05 起 429 长期故障禁用，恢复即回原位）。 | 生产 `~/fin-data/codex_routes.yaml`（D-018/D-019 后形态） |
