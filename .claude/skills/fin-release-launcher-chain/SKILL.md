@@ -1,6 +1,6 @@
 ---
 name: fin-release-launcher-chain
-description: Rebuild and deploy a FIN release when launcher/runtime code or the production consultation chain changed, then verify the candidate through the real product boundary. Use for runtime_unavailable, launcher identity/auth/schema failures, or “重建 release 并上线”; use manage-fin-codex-routes for config-only route changes, and do not use for personal Codex setup.
+description: Rebuild and deploy a FIN release when launcher/runtime code or the production consultation chain changed, then verify the candidate through the real product boundary. Use for runtime_unavailable, launcher identity/auth/schema failures, or “重建 release 并上线”; config-only route/model changes go through the connection pool tables (config/finqa_nodes.yaml, config/llm.yaml), and do not use for personal Codex setup.
 ---
 
 # FIN Release Launcher Chain
@@ -25,7 +25,7 @@ evidence.
 
 1. Read `AGENTS.md`, `docs/pm/NOW.md`, Git status, current release identity and
    `fin-codex-routes validate/status`. Preserve unrelated WIP. If the requested
-   change is YAML-only, use `manage-fin-codex-routes` and do not rebuild.
+   change is YAML-only, edit the pool tables (config/finqa_nodes.yaml, config/llm.yaml) and do not rebuild.
 2. Reproduce the smallest failing production boundary. Start with the public
    product call when it is safely read-only; descend into launcher diagnostics
    only when that boundary fails. Read

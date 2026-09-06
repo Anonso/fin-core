@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 外部审视评审者入口（设计门/吓人 diff/外援三触发共用）—— D-045
-# 评审者链：cmd（Command Code · deepseek-v4-pro，主）→ glm（zcode 无头·glm-5.3，替补）。
+# 评审者链：cmd（Command Code · deepseek-v4-pro，主）→ glm（claudecode 无头·glm-5.3，替补）。
 # 调用语法（跨评审者稳定，翻译层按 profile 吸收/拒绝，详见 docs/design/d045-*.md）：
 #   codex-open exec [--skip-git-repo-check] [-C <path>] "<packet>"   # 无头评审
 #   codex-open "<prompt>"                                            # TTY 交互

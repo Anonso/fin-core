@@ -127,3 +127,4 @@ L2 消费层  只声明「引用哪些连接别名 + 顺序 + 本层旋钮」
 - 步4 同步：GLOSSARY 问询腿条目、llm-route-topology.md A/C 节+模型对照表；switch-codex-open-provider skill 的双记账指导待其落稿时一并改（该文件有并行未提交改动）。
 - 验收（§5）：P1 传导✓（三腿 skip 横幅+rc78，flash 不接生产流量）P2 钉腿拒绝✓（rc=2，单测+活体双证）P3 回归 920+ 测试绿（抓到并修复 cmd_guard 1 处后全绿）P4 双挂 rc78✓ P5 三冒烟✓。
 - 净账：+池解析/传导/拒绝三机制、+llm.yaml 4 条目、节点表 −harness/−model 字段；−跨表双记账一处。无新进程。
+- **同日二次重排追加（owner 拍板）**：真实问询=有头手动，无头链≈测试——生产链序仅 commandcode；测试腿 A=commandcode-flash / B=zcode（单旋钮锚定 glm-5.3-flash）/ C=claude-cc-flash（`--model` 逐次指定，served 实证）；评审替补改 `claude-cc`（glm-5.3）。**池条目终态 6 条**（commandcode-pro/flash、zcode、claude-cc/flash、codex-opencode）——原「claude-cc 删、managed:self 语义」被此重排取代（CC 以 pool 型登记，模型经 --model 逐次指定，served 实证）；managed:self 语义保留在 schema（现无实例）。zcode 机制边界（无逐次旗标/--settings 未实现/ZCODE_HOME 仅遥测/会话创建钉定）实测入拓扑页。

@@ -55,7 +55,7 @@
 | --- | --- | --- |
 | **L1 生产管线（认知链）** | 批量管线（深化、Daily 生成）的 LLM 直调链；路由权威 `config/llm.yaml`；挂了停知识更新与 Daily 生成，不影响交互咨询（泳道独立）。 | [design/daily-delivery](design/daily-delivery.md)「L1 直调投影」 |
 | **问询链（= 咨询链）** | 问询的唯一链，2026-09-06 起 = finqa-chain（交互路由链 codex_routes 已退役，见该条）；owner 与机器共用同一链同一入口。 | [llm-route-topology](architecture/llm-route-topology.md) A 节 |
-| **问询腿（leg）** | harness 级问询腿：同一 consult-agent 工作区（人格+13 工具面）被 zcode / Command Code / codex 各自加载；腿=节点表里的一个节点，钉腿（`--node`）用于测试/探针/对照。 | consult-agent README（`~/fin-data/consult-agent/README.md`）+ [finqa_chain.py](../scripts/finqa_chain.py) |
+| **问询腿（leg）** | harness 级问询腿：同一 consult-agent 工作区（人格+13 工具面）被 zcode / Command Code / claude(CC) / codex 各自加载；腿=节点表里的一个节点，钉腿（`--node`）用于测试/探针/对照。 | consult-agent README（`~/fin-data/consult-agent/README.md`）+ [finqa_chain.py](../scripts/finqa_chain.py) |
 | **finqa-chain（问询链）** | 问询统一入口（owner 与机器共用）：enabled 腿按声明序自动 fallback，session keep/discard 旋钮、无熔断；launcher `finqa_chain.py` 唯一起法权威，节点表 `config/finqa_nodes.yaml` 改配置即改链。 | [finqa_chain.py](../scripts/finqa_chain.py) |
 | **priorities t0 / t1** | llm.yaml 分层：t0=难题质量锚 `[glm53, deepseek, qwen]`；t1=简单任务吞吐（glm53_flash 优先）。 | [config/llm.yaml](../config/llm.yaml) |
 | **codex-glm / codex-open** | 已退役（2026-09-06）：交互路由链 codex_routes.yaml+codex-proxy 已整体退役入备份；`codex-glm` 名下仅存认证/模型目录 `~/fin-data/codex-routes/codex-glm/`，现为评审链 glm 替补腿资产。 | [NOW](pm/NOW.md) 2026-09-06 段 |
