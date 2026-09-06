@@ -17,8 +17,7 @@ from pathlib import Path
 from typing import Protocol
 from zoneinfo import ZoneInfo
 
-import yaml
-
+from fin_analyse.adjudication.config import load_adjudication_config
 from fin_analyse.adjudication.inbox import (
     AdjudicationInbox,
     ItemRow,
@@ -26,13 +25,9 @@ from fin_analyse.adjudication.inbox import (
 )
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
-_DEFAULT_ESCALATE_AFTER_DAYS = 3
 _TRANSITION_ACTIONS = ("submit", "reopen")
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CONFIG_PATH = _PROJECT_ROOT / "config" / "adjudication.yaml"
-
-__all__ = ["PushDisposition", "PushOutcome", "load_digest_config", "render_digest", "push"]
+__all__ = ["PushDisposition", "PushOutcome", "render_digest", "push"]
 
 
 class DigestSender(Protocol):
@@ -60,27 +55,6 @@ class PushOutcome:
     detail: str | None = None
 
 
-def load_digest_config(path: Path | None = None) -> dict:
-    """Load digest tuning values; missing file = built-in defaults (silent)."""
-
-    config_path = path or CONFIG_PATH
-    payload: dict = {}
-    if config_path.exists():
-        loaded = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-        if loaded is not None:
-            if not isinstance(loaded, dict):
-                raise PushError(f"adjudication_config_invalid: {config_path}")
-            payload = loaded
-    digest = payload.get("digest") or {}
-    if not isinstance(digest, dict):
-        raise PushError("adjudication_config_digest_invalid")
-    try:
-        escalate_after_days = int(digest.get("escalate_after_days", _DEFAULT_ESCALATE_AFTER_DAYS))
-    except (TypeError, ValueError) as error:
-        raise PushError("adjudication_config_escalate_invalid") from error
-    if escalate_after_days < 0:
-        raise PushError("adjudication_config_escalate_invalid")
-    return {"escalate_after_days": escalate_after_days}
 
 
 def _shanghai_day(now: datetime) -> str:
@@ -127,7 +101,10 @@ def push(
     problems raise :class:`PushError` before any send."""
 
     current = now or datetime.now(tz=UTC)
-    config = load_digest_config(config_path)
+    try:
+        config = load_adjudication_config(config_path)
+    except ValueError as error:
+        raise PushError(f"adjudication_config_invalid: {error}") from error
     items = inbox.list_open()
     if not items:
         return PushOutcome(disposition=PushDisposition.NO_OPEN_ITEMS)

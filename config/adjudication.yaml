@@ -2,3 +2,6 @@ schema_version: fin.adjudication-config/v1
 digest:
   # 积压超过该天数在推送摘要中标 ⚠（可调项进配置，家规 6）。
   escalate_after_days: 3
+g_annotation_batch:
+  # G 标注 as_of 落后超过该天数即开「批次到期」项（as_of 滚动后自动消项）。
+  lag_days_threshold: 2

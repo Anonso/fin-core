@@ -343,3 +343,86 @@ def scan_mainline_candidates(
         malformed_dates=stats["malformed_dates"],
         draft_path=str(target),
     )
+
+
+_BATCH_SCHEMA_VERSION = "fin.g-annotation-batch/v1"
+# owner 2026-09-01 拍板：每日热点 = 老师 AI 汇总的参考信息（非老师看法），
+# 不进 G 认知主线；批次落后计数同样不计它（否则日更流会制造永久落后假象）。
+_BATCH_EXCLUDED_COLUMNS = frozenset({"星大派每日热点"})
+
+
+@dataclass(frozen=True)
+class AnnotationBatchScanResult:
+    """Content-free batch-lag view for the adjudication inbox (D-051 v0.1).
+
+    回答一个问题：标注 as_of 相对已入库老师内容落后多少。只报数量与跨度，
+    不提名具体文章——普通栏老师文章不进机器提名（来源门闭集），但它们等
+    owner 批次勾选终审；复核权仍在 owner。
+    """
+
+    schema_version: str = _BATCH_SCHEMA_VERSION
+    disposition: str = "SKIPPED"
+    reason: str | None = None
+    as_of: str | None = None
+    lag_days: int = 0
+    unarchived: int = 0
+    latest_unarchived_date: str | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "disposition": self.disposition,
+            "reason": self.reason,
+            "as_of": self.as_of,
+            "lag_days": self.lag_days,
+            "unarchived": self.unarchived,
+            "latest_unarchived_date": self.latest_unarchived_date,
+        }
+
+
+def scan_annotation_batch(
+    *,
+    annotation_path: str | Path,
+    index_path: str | Path | None = None,
+    today: date | None = None,
+) -> AnnotationBatchScanResult:
+    """Scan the annotation lag: index entries strictly after ``as_of``.
+
+    ``date > as_of`` 即「最后复核时点之后入库」——as_of 随批次完成滚动
+    （带时点），故该谓词天然排除已入档文章，无需查 read-model。
+    """
+
+    def _skipped(reason: str) -> AnnotationBatchScanResult:
+        return AnnotationBatchScanResult(disposition="SKIPPED", reason=reason)
+
+    as_of = _annotation_as_of(Path(annotation_path))
+    if as_of is None:
+        return _skipped("annotation_as_of_missing")
+    if index_path is None:
+        from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
+
+        index_path = default_knowledge_base_root() / "index.json"
+    index = _load_index(Path(index_path))
+    if index is None:
+        return _skipped("index_unreadable")
+
+    today = today or date.today()
+    unarchived_dates: list[date] = []
+    for raw_entry in index:
+        if not isinstance(raw_entry, dict):
+            continue
+        if raw_entry.get("column") in _BATCH_EXCLUDED_COLUMNS:
+            continue
+        entry_date = _entry_date(raw_entry)
+        if entry_date is not None and entry_date > as_of:
+            unarchived_dates.append(entry_date)
+
+    return AnnotationBatchScanResult(
+        disposition="SCANNED",
+        as_of=as_of.isoformat(),
+        lag_days=max(0, (today - as_of).days),
+        unarchived=len(unarchived_dates),
+        latest_unarchived_date=(
+            max(unarchived_dates).isoformat() if unarchived_dates else None
+        ),
+    )

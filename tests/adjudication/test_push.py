@@ -11,10 +11,10 @@ from fin_analyse.adjudication.inbox import (
     AdjudicationInbox,
     AdjudicationItem,
 )
+from fin_analyse.adjudication.config import load_adjudication_config
 from fin_analyse.adjudication.push import (
     PushDisposition,
     PushError,
-    load_digest_config,
     push,
 )
 
@@ -163,15 +163,34 @@ def test_dry_run_renders_without_send_or_ledger(inbox: AdjudicationInbox) -> Non
     assert _sent_count(inbox) == 0
 
 
-def test_load_digest_config_defaults_and_validation(tmp_path: Path) -> None:
-    assert load_digest_config(tmp_path / "missing.yaml") == {"escalate_after_days": 3}
+def test_load_adjudication_config_defaults_and_validation(tmp_path: Path) -> None:
+    assert load_adjudication_config(tmp_path / "missing.yaml") == {
+        "escalate_after_days": 3,
+        "g_lag_days_threshold": 2,
+    }
     config_file = tmp_path / "adjudication.yaml"
     config_file.write_text(
-        "schema_version: fin.adjudication-config/v1\ndigest:\n  escalate_after_days: 5\n",
+        "digest:\n  escalate_after_days: 5\ng_annotation_batch:\n"
+        "  lag_days_threshold: 4\n",
         encoding="utf-8",
     )
-    assert load_digest_config(config_file) == {"escalate_after_days": 5}
+    assert load_adjudication_config(config_file) == {
+        "escalate_after_days": 5,
+        "g_lag_days_threshold": 4,
+    }
     bad = tmp_path / "bad.yaml"
     bad.write_text("digest:\n  escalate_after_days: -1\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_adjudication_config(bad)
+    # push() 把配置错误包成 typed PushError（fail-closed 于发送前）
+    from fin_analyse.adjudication.inbox import AdjudicationInbox
+
+    inbox = AdjudicationInbox(state_root=tmp_path / "inbox")
+    inbox.reconcile(
+        __import__(
+            "fin_analyse.adjudication.inbox", fromlist=["AdjudicationItem"]
+        ).AdjudicationItem(item_id="x", kind="k", title="t"),
+        pending=True,
+    )
     with pytest.raises(PushError):
-        load_digest_config(bad)
+        push(inbox, sender=None, target_environ={}, now=_NOW, config_path=bad)

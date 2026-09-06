@@ -21,8 +21,12 @@ from io import StringIO
 from pathlib import Path
 
 from fin_analyse.adjudication import AdjudicationInbox, AdjudicationItem
+from fin_analyse.adjudication.config import load_adjudication_config
 from fin_analyse.guo_teacher_research.cognition_mainline_rebuild import rebuild_if_stale
-from fin_analyse.guo_teacher_research.mainline_candidates import scan_mainline_candidates
+from fin_analyse.guo_teacher_research.mainline_candidates import (
+    scan_annotation_batch,
+    scan_mainline_candidates,
+)
 from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
 from fin_analyse.runtime.state_roots import adjudication_inbox_state_root
 from fin_analyse.scraper.capture_ingest import main as import_capture
@@ -547,7 +551,7 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
     # 裁决收件箱 producer 真相同步：钉在 scan try/except 之外、audit 同层、
     # 独立 suppress+logging——inbox 异常不得被误记为 scan_invocation_failed。
     try:
-        _reconcile_mainline_nomination_inbox(scan_dict)
+        _reconcile_g_annotation_batch_inbox(scan_dict, annotation_path=annotation)
     except Exception:  # noqa: BLE001 - inbox 挂点永不阻断 ingest
         logging.getLogger(__name__).warning(
             "adjudication inbox reconcile failed", exc_info=True
@@ -555,35 +559,55 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
     return result_dict
 
 
-def _reconcile_mainline_nomination_inbox(scan_result: dict[str, object]) -> None:
-    """主线提名真相同步（best-effort producer，adjudication-inbox 设计页）。
+def _reconcile_g_annotation_batch_inbox(
+    scan_result: dict[str, object],
+    *,
+    annotation_path: Path,
+) -> None:
+    """G 标注批次真相同步（best-effort producer，D-051 v0.1）。
 
-    pending = SCANNED 且 nominated>0（owner 扫批入档即完成路径，nominated 清零
-    干净）；same_article 清空只随 as_of 锚滚动，只作 title 信息性计数，不作
-    pending 依据（r2-P1-1）。SKIPPED/FAILED 真相未知，不碰 inbox；SCANNED 且
-    归零 → producer auto-resolve。
+    owner 2026-09-06 拍板定位：收件箱放「需 owner 裁决才能入库生效」的项
+    （G 认知时间线原型）。pending = as_of 落后 ≥ 阈值（默认 2 天，可配）且
+    库内有更新老师文章——只报数量/跨度，不提名具体文章（普通栏不进机器
+    提名闭集，复核权留 owner）；as_of 随批次完成滚动 → 自动消项。
+    SKIPPED（as_of 缺失/index 不可读）真相未知，不碰 inbox。
     """
 
-    if scan_result.get("disposition") != "SCANNED":
+    batch = scan_annotation_batch(
+        annotation_path=annotation_path,
+        index_path=default_knowledge_base_root() / "index.json",
+    )
+    if batch.disposition != "SCANNED":
         return
+    threshold = load_adjudication_config()["g_lag_days_threshold"]
+    pending = batch.lag_days >= threshold and batch.unarchived > 0
+    title = (
+        f"G 标注批次到期：as_of={batch.as_of}，落后 {batch.lag_days} 天，"
+        f"未入册老师文章 {batch.unarchived} 篇"
+    )
+    if batch.latest_unarchived_date:
+        title += f"（最新 {batch.latest_unarchived_date}）"
     nominated = scan_result.get("nominated")
-    same_article = scan_result.get("same_article")
     draft_path = scan_result.get("draft_path")
-    title = f"G 主线候选提名：{nominated if isinstance(nominated, int) else 0} 条待勾选"
-    if isinstance(same_article, int) and same_article:
-        title += f"，另有 {same_article} 条同文待核"
+    if isinstance(nominated, int) and nominated > 0:
+        title += f"，其中机器提名 {nominated} 条"
+    payload = (
+        draft_path
+        if isinstance(draft_path, str) and draft_path
+        else str(annotation_path)
+    )
     AdjudicationInbox(state_root=adjudication_inbox_state_root()).reconcile(
         AdjudicationItem(
-            item_id="mainline.nomination",
-            kind="g-mainline-nomination",
+            item_id="g.annotation_batch",
+            kind="g-annotation-batch",
             title=title,
-            payload_ref=str(draft_path) if isinstance(draft_path, str) else None,
+            payload_ref=payload,
             resolution_hint=(
-                "勾选→起草协议→verify_mainline_annotation.py 机验→手工归档标注文档；"
-                "完成后 fin-adjudication done mainline.nomination"
+                "开标注批次：从 index 勾选→起草协议→verify_mainline_annotation.py 机验"
+                "→终审入档；as_of 滚动后本项自动消项"
             ),
         ),
-        pending=isinstance(nominated, int) and nominated > 0,
+        pending=pending,
     )
 
 
