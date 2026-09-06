@@ -48,7 +48,7 @@
 
 | 模型 | 问询链身份 | 提取链身份 | 评审链身份 |
 | --- | --- | --- | --- |
-| glm-5.3 | （harness 层让位；提取链 glm53 仍在） | t0 头（glm53） | glm 替补（claudecode） |
+| glm-5.3 | 问询链无此档（测试腿 B/C 均 flash） | t0 头（glm53） | **glm 替补（claudecode·5.3，在役）** |
 | glm-5.3-flash | zcode 测试腿 B + claude 测试腿 C（单旋钮/--model） | cognition 头 + t1 头 + 识图第 2 位 | — |
 | deepseek-v4-pro | commandcode 腿（节点表默认） | deepseek（legacy 池位） | cmd 主评审者 |
 | deepseek-v4-flash | commandcode-flash 测试腿 | DS 槽位两渠道节点 | — |
