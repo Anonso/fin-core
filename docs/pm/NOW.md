@@ -78,7 +78,18 @@ MANIFEST 含 sha256，目录结构镜像可恢复）；`manage-fin-codex-routes`
 `tools/effect_evaluation/fin_arm_capture.py` `_ROUTE_CONFIG`（Hermes 时代评估栈
 provenance 字段）、`guo_teacher_research` 孤立子模块 codex_route_config/
 codex_runtime/runtime_diagnostics（包外无活调用方，5 测试在护）、
-`fin_tool_usage_audit.py:28` 指向已不存在的 codex-proxy-a（退役前即悬空）。2026-09-06 CLI 收口（D-050）：唯一
+`fin_tool_usage_audit.py:28` 指向已不存在的 codex-proxy-a（退役前即悬空）。
+**影响范围复核（同日）**：网关重启安全——release 快照 `service_registry.py`
+硬编码 codex-proxy/yaml 但全部 lazy 触达（registry 文档级 lazy + `_services()`
+惰性构建 + 「Lazy import seam」双缝），MCP 启动不构建 consult runtime，缺失
+仅在已停用 consult 工具被调用时命中 = 08-27「设计内允许报错」路径；测试
+guo_teacher_research codex 系 52 passed + effect_evaluation 102 passed（hermetic
+不读真实 yaml）；shell/systemd 无 FIN_CODEX_ROUTE 导出、codex-remote-control
+单元无关（CODEX_HOME=~/.codex）、Hermes 侧仅 memory 叙述无代码读方、两个
+codex home config 均自足。标注：旧 release 的 service_registry/production_runtime
+硬编码属回滚资产已知限制（主支从未有此引用，旧架构仅存 release）；并行会话
+switch-codex-open-provider 未提交稿仍引用已退役的 manage-fin-codex-routes
+skill，落稿时需知悉。2026-09-06 CLI 收口（D-050）：唯一
 入口 `finqa`（--node 钉腿 + -i 交互），launcher=起腿知识唯一权威；测试腿
 zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_version_pin
 单源 + bashrc 六函数退役（finqa-c/-cmd 过渡别名）；设计门 3 发现全采纳
