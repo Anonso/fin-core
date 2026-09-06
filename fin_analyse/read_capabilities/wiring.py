@@ -219,9 +219,15 @@ def build_reader_wiring(
         cognition_mainline_reader = CognitionMainlineReadModelReader(
             state_root / "fin-analyse" / "cognition-mainline-readmodel-v1"
         )
+        # 元认知调节器画像路径（设计门 g-meta-calibrator）：文件可缺失，
+        # loader fail-open——无画像=不注入=现状行为。
+        meta_profile_path = (
+            state_root / "fin-analyse" / "cognition-replay-evidence" / "meta-profile.v1.json"
+        )
         provider = ProductionReadCapabilityProvider(
             knowledge_base_root=knowledge_base_root,
             cognition_mainline_reader=cognition_mainline_reader,
+            meta_profile_path=meta_profile_path,
             market_overview=market_overview,
             on_demand_tactical_context=on_demand,
             margin_evidence=margin,

@@ -35,6 +35,9 @@ from fin_analyse.guo_teacher_research.macro_brain import (
     match_shared_brain_cards,
     suggested_queries,
 )
+from fin_analyse.guo_teacher_research.meta_calibration import (
+    load_meta_calibration_block,
+)
 from fin_analyse.guo_teacher_research.ready_evidence import (
     RecentReferenceReadyEvidenceReader,
 )
@@ -220,6 +223,7 @@ class ProductionReadCapabilityProvider:
         actual_portfolio: _ActualPortfolioReader | None = None,
         user_watchlist: _UserWatchlistReader | None = None,
         clock: Callable[[], datetime] | None = None,
+        meta_profile_path: Path | None = None,
     ) -> None:
         if runtime_context is None:
             if knowledge_base_root is None:
@@ -245,6 +249,9 @@ class ProductionReadCapabilityProvider:
         self._actual_portfolio = actual_portfolio
         self._user_watchlist = user_watchlist
         self._clock = clock or (lambda: datetime.now(UTC))
+        # 元认知调节器画像（设计门 g-meta-calibrator）：None/fail-open=不注入，
+        # 问询行为与无调节器逐字节等价。
+        self._meta_profile_path = meta_profile_path
         self._ready_evidence_reader = (
             ready_evidence_reader
             if ready_evidence_reader is not None
@@ -292,25 +299,35 @@ class ProductionReadCapabilityProvider:
             audit_by_ref = {}
         assert audit_by_ref is not None
         # Slice 3b: layered G context (pinned/framework/facts/associations/external_brain)
-        return ProductionReadResult(
-            value=_g_layered_context_value(
-                raw_items=[item for item in raw_items if isinstance(item, Mapping)],
-                audit_by_ref=audit_by_ref,
-                as_of=request.as_of,
-                resolved=resolved,
-                question=request.question,
-                shared_brain_cards=(
-                    match_shared_brain_cards(
-                        load_shared_brain_cards(self._knowledge_base_root),
-                        request.question,
-                    )
-                    if self._knowledge_base_root is not None
-                    else []
-                ),
-                gaps=gaps,
+        # 元认知调节器（设计门 g-meta-calibrator）：owner 终审画像存在且新鲜时
+        # 追加 meta_calibration 块；缺失/损坏/过期 fail-open=不追加。
+        value = _g_layered_context_value(
+            raw_items=[item for item in raw_items if isinstance(item, Mapping)],
+            audit_by_ref=audit_by_ref,
+            as_of=request.as_of,
+            resolved=resolved,
+            question=request.question,
+            shared_brain_cards=(
+                match_shared_brain_cards(
+                    load_shared_brain_cards(self._knowledge_base_root),
+                    request.question,
+                )
+                if self._knowledge_base_root is not None
+                else []
             ),
-            data_gaps=tuple(gaps),
+            gaps=gaps,
         )
+        ref_date = (
+            request.as_of.date()
+            if request.as_of is not None
+            else self._clock().date()
+        )
+        calibration = load_meta_calibration_block(
+            self._meta_profile_path, ref_date=ref_date
+        )
+        if calibration is not None:
+            value["meta_calibration"] = calibration
+        return ProductionReadResult(value=value, data_gaps=tuple(gaps))
 
     def read_teacher_cognition(self, request: ProductionReadRequest) -> ProductionReadResult:
         question, instruments = _bounded_inputs(request)

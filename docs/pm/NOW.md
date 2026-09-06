@@ -157,7 +157,7 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 
 | 工具 | 产品影响面 | 状态 | 问询探针 | 指针 |
 | --- | --- | --- | --- | --- |
-| read_g_context | G 主线证据注入 | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分 | [../design/g-cognition.md](../design/g-cognition.md) |
+| read_g_context | G 主线证据注入 + 元认知调节（09-06 起：可选 meta_calibration 块，fail-open 无画像=现状） | 在用 | 老师体系覆盖的问题，验证据链 + 三维打分；调节器验注入/退化探针 | [../design/g-cognition.md](../design/g-cognition.md)；[../design/g-meta-calibrator.md](../design/g-meta-calibrator.md) |
 | read_actual_portfolio | 持仓名称/现价/变化栏 | 在用 | 「分析我的持仓」 | [../design/portfolio.md](../design/portfolio.md)；探针 08-29 ok 无 gaps（BUG-001/008 已闭） |
 | read_market_snapshot | 标的行情 + 主指数日线（大盘线） | 在用（09-05 板块 lane 上线〔NOW #24，ff372bd〕：液冷/半导体/通信设备等中文名直查腾讯板块指数日线+技术因子——单源 limitation 常驻、无 30m/60m，端到端 READY/120 bars/零 gap+消费端探针答引板块序列带单源口径；09-04 主指数 lane〔96f8fcd〕与个股语义零变化；08-31 EASTMONEY f48 修复与 BUG-022 已闭） | 名称查「科创50」日线，验 bars+gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-011/022 已闭；git 96f8fcd |
 | read_market_overview | 大盘结构 | 在用（09-04 09:07 盘前实弹闭环：整链拒未再现，PARTIAL+7 命名 gap〔5 常驻良性+2 盘前源数据缺席=f3/f6 占位与广度，源属性〕；owner 会话 1c718317 答案诚实降级质量在线。08-31 定修+09-01 gate5 两次修复生效） | 「今天大盘怎么样」，验 gaps 空 | [../design/market-data.md](../design/market-data.md)；BUG-002 已闭 |
@@ -198,6 +198,7 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 | 旁路·owner | 0 | BUG-024 盘前读法实弹终验：v3 人格增补+主指数日线 lane（09-04，96f8fcd）+细分板块 lane（09-05，ff372bd）均施工全清，剩 owner 实弹验「线层现工具序列或诚实标注」；09-07 收盘后另核板块 lane 当日 bar 即时性（评审 Q2-P2，见 BUGS BUG-024） | owner 下个交易日（09-07 周一）盘前+盘后 |
 | 旁路·owner | 2 | finq 记账（D-043/C3）：y 记一字、n 必须一句原因（owner 纪律，不加校验）；存量 3 条历史缺口接受（不回填 append-only 台账），自 D3 起新账强制 | owner 随用 |
 | 旁路·时间 | 3 | 评分边界样本：首篇 [6,7)（或 <6）新帖进自然窗口时，核 read_instrument_scores 时间线与 G/reference 窗口分级行为（D-033/036/037 已交付：registry 1629 条、增量门槛 6.0 走 config/zsxq_capture.json；09-05 夜核对：registry 1695 条、parser v3+增量接线落地（#26 出队）、首篇 [6,7) 边界样本已入册（603629@09-05 能量 6.8）——分级行为核对仍待做；设计 [../design/instrument-score-registry.md](../design/instrument-score-registry.md)、[../design/instrument-score-timeline.md](../design/instrument-score-timeline.md)） | 自然窗口到点核对 |
+| 旁路·owner | 34 | 元认知画像初稿确认（g-meta-calibrator 设计门 cmd 12 发现全采纳 12/12，施工完 9 测试绿）：确认设计稿 §2.3 五行画像（basis 指针式）→ 写 meta-profile.v1.json 入 state → 实弹问询验注入；确认后删设计稿（家规5） | owner 确认画像措辞 |
 | 旁路·时间（09-07 23:00 后） | 33 | 回放证据层定时首验：核 daily.log 9/07 批次实跑非 skip（batch=20260907，nominations-20260907 落盘）；节假日空转 9/06 已实测 rc=0；取数全败=rc1 硬错误（守卫单测实证；代理×新浪兼容实测无碍）；首验过=删设计稿 cognition-replay-facts.md（家规5，Git 史 ab14afb 可考）+NOW L3 指针改指 Git 史 | 09-07 23:00 后 |
 | 旁路·时间（09-23/09-30） | 31 | 回放证据层窗口到期：区间类 CHK-0811-02/0825-01 钉 9/23（G 口径碰头前终点）、方向类 CHK-0827-01/02-spread、CHK-0827-02-blowup 钉 9/30，到期后跑 nominate 出 relation（改判随时可做=retire+新 spec）；扩篮子已拍板不扩（09-06，中证银行单代码，mapping 留痕）；blowup 检查机器面 not_machine_v1，到期 relation=unknown 需 owner 供证据或接受 unknown | 09-30 后首个验证批次 |
 | 旁路·owner | 32 | cmd 评审者 run 阶段 rc=3 排查（31h 两次失败：09-05 pre + 09-06 run）；交接稿 fin-data/handoffs/20260906-cmd-reviewer-rc3-run-failure-handoff.md；设计门结果不受影响 | owner 新会话 |
