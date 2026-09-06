@@ -37,3 +37,6 @@ cron.log
 
 # --- codex 项目级个人配置（本地） ---
 .codex/
+
+# --- cmd client runtime artifacts (taste learning, machine-local) ---
+.commandcode/taste/
