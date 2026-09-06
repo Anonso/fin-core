@@ -277,7 +277,7 @@ class TestHappyPaths:
 
 
 class TestSnapshotRequiresInstruments:
-    """BUG-055：read_market_snapshot 零 instruments 在 server 层 invalid_params。
+    """BUG-056：read_market_snapshot 零 instruments 在 server 层 invalid_params。
 
     两次实弹（09-04 CC e6a6ffbf、09-05 cmd 8ef37059）：agent 把 snapshot 与
     read_actual_portfolio 并行发射、前者不带标的，provider 静默返回

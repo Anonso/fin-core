@@ -1478,4 +1478,14 @@
   gap」；provider 零 instruments 分支保留为纵深防御（wiring 直调仍可达，
   TestHappyPaths 原测试继续护）。测试：wiring server 层 3 例（零参/全空白/
   反例 margin 不误伤）+ 描述钉死 1 例。
-- 状态：已关闭（2026-09-06，全仓 3250 绿；审计门补跑进行中，裁决随 bug 记录）。
+- 状态：已关闭（2026-09-06，全仓 3250 绿）。审计门补跑（R3 命中，先合入后补跑；
+  cmd·deepseek-v4-pro elapsed ≈854s，无 fallback）：**修正后通过**——发现
+  P1×0/P2×1/P3×5：采纳 3（P2 编号引用漂移三处 BUG-055→BUG-056 纠正
+  〔server.py 注释/test_wiring docstring/test_tool_descriptions docstring〕+
+  snapshot 描述补零持仓 fallback 指引〔read_market_overview〕+ portfolio 描述
+  FIRST 规则补「先取码后发、禁止并行盲发」顺序语）；备案 3（instruments=[None]
+  理论边缘由 resolver 单 gap 兜底；零参改 invalid_params 后不再落 trace、误用
+  形态观测消失=收紧已知代价；provider「纵深防御」对全空白 instruments 覆盖窄于
+  字面）；驳回 0。范围外备案一条：codex 腿 broker 面（local_capability_transport
+  独立 FastMCP，不经 server.py 校验）同款零参静默双 gap 仍存，实弹未现、留作
+  后续待办候选。裁决后修复提交随当日 git log。

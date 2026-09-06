@@ -23,6 +23,9 @@ def test_portfolio_description_is_user_confirmed_snapshot() -> None:
     assert "read_g_context" in text
     assert "analysis/opinion" in text
     assert "skips" in text
+    # BUG-056 审计门 Q4-P3：FIRST 规则必须带取码顺序语，不得诱导并行盲发。
+    assert "afterward" in text
+    assert "in parallel" in text
 
 
 def test_g_context_description_analysis_first_rule() -> None:
@@ -46,7 +49,7 @@ def test_market_snapshot_description_keeps_gap_honesty_rule() -> None:
 
 
 def test_market_snapshot_description_requires_instruments() -> None:
-    """BUG-055：必传标的与「先 portfolio 取码」须在描述里讲清。
+    """BUG-056：必传标的与「先 portfolio 取码」须在描述里讲清。
 
     两次实弹误报（09-04/09-05）都是零 instruments 调用后把双 gap 当数据缺口
     报给 owner；描述是唯一保证到达每个客户端模型的通道（BUG-004 先例）。
@@ -55,6 +58,8 @@ def test_market_snapshot_description_requires_instruments() -> None:
     assert "REQUIRES instruments" in text
     assert "invalid params" in text
     assert "read_actual_portfolio" in text
+    # 审计门 Q4-P3：零持仓场景给出 fallback 指引，不逼空参调用。
+    assert "read_market_overview" in text
 
 
 def test_instrument_score_description_carries_coverage_boundary() -> None:

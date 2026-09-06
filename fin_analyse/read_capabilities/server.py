@@ -130,7 +130,7 @@ _TOOLS_REQUIRING_AS_OF = frozenset(
 # Tools with no zero-instrument reading. read_market_snapshot is per-instrument
 # tactical context (the market-level tool is read_market_overview); an empty
 # call used to return instruments_missing+unavailable gaps, which the
-# consultation agent then reported as a supply outage (BUG-055, two live-fire
+# consultation agent then reported as a supply outage (BUG-056, two live-fire
 # incidents). Fail loudly as invalid_params so the model can correct the call.
 _TOOLS_REQUIRING_INSTRUMENTS = frozenset({"read_market_snapshot"})
 
@@ -169,7 +169,9 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "Read the latest user-confirmed actual portfolio snapshot: holdings, "
         "quantities, costs, cash, exposure, per-holding owner thesis. Read-only; "
         "never changes the portfolio. HARD RULE for any instrument/holdings "
-        "question: call this plus read_market_snapshot FIRST. For any "
+        "question: call this plus read_market_snapshot FIRST — this tool "
+        "yields the codes, so pass them to read_market_snapshot afterward and "
+        "never fire it in parallel before the codes are known. For any "
         "analysis/opinion question about holdings, call read_g_context FIRST "
         "as well — only a pure factual lookup (what holdings, what cost) or an "
         "explicit user opt-out of G cognition skips G. Never invent holdings, "
@@ -182,6 +184,9 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "instruments is rejected as invalid params, it is NOT a data gap. For "
         "holdings quotes, call read_actual_portfolio first and pass its codes; "
         "do not fire this tool in parallel with it before the codes are known. "
+        "If there is nothing to quote (no holdings, no named instrument), do "
+        "not call this with an empty list — use read_market_overview for "
+        "market-level context instead. "
         "Major indices are supported by exact "
         "Chinese name or qualified symbol (上证指数/深成指/创业板指/科创50/深证综指, "
         "000688.SH etc.) and return index daily bars + technicals; bare six-digit "
