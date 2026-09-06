@@ -513,3 +513,10 @@
 - 否决了什么：①自动/免确认 apply（journal 是 owner-stated 事实史，助手代陈述即污染账本）；②发布流追加变更日志（durable 新状态，按家规 10 等草稿机制真实使用后再评估，本轮不做）；③server trace 落问题原文（digest 是有意的隐私取向，不动）。
 - 功能面： 决策日志
 - 状态：active · 证据：fin_analyse/read_capabilities/server.py record_decision 描述 + ~/fin-data/consult-agent/CLAUDE.md 规则 8（2026-09-06 修订注）；审计门补跑过（24dd709，R3 字面命中追认；cmd·ds-pro 两连截断→glm·glm-5.3 ≈327s，0 P1/0 P2/1 P3，P3=新建议 reset 边界措辞挂观察期，台账 design-gate/d049-anti-nag-narrow-audit-20260906/）；效果判定=留账率与噪音感受，随 finq 记账观察一至两周。
+
+## D-050 · 2026-09-06 · 问询 CLI 收口：finqa_chain launcher 升权为起腿知识唯一权威，bashrc 六函数退役（owner 拍板方案 A+四修正）
+- 决策：唯一用户入口 `finqa`（无参=链兜底;`--node <id>` 唯一钉腿旗标,enabled:false 测试腿仅此可达;`--node <id> -i` 交互式=同 argv 去 -p,os.execvpe 前台透传 rc）。`session: keep|discard` 旋钮进节点表(仅 commandcode;commandcode-flash=discard,人格回归探针同走该腿);`cmd_version_pin` 单源进节点表顶层(codex_open.sh fail-closed 读、persona_regression.sh 读+告警);persona_regression.sh 起腿接线 `finqa --node commandcode-flash`(重试留探针);consult-agent README 等效命令段改指路;bashrc 六函数删(finqa-c/-cmd 留过渡别名注废弃,旧函数体注释存档);裁掉 `-e/-m` ad-hoc 自由面与 `--leg` 第二钉腿旗标。
+- 为什么：起腿知识手抄 6–7 份已分叉咬人——README 等效命令丢 `[1m]`（现行文档 bug）、cmd 版本钉 1.49.1 双记账、cmd 无头两语义变体（链留档 vs 探针 --no-session）无声明位、权威基线住无版本化的 bashrc。
+- 否决了什么：①B 保守方案（bashrc 交互函数保持现状=病根不动，权威仍无 diff 史）；②`--leg` 与 `--node` 并存（两钉腿旗标=新分叉）；③-e/-m 自由参数面（现实消费者全有节点，规则 6 不预建）。**本条反转 D-048 否决项④**（「finqa-codex 改名/旧函数废除被否」）——分叉事故实证后 owner 改拍板废除。
+- 功能面： finqa-chain
+- 状态：active · 证据：设计门台账 design-gate/finqa-cli-unify-20260906/（cmd·ds-pro 两次发射:attempt1 输出夭折[BUG-055 假成功形态]、attempt2 角色混淆但 3 发现全采纳驳回 0）；zcode-flash/commandcode-flash 钉腿实答 + tsv success 行；switch-codex-open-provider/run-design-gate 两 SKILL.md 活引用同步修订。

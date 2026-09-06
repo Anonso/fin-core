@@ -19,7 +19,12 @@ DEFAULT_PROFILE="${GATE_PROFILE:-cmd}"   # 环境覆盖：GATE_PROFILE=glm（测
 
 CMD_BIN="$(command -v cmd || true)"
 CMD_MODEL="deepseek/deepseek-v4-pro"
-CMD_VERSION_PIN="1.49.1"
+# 版本钉单源=finqa_nodes.yaml 顶层 cmd_version_pin(2026-09-06 收口,双记账废止);
+# 读不到 fail-closed——版本钉是安全闸(闭源客户端升级先落替补),不许空值放行。
+CMD_VERSION_PIN="$(sed -n 's/^cmd_version_pin:[[:space:]]*"\{0,1\}\([^"[:space:]#]*\)"\{0,1\}.*/\1/p' \
+    "$WORKSPACE/config/finqa_nodes.yaml")"
+[[ -n "$CMD_VERSION_PIN" ]] || { printf 'codex-open: %s\n' \
+    "cmd_version_pin missing/unreadable in config/finqa_nodes.yaml" >&2; exit 78; }
 
 CODEX_GLM_AUTH_FILE="/home/ypk/fin-data/codex-routes/codex-glm/auth.json"
 # 模型目录：复用问询链 codex-glm 路由的目录（glm-5.3 带 instructions_template
@@ -216,8 +221,8 @@ run_cmd_capture() {
         mv "${out}.text" "$out"
         return 0
     fi
-    # 失败路径：尽力提取半份文本供 stderr 追溯，避免 NDJSON 原样灌入 stderr
-    # （大评审可达数 MB）；提取失败留原始尾部 2000B。
+    # 失败路径：提取 result 行 finalText 供 stderr 追溯，避免 NDJSON 原样灌入
+    # stderr（大评审可达数 MB）；提取失败留原始尾部 2000B。
     if ! "$JQ_BINARY" -ers \
         '[.[] | select(.type=="result")][-1] // empty | .finalText // ""' \
         "$out" 2>/dev/null > "${out}.text"; then
@@ -261,7 +266,7 @@ run_glm_capture() {
 PRIMARY_NAME="$DEFAULT_PROFILE"
 SECONDARY_NAME="$SECONDARY"
 TMP_PRIMARY="$(mktemp /tmp/codex-open-primary.XXXXXX)"
-trap 'rm -f "$TMP_PRIMARY" "$TMP_PRIMARY.secondary" 2>/dev/null' EXIT
+trap 'rm -f "$TMP_PRIMARY" "$TMP_PRIMARY.secondary" "$TMP_PRIMARY.text" 2>/dev/null' EXIT
 
 PRIMARY_RUNNER="run_${PRIMARY_NAME}_capture"
 SECONDARY_RUNNER="run_${SECONDARY_NAME}_capture"

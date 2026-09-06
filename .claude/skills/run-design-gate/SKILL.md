@@ -91,6 +91,6 @@ timeout 3700 scripts/codex_open.sh exec --skip-git-repo-check -C /home/ypk/fin-c
   为空 + ERROR 行（fallback 横幅与 [partial] 块不是失败）。
 - 评审者链 cmd→glm 已异构（deepseek vs GLM），旧「双评审者同源期独立性打折」
   注记作废；外援双模并行校准需要时仍可手动并行跑两入口。
-- cmd 主评审者是闭源账号客户端：版本被钉定（升级需改脚本 CMD_VERSION_PIN 并
-  重跑验证阶梯）、会话过期看 `cmd login`；权限放大旗标（--yolo/--tools-all
+- cmd 主评审者是闭源账号客户端：版本被钉定（单源=finqa_nodes.yaml cmd_version_pin，
+  升级需改该键并重跑验证阶梯）、会话过期看 `cmd login`；权限放大旗标（--yolo/--tools-all
   等）入口层 fail-closed，勿在 packet 调用里传。

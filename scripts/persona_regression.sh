@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
 # 人格修订回归探针（persona-governance-v1 §2，设计门 a0d885d）
 # 用法：scripts/persona_regression.sh   （无参数；每次人格 r 修订后、收口前跑一轮）
-# 腿：cmd·deepseek-v4-flash（最弱腿=最严苛服从性测试；effort max）。
+# 腿：finqa --node commandcode-flash（cmd·deepseek-v4-flash：最弱腿=最严苛服从
+#     性测试；effort max；session=discard 不留档——均由节点表声明，本脚本不手写）。
 #     腿定位（owner 2026-09-05 拍板）：flash 非生产、仅测试用——本探针 FAIL 须先
 #     分辨「flash 腿执行方差」（在案：财务双源标注不稳、首行元叙述泄漏，均不立案）
 #     与「人格回归」；生产腿=glm-5.3（CC）/deepseek-v4-pro（cmd），以其为准。
-#     版本钉见 codex_open.sh CMD_VERSION_PIN——两处须同步升版（互指注释）。
-# 必须在 consult-agent 工作区起腿（cwd=目录即身份；不在该 cwd 人格不加载=全题空转），
-# 本脚本自行 cd 并校验。隔离：答案/台账只落 $STATE（0700，不入 git、不入 finq）；
-# -m 逐次指定，生产默认配置零改动。
+#     版本钉单源=finqa_nodes.yaml cmd_version_pin（本脚本读取打印，不双记账）。
+# 必须在 consult-agent 工作区起腿（cwd=目录即身份；launcher 已强制 cwd，本脚本
+# 自行 cd 并校验作双保险）。隔离：答案/台账只落 $STATE（0700，不入 git、不入 finq）。
 # 判定口径：PASS/FAIL/WARN 是网不是闸——FAIL/WARN 人工看摘录裁决后方可收口
 # （设计门 S1：grep 防漏不防滥，不承诺自动化八股检测）。
 # 已知预期 FAIL：全题首行元叙述检查（flash 腿泄漏在案，BUG 候选待立案）——
 # 该项作缺陷回归跟踪位，修复后翻绿。
 set -u
 CONSULT="$HOME/fin-data/consult-agent"
+FINCORE="$HOME/fin-core"
+FINQA=("$FINCORE/.venv/bin/python" "$FINCORE/scripts/finqa_chain.py")
+NODES_FILE="$FINCORE/config/finqa_nodes.yaml"
 CMD_BIN="${CMD_BIN:-$HOME/.local/bin/cmd}"
-CMD_MODEL="deepseek/deepseek-v4-flash"
+CMD_VERSION_PIN="$(sed -n 's/^cmd_version_pin:[[:space:]]*"\{0,1\}\([^"[:space:]#]*\)"\{0,1\}.*/\1/p' "$NODES_FILE")"
 STATE_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/fin-analyse/persona-regression"
 TS="$(date +%Y%m%d-%H%M%S)"
 STATE="$STATE_ROOT/$TS"
@@ -46,14 +49,15 @@ EOF
 cd "$CONSULT" || { echo "FATAL: consult-agent 工作区不存在" >&2; exit 2; }
 [[ -f CLAUDE.md && -f AGENTS.md ]] || { echo "FATAL: CLAUDE.md/AGENTS.md 缺失，不在 consult-agent 工作区？" >&2; exit 2; }
 V="$("$CMD_BIN" --version 2>/dev/null | head -1)"
-echo "cmd version: $V (须与 codex_open.sh CMD_VERSION_PIN 同步升版)"
+echo "cmd version: $V (版本钉单源=finqa_nodes.yaml cmd_version_pin=${CMD_VERSION_PIN:-<缺失>})"
+[[ -n "$CMD_VERSION_PIN" && "$V" == "$CMD_VERSION_PIN" ]] || \
+  echo "WARN: cmd 版本与节点表版本钉不一致——探针结果请标注版本后人工裁量" >> "$STATE/runner.log"
 
 N=${#QUESTIONS[@]}
 for ((i=1; i<=N; i++)); do
   q="${QUESTIONS[$((i-1))]}"
   for attempt in 1 2; do
-    timeout 900 "$CMD_BIN" --skip-onboarding --no-auto-update --no-session \
-      --effort max -p -m "$CMD_MODEL" "$q" \
+    FINQA_NODE_TIMEOUT=900 timeout 940 "${FINQA[@]}" --node commandcode-flash "$q" \
       > "$STATE/q${i}.md" 2> "$STATE/q${i}.err"
     rc=$?
     [[ $rc -eq 0 ]] && break

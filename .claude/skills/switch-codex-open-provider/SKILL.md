@@ -128,7 +128,8 @@ run_codex 段：
 /tmp/command）：models ✅ 67 个（deepseek pro/flash/flash-fast/vision-exp，
 glm-5.3 也在）；`/responses` ❌ 404（官方文档明示仅 OpenAI chat completions +
 Anthropic Messages 两形态）；chat h2 ❌ EOF×3 / h1 ✅ 实弹返回 ok。→
-**codex 腿全部不可换**（finqa-x/finqa-codex、生产 codex-open 路由——后者另有
+**codex 腿全部不可换**（节点表 codex 腿=休眠，原 bashrc finqa-x/finqa-codex 已于
+2026-09-06 收口退役、生产 codex-open 路由——后者另有
 manage-fin-codex-routes 边界「codex-provider 仅 Responses-compatible」双重锁）；
 `llm.yaml` DS 槽位节点（openai_compatible，python 客户端默认 h1）可换——
 2026-09-05 起 DS 槽位拆两独立链节点 `deepseek_flash_opencode`（enabled 开关，
@@ -148,7 +149,7 @@ sha256 与回滚说明；内附的 deepseek_flash 换 commandcode 补丁 **已 s
 基于重构前单节点 llm.yaml 生成，现行两节点结构以 llm.yaml `enabled` 开关为准，
 勿再应用该补丁）。
 
-**边界**：codex-open 路由与 finqa-x/finqa-codex 保持 opencode-go 不动
+**边界**：codex-open 路由与节点表 codex 腿（休眠）保持 opencode-go 不动
 （429 只能等服务商侧恢复，或 owner 另批本地 responses→chat 翻译代理——新基建，
 按家规 11 举证另立项）。flash 段收口（2026-09-05 晚）：原「09-07 前不动生产」
 窗口被 owner 取消，且 ee0f4e1/本节所记「窗口 owner 拍板」归属有误（owner 原话
@@ -166,8 +167,8 @@ MODEL_NOT_IN_PLAN**（sonnet/haiku 需 Pro+，fable/opus 需 Provider+）。→ 
 `ANTHROPIC_BASE_URL=https://api.commandcode.ai/provider`（SDK 自动拼
 /v1/messages）+ `ANTHROPIC_AUTH_TOKEN`（llm.env COMMANDCODE_API_KEY）+
 `ANTHROPIC_MODEL=claude-sonnet-5` + `ANTHROPIC_SMALL_FAST_MODEL=claude-haiku-4-5-20251001`
-（CC 后台模型也要在 plan 内）+ 独立 `CLAUDE_CODE_CONFIG_DIR`（与 finqa-c 共 cwd
-会串项目级 settings 的模型旋钮，必须隔离）。**LiteLLM 桥替代路线**（CC 或 codex
+（CC 后台模型也要在 plan 内）+ 独立 `CLAUDE_CODE_CONFIG_DIR`（与问询 claude 腿
+`finqa --node claude -i` 共 cwd 会串项目级 settings 的模型旋钮，必须隔离）。**LiteLLM 桥替代路线**（CC 或 codex
 任一 harness 吃 chat-only 上游）：LiteLLM proxy 上游面 `/v1/responses` 或
 `/v1/messages`、下游桥 chat completions（codex 场景文档明示 `use_chat_completions_api:
 true`）；代价 = 常驻 daemon + 第四份 key 副本 + 映射保真风险（CC 依赖
@@ -201,7 +202,7 @@ GLM 问询腿（finqa-cmd / finqa-commandcode，2026-09-05 owner 拍板换腿）
 （read_user_watchlist 返回 30 标的，与 Kilo 一致）。要点：二进制 `~/.local/share/
 command-code` + symlink `~/.local/bin/cmd`（重装 = `npm install --prefix
 ~/.local/share/command-code command-code@1.49.1`，精确版本钉定，升级需同步
-脚本 CMD_VERSION_PIN 并重跑验证阶梯）；`cmd mcp add-json <name> <json> --scope
+finqa_nodes.yaml `cmd_version_pin` 并重跑验证阶梯）；`cmd mcp add-json <name> <json> --scope
 project`（在目标工作区执行）**直接写共享的 .mcp.json**（与 CC 同一面，会给条目补
 transport/enabled 字段，CC 忽略无碍）；`--skip-onboarding` 关 taste、`--no-auto-update`
 钉版本；-p 前必须已认证（无 env-key 旁路）。UNLICENSED 闭源薄客户端（dist 3.3M，
@@ -265,8 +266,8 @@ auth.json 单一事实源，误提交 commit e0c7269），同日回退。正确�
    `opencode-go.key`；Profile A = `~/.local/share/codex-open/auth.json` 的
    `relay-19851117.key`；保持 0600，先 `cp -a` 备份原文件。
 2. 一致性校验（不打印值）：新 key 值与 auth.json 条目值 sha256 一致。
-3. 入口零改动：scripts/codex_open.sh 仍读 auth.json；`~/.bashrc` 的
-   finqa-codex/finqa-x、llm.yaml 的 `AUTHJSON:opencode-go` 降级链、
+3. 入口零改动：scripts/codex_open.sh 仍读 auth.json；finqa_chain 节点表 codex 腿
+   （休眠）、llm.yaml 的 `AUTHJSON:opencode-go` 降级链、
    codex_routes.yaml 的 codex-open 路由同源生效——只改 auth.json 一处即
    全覆盖。
 4. 重跑验证阶梯第 1 条（`bash -n`）+ 一次 `exec "Reply with exactly: ok"`。
