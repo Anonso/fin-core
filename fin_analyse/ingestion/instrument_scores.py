@@ -12,6 +12,8 @@ v3（owner 09-05 裁决）：①「项目评分」=利好度改版、「情绪�
 「投产启动」=启动时机（供货周期不映射，防落 horizon 兜底）；②列表锚点行后
 支持「k1：v1；k2：v2」分号单行格式，旧格式逐字节兼容；③正文显式代码优先，
 名称名册只在缺码时补（利通科技（603629）不得被覆盖为 920225）。
+v4（同夜裁决）：锚点后零字段命中的行不产出（散文「公司（代码）」行首
+写法不是评分表，空壳事故 5 例举证）。
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 SCHEMA_VERSION = "fin.instrument-scores/v1"
-PARSER_VERSION = "v3"
+PARSER_VERSION = "v4"
 
 _SCORE_RE = re.compile(r"([0-9]+(?:\.[0-9]+)?)")
 _CODE_RE = re.compile(
@@ -416,16 +418,34 @@ def _parse_list_style(text: str) -> list[dict[str, Any]]:
     return drafts
 
 
+_SCORE_FIELD_SLOTS = (
+    "lihao",
+    "consensus",
+    "core_business",
+    "sector",
+    "launch_in",
+    "horizon",
+)
+
+
+def _has_any_field(draft: Mapping[str, Any]) -> bool:
+    return any(draft.get(key) is not None for key in _SCORE_FIELD_SLOTS)
+
+
 def parse_rows_from_text(text: str) -> list[dict[str, Any]]:
-    """解析一段载体文本为行草稿（表格或列表/代码前置 inline 风格）。"""
+    """解析一段载体文本为行草稿（表格或列表/代码前置 inline 风格）。
+
+    v4（owner 09-05 裁决）：锚点后任一字段位都未命中的行不产出——散文里
+    「公司（代码）」行首写法不是评分表（空壳事故 5 例：08-30×3、07-30、
+    08-26，其中 3 例已入册后人工 drop）。
+    """
     cleaned = _FALLBACK_PREFIX_RE.sub("", text or "")
-    table_drafts = _parse_table(cleaned)
-    if table_drafts:
-        return table_drafts
-    list_drafts = _parse_list_style(cleaned)
-    if list_drafts:
-        return list_drafts
-    return _parse_inline_rows(cleaned)
+    drafts = _parse_table(cleaned)
+    if not drafts:
+        drafts = _parse_list_style(cleaned)
+    if not drafts:
+        drafts = _parse_inline_rows(cleaned)
+    return [draft for draft in drafts if _has_any_field(draft)]
 
 
 @dataclass(frozen=True, slots=True)

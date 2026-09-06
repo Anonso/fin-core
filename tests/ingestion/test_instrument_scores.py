@@ -188,7 +188,7 @@ def test_parse_code_first_inline_rows() -> None:
     assert by_code["600584"].lihao_score == 8.6
     assert by_code["600584"].consensus_score == 8.8
     assert by_code["600584"].article_score == 6.8
-    assert by_code["600584"].parser_version == "v3"
+    assert by_code["600584"].parser_version == "v4"
     assert by_code["688200"].status == "needs_review"
     assert by_code["688200"].review_reason == "missing_fields:consensus"
 
@@ -420,6 +420,27 @@ def _seed_kb(tmp_path: Path, articles: list[dict]) -> None:
     (tmp_path / "index.json").write_text(
         json.dumps({"articles": articles}), encoding="utf-8"
     )
+
+
+def test_v4_anchor_without_fields_is_dropped() -> None:
+    """v4 守卫：散文「公司（代码）」行首写法不是评分表——8/30 空壳事故。"""
+    text = """壁垒在“上游配额 + 下游锁定”。
+利通电子（603629）
+核心画像是先发加渠道，客户集中度高，弹性在三家里最陡。
+协创数据（300857）
+规模换话语权，交付网络铺得开。
+"""
+    assert parse_rows_from_text(text) == []
+
+
+def test_v4_partial_field_anchor_still_kept() -> None:
+    """守卫只杀零字段行：任一字段位命中即保留（走 needs_review 人工闭环）。"""
+    text = """1. **示例公司 600000**
+   投产启动：1-2周
+"""
+    drafts = parse_rows_from_text(text)
+    assert len(drafts) == 1
+    assert drafts[0]["launch_in"] == "1-2周"
 
 
 def test_update_instrument_scores_incremental_and_watermark(tmp_path: Path) -> None:
