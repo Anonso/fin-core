@@ -165,7 +165,7 @@ def main() -> int:
     if snapshot_path.exists() and _content_key(snapshot_path.read_text(encoding="utf-8")) == new_key:
         _log(f"snapshot-{batch} content-equivalent, skip rewrite")
     else:
-        lib.write_private_state_text(snapshot_path, payload)
+        lib.atomic_write_text(snapshot_path, payload)
 
     manifest["artifacts"].append({
         "file": snapshot_path.name, "sha256": lib.sha256_file(snapshot_path),

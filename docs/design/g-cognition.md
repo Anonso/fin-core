@@ -45,7 +45,7 @@
 - **工作集 seam**：`GWorkingSetService.reconcile`（`g_working_set.py:551`）→ `READY|STALE|MISSING|PARTIAL`；`evaluate`（:946）、`read`（:916）；写入口只经 `prepare_publication`（:695）+ `compare_and_publish`（:710，返回 PUBLISHED/ALREADY_PUBLISHED/REJECTED）+ `verify_published_plan`（:811，shared lock 严格读取真实 manifest 回绑 plan）；`reconcile_and_publish`（:855）只是兼容 facade。
 - **runtime 只读 seam**：`AgentRuntimeContextProvider.resolve(...)`（`runtime_context.py:305,352`）——生产 composition 必须显式传入唯一 `kb_root`（`GatewayServiceRoots.kb_root`），不从源码/cwd 推断。
 - **能力 seam**：`read_g_context`（`production_capability_provider.py:202`）以 `agent_id="guo_teacher"`、`max_g_events=_MAX_G_ITEMS` 解析；输出分层投影（pinned/framework/facts/associations/external_brain）。
-- **长认知 seam**：`CognitionMainlinePublisher`（构建期）/ `CognitionMainlineReadModelReader`（只读当前 revision，missing/corrupt/schema_drift/hash_drift typed failure，不隐式创建）/ `project_cognition_mainline`（PIT 注入）。
+- **长认知 seam**：`CognitionMainlinePublisher`（构建期）/ `CognitionMainlineReadModelReader`（只读当前 revision，missing/corrupt/schema_drift/hash_drift typed failure，不隐式创建）/ `project_cognition_mainline`（PIT 注入）。read_g_context 返回含可选 meta_calibration 调节块（g-meta-calibrator，Git 史 bd15e50，fail-open 无画像=不注入）。
 - **记忆 seam**：`CognitionMemoryStoreService.handle(CognitionMemoryRequest) -> CognitionMemoryResult`（14 操作）；scope 合同四值；生产 consultation composition 注入已打开的 owner-only read view，unsafe/missing root 只降级 reader unavailable。
 
 ## 已知故障与设计回应

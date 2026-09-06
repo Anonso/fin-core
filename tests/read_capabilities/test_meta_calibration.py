@@ -125,3 +125,78 @@ def test_closed_sets_enforced(tmp_path):
     assert load_meta_calibration_block(
         _write(tmp_path, bad), ref_date=date(2026, 9, 6)
     ) is None
+
+
+# ── provider 入口层（audit P2-2：逐字节等价断言） ─────────────
+
+def _stub_provider(meta_profile_path):
+    from fin_analyse.guo_teacher_research.production_capability_provider import (
+        ProductionReadCapabilityProvider,
+    )
+    from fin_analyse.guo_teacher_research.runtime_context import (
+        AgentRuntimeContextResult,
+    )
+
+    class _StubRuntime:
+        def resolve(self, request):
+            return AgentRuntimeContextResult(
+                available=True, llm_context={"g_context": []}
+            )
+
+    return ProductionReadCapabilityProvider(
+        runtime_context=_StubRuntime(), meta_profile_path=meta_profile_path
+    )
+
+
+def test_provider_no_profile_value_is_untyped_equivalent(tmp_path):
+    from fin_analyse.read_capabilities.types import ProductionReadRequest
+
+    bare = _stub_provider(None)
+    with_absent = _stub_provider(tmp_path / "absent.json")
+    v1 = bare.read_g_context(ProductionReadRequest(question="科技怎么看")).value
+    v2 = with_absent.read_g_context(ProductionReadRequest(question="科技怎么看")).value
+    assert "meta_calibration" not in v1
+    assert v1 == v2  # 逐字节等价（无画像=现状）
+
+
+def test_provider_with_profile_injects_block(tmp_path):
+    from fin_analyse.read_capabilities.types import ProductionReadRequest
+
+    path = _write(tmp_path, _profile())
+    provider = _stub_provider(path)
+    value = provider.read_g_context(ProductionReadRequest(question="科技怎么看")).value
+    block = value["meta_calibration"]
+    assert block["as_of"] == "2026-09-06"
+    assert len(block["dimensions"]) == 2
+
+
+def test_loader_mixed_basis_segments_rejected(tmp_path):
+    bad = _profile()
+    bad["dimensions"][1]["basis"] = (
+        "batch:20260904#CHK-0827-01-spread;8 月科技跑输银行十个百分点"
+    )
+    with pytest.raises(MetaProfileError):
+        validate_meta_profile(bad)
+    assert load_meta_calibration_block(
+        _write(tmp_path, bad), ref_date=date(2026, 9, 6)
+    ) is None
+
+
+def test_duplicate_class_rejected(tmp_path):
+    dims = _profile()["dimensions"]
+    bad = _profile(dimensions=[dims[0], dims[0]])
+    with pytest.raises(MetaProfileError, match="duplicate class"):
+        validate_meta_profile(bad)
+
+
+def test_bool_max_age_and_cap_enforced(tmp_path):
+    with pytest.raises(MetaProfileError):
+        validate_meta_profile(_profile(max_age_days=True))
+    dims = [_profile()["dimensions"][0]] * 9
+    with pytest.raises(MetaProfileError, match="max 8"):
+        validate_meta_profile(_profile(dimensions=dims))
+    long_basis = "batch:20260904#CHK-0827-01-spread" + "x" * 300
+    with pytest.raises(MetaProfileError, match="300"):
+        validate_meta_profile(
+            _profile(dimensions=[dict(_profile()["dimensions"][0], basis=long_basis)])
+        )

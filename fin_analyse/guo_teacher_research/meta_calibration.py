@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -77,6 +78,8 @@ def validate_meta_profile(d: object) -> dict:
     dimensions = _require(d, "dimensions", (list,))
     if not dimensions:
         raise MetaProfileError("empty dimensions")
+    if len(dimensions) > 8:
+        raise MetaProfileError("too many dimensions (max 8)")
     seen: set[str] = set()
     for dim in dimensions:
         if not isinstance(dim, dict):
@@ -93,6 +96,8 @@ def validate_meta_profile(d: object) -> dict:
         basis = str(_require(dim, "basis", (str,)))
         if not basis:
             raise MetaProfileError("empty basis")
+        if len(basis) > 300 or len(str(dim.get("note", ""))) > 300:
+            raise MetaProfileError("basis/note exceed 300 chars (injection-bound hygiene)")
         for part in basis.split(";"):
             part = part.strip()
             if not part.startswith(_BASIS_PREFIXES):
@@ -113,7 +118,12 @@ def load_meta_calibration_block(
         return None
     try:
         profile = validate_meta_profile(json.loads(Path(path).read_text(encoding="utf-8")))
-    except (OSError, ValueError):
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as exc:
+        # 画像存在但不可用（损坏/条款缺失/超限）：仍 fail-open 不注入，但留 stderr
+        # 一次性线索（audit P3：完全静默则 owner 无从察觉配置漂移）。
+        print(f"meta_calibration: profile unusable, not injecting ({exc})", file=sys.stderr)
         return None
     profile_as_of = date.fromisoformat(str(profile["as_of"]))
     age_days = (ref_date - profile_as_of).days

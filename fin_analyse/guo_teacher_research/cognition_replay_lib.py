@@ -228,9 +228,30 @@ def resolve_state_root(environ: dict[str, str] | None = None) -> Path:
     return ensure_private_state_directory(root)
 
 
+def atomic_write_text(path: Path, text: str) -> None:
+    """整文件原子替换：同目录临时文件 + os.replace（先例 owner_only_snapshot.py:540）。
+
+    审计门 audit-g-meta-calibrator-20260907 P2-1：write_private_state_text 是
+    同文件 O_TRUNC 写，存在半写窗口；持久证据面（specs/mapping/profile/manifest/
+    nominations/snapshot）一律走本函数——半写读者最多看到旧整版或新整版。
+    """
+    import os
+    import uuid
+
+    tmp = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def atomic_write_json(path: Path, payload: dict) -> None:
-    """整文件原子重写（temp + flock + os.replace），0600；批=文件一一对应。"""
-    write_private_state_text(path, json.dumps(payload, ensure_ascii=False, indent=1) + "\n")
+    """整文件原子重写（atomic_write_text），0600；批=文件一一对应。"""
+    atomic_write_text(path, json.dumps(payload, ensure_ascii=False, indent=1) + "\n")
 
 
 def sha256_file(path: Path) -> str:

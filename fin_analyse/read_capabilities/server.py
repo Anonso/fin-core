@@ -163,7 +163,9 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "macro_reference_items are non-G MACRO/外围 background references "
         "(cap 3, macro-leaning: 大盘/政策/海外/商品/流动性): use only to "
         "extend the macro read after the G mainline, never as G conclusions; "
-        "stock/industry-specific references belong to read_article_search."
+        "stock/industry-specific references belong to read_article_search. "
+        "Return may include a meta_calibration block (owner-curated reliability "
+        "profile of this teacher's past calls); obey its boundary clauses."
     ),
     "read_actual_portfolio": (
         "Read the latest user-confirmed actual portfolio snapshot: holdings, "
