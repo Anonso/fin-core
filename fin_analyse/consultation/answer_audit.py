@@ -1,8 +1,10 @@
 """F1 answer-audit: leak-lexicon scan over finalized headless consultation answers.
 
 审计是只读旁路：findings 只落账（audit.tsv），**禁止回调、拦截、改写、参与 rc**——
-「命中≠处置」是本模块的产品不变量（设计 docs/design/consult-answer-audit-v1.md，
-设计门 2026-09-06）。词表唯一权威源=config/answer_audit.yaml（会变项进配置）。
+「命中≠处置」是本模块的产品不变量；audit.tsv 由 owner 按期人工裁决，命中可走
+BUGS 立案（设计稿已按家规5删转 Git 史：7f8de2a 起稿、344e944 终版，设计门
+2026-09-06 cmd·ds-pro 过闸；本 docstring 为权威摘要）。词表唯一权威源=
+config/answer_audit.yaml（会变项进配置）。
 v2 扩展位（session 归档异步扫描，覆盖有头交互）前置未发生，不预建（家规 11）。
 """
 

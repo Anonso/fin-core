@@ -1,5 +1,6 @@
 # 行为回归探针集 v1（fin.behavior-probes/v1）
-# 设计：docs/design/behavior-probe-set-v1.md（非核心件，开工四句话在稿头）。
+# 设计稿已按家规5删转 Git 史（7f8de2a 起稿、344e944 修订、43472b3 收官；本注释为
+# 权威摘要：非核心件，题集数据化、判据锚预注册、腿沿节点表、STATE 0700 不入 git）。
 # 预注册纪律：本文件判据锚于 2026-09-06 首次实弹前锁定；开卷后改锚须随 commit
 # 记原因（出题前锁定、开卷不改锚）。日期锚定题半年例行换锚（沿 persona_regression 先例）。
 # 判定语义：expect=任一命中 PASS；expect_all=全部命中 PASS；forbid=零命中 PASS；

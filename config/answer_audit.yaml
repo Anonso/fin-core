@@ -1,5 +1,6 @@
 # 问询答案事后审计 F1 泄漏词表（fin.answer-audit/v1）——唯一权威源。
-# 设计：docs/design/consultation 侧 consult-answer-audit-v1.md（设计门 2026-09-06，
+# 设计稿已按家规5删转 Git 史（7f8de2a 起稿、344e944 终版；设计门 2026-09-06，
+# P1-3 裁决：本文件为 F1 词表唯一权威，config/behavior_probes.yaml 经 lexicon 族名
 # P1-3 裁决：本文件为 F1 词表唯一权威，config/behavior_probes.yaml 经 lexicon 族名
 # 引用，无双记账窗口）。命中只落账（audit.tsv）、禁止回调/拦截/改写——「命中≠处置」
 # 是产品不变量。词表迭代=改本文件，不改代码。

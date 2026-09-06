@@ -1,4 +1,4 @@
-"""Tests for the F1 answer-audit旁路 (consult-answer-audit-v1)."""
+"""Tests for the F1 answer-audit旁路（设计稿已删转 Git 史：7f8de2a/344e944 可考）."""
 
 from __future__ import annotations
 

@@ -28,8 +28,9 @@ fallback|success|exhausted,success 行即使用证据与 provenance 数据源;de
 阶段级 token,不落问题文本与上游输出(家规 3)。session 可丢:各腿照原样留档但
 从不 resume;discard 腿不留档。无熔断:每次调用从首位真试起(人频次,现探现走)。
 答案审计:无头 rc=0 后经 fin_analyse.consultation.answer_audit 做泄漏词表旁路
-落账(audit.tsv,O_APPEND,fail-open,命中≠处置——设计 docs/design/
-consult-answer-audit-v1.md,设计门 2026-09-06;词表=config/answer_audit.yaml)。
+落账(audit.tsv,O_APPEND,fail-open,命中≠处置;findings 只落账由 owner 按期人工
+裁决,可走 BUGS 立案——设计稿已按家规5删转 Git 史〔7f8de2a 起稿、344e944 终版,
+设计门 2026-09-06 cmd·ds-pro 过闸〕;词表=config/answer_audit.yaml)。
 """
 
 from __future__ import annotations

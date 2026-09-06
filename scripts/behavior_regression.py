@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""行为回归探针 runner（设计：docs/design/behavior-probe-set-v1.md）。
+"""行为回归探针 runner（设计稿已按家规5删转 Git 史：7f8de2a 起稿、344e944 修订、
+43472b3 收官可考；本注释为权威摘要）。
 
 题集=config/behavior_probes.yaml（判据锚预注册）；腿=finqa_chain --node（节点表
 语义，launcher 唯一起法权威）。判定是网不是闸：report 落 $STATE（0700，不入
