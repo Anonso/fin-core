@@ -1454,6 +1454,7 @@
 - 根因：两层。①cmd CLI（1.49.1，闭源）`-p` 无头模式工具权限被拒时（本 packet 要求读工作区外 `~/fin-data/consult-agent/CLAUDE.md`，工作区外读需审批、无头无人批）**终止整个 run**，result 行 `subtype:"success"`+rc=0/9 不稳定，`stopReason:"permission_denied"` 是唯一真话；②`codex_open.sh` 信任 rc=0 即透传，无任何输出完整性校验。昨日同 launcher 成功（finqa-chain 门）系 packet 未引工作区外文件，非版本差异。
 - 修复：`run_cmd_capture` 固定 `--output-format json`，只认 result 行 `stopReason=="end_turn"` 且 finalText 非空；不完整（rc≠0 或假成功）按失败走既存 glm 替补+fallback.tsv，stderr 留痕改提取后半份文本（防 NDJSON 数 MB 灌入）。回归：`tests/scripts/test_codex_open_cmd_guard.py` 5 用例（stub cmd/codex：end_turn 透传/rc0 假成功/rc9 拒绝/garbage/empty）；真 CLI e2e 实测拒绝被拦、替补完成、tsv 落账。已知残余：cmd 无头读不了工作区外文件是 CLI 结构性圈界，遇域外引用即替补（能力弱于 glm read-only 沙箱，可接受）。
 - 状态：已修复（2026-09-06，commit 50d013b；审计门补跑过：cmd·ds-pro ≈860s，0 P1/0 P2/9 P3——trap 补 .text/注释措辞/BUGS SHA/stub 版本随门采纳，其余记录挂起，台账 design-gate/bug055-cmd-guard-audit-20260906/）。诊断证据：`design-gate/d049-anti-nag-narrow-audit-20260906/review.attempt{1,2}.md` + /tmp 探针（NDJSON `stopReason:"permission_denied"` 实锤，临时件已清）。
+- 同族未修面（2026-09-06 追记）：问询机器链 `finqa_chain.py` commandcode 腿同为 `cmd -p` + rc 透传（模块头注释明言 rc 透传），假成功形态同样成立——触发概率低于评审场景（问询主用 MCP 只读工具，无域外读刚需）但非零；防护未覆盖。finqa_chain.py 时有并行施工（finqa-cli-unify 在途），修法随其统一调用面时一并落 JSON+stopReason 白名单，避免双会话碰撞。
 
 ## BUG-056 read_market_snapshot 零 instruments 静默返双 gap，agent 误报「行情数据缺口」（2026-09-06 finq 复盘立案，同日修复）
 
