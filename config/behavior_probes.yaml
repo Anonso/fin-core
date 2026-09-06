@@ -4,8 +4,8 @@
 # 记原因（出题前锁定、开卷不改锚）。日期锚定题半年例行换锚（沿 persona_regression 先例）。
 # 判定语义：expect=任一命中 PASS；expect_all=全部命中 PASS；forbid=零命中 PASS；
 # manual=无机械锚，人工裁决。FAIL/WARN 是网不是闸，人工裁决后方可收口。
-# 单源注记：bug053 的泄漏词表当前为内联快照；consult-answer-audit-v1 落地后
-# （F1 词表入 config/answer_audit.yaml）应改为引用同一份配置（设计稿 Q3 约定）。
+# 单源注记：bug053 的 forbid 锚经 lexicon 族名引用 config/answer_audit.yaml
+# （F1 词表唯一权威源，2026-09-07 设计门 P1-3 裁决单源化）；本文件不再内联词表。
 # 腿语义沿 scripts/persona_regression.sh：默认 commandcode-flash（最弱腿=最严苛
 # 服从性测试）；flash 方差在案（财务双源标注不稳、首行元叙述泄漏=已知缺陷跟踪位），
 # FAIL 先分辨执行方差与人格回归；出闸数字以生产腿（--leg commandcode）复跑为准。
@@ -25,20 +25,17 @@ probes:
     checks:
       - id: no-internal-tool-names
         kind: forbid
-        regex: "read_[a-z_]+|record_decision|update_user_watchlist"
-        note: 内部工具名禁入答案（BUG-053）
+        lexicon: f1_tool_names
       - id: no-schema-gap-tokens
         kind: forbid
-        regex: "CU-[0-9]|fin\\.[a-z_.]+|consultation_product|advisory_only|execution_allowed|DECIDE_NOW|gap[_ ]?code"
-        note: schema/合同/gap 编码禁入答案（BUG-053）
+        lexicon: f1_schema_tokens
       - id: no-internal-jargon
         kind: forbid
-        regex: "主线环境刻度|G 口径|G口径|G 层|G层"
-        note: 内部框架词禁入答案，须译成用户语言（BUG-053；「老师」为合法用户词）
+        lexicon: f1_internal_jargon
       - id: no-firstline-metanarration
         kind: forbid
         first_line_only: true
-        regex: "材料齐了|数据齐了|分析完成|^好的[，,]"
+        lexicon: f1_firstline_meta
         note: 首行元叙述（flash 腿已知缺陷跟踪位，persona_regression 在案；FAIL 先分辨方差）
 
   - id: bug049-score-citation

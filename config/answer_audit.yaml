@@ -1,0 +1,34 @@
+# 问询答案事后审计 F1 泄漏词表（fin.answer-audit/v1）——唯一权威源。
+# 设计：docs/design/consultation 侧 consult-answer-audit-v1.md（设计门 2026-09-06，
+# P1-3 裁决：本文件为 F1 词表唯一权威，config/behavior_probes.yaml 经 lexicon 族名
+# 引用，无双记账窗口）。命中只落账（audit.tsv）、禁止回调/拦截/改写——「命中≠处置」
+# 是产品不变量。词表迭代=改本文件，不改代码。
+# 驳回入表的词（设计门 S2 裁决）：bare「推演值」（与动作合同「估计/未验证」标注
+# 义务撞车）、「先说结论|根据你的问题」类开场白（结论先行为输出纪律要求，非元叙述）。
+
+schema_version: fin.answer-audit/v1
+
+lexicons:
+  f1_tool_names: "read_[a-z_]+|record_decision|update_user_watchlist"
+  f1_schema_tokens: "CU-[0-9]|fin\\.[a-z_.]+|consultation_product|advisory_only|execution_allowed|DECIDE_NOW|gap[_ ]?code"
+  f1_internal_jargon: "主线环境刻度|G 口径|G口径|G 层|G层|G 判定|G判定"
+  f1_launcher_marks: "finqa_chain|fallback\\.tsv|fallback 记录"
+  f1_firstline_meta: "材料齐了|数据齐了|分析完成|^好的[，,]"
+
+checks:
+  - id: internal-tool-names
+    lexicon: f1_tool_names
+    severity: leak
+  - id: schema-gap-tokens
+    lexicon: f1_schema_tokens
+    severity: leak
+  - id: internal-jargon
+    lexicon: f1_internal_jargon
+    severity: leak
+  - id: launcher-marks
+    lexicon: f1_launcher_marks
+    severity: leak
+  - id: firstline-metanarration
+    lexicon: f1_firstline_meta
+    severity: leak
+    first_line_only: true

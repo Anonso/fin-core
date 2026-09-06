@@ -78,7 +78,9 @@ runner（默认 flash 测试腿 A=最严苛服从性）；判据锚三态（must
   （re 三态）→ `report.txt` + `meta.jsonl` → exit 0，FAIL/WARN 人工裁决收口。
 - 旋钮：`--profile smoke|full`、`--leg` 覆盖（出闸级对照跑生产腿 ds-pro；flash FAIL
   先分辨执行方差与人格回归，沿节点表腿定位拍板）、`--plan` 干跑、`--probe id` 单题。
-- forbid 词表与 consult-answer-audit-v1 的 F1 读同一份配置（单源，不双记账）。
+- forbid 词表与 consult-answer-audit-v1 的 F1 **已单源**（2026-09-07 施工，设计门
+  P1-3 裁决）：F1 词表唯一权威=`config/answer_audit.yaml`，probes yaml 经 `lexicon:`
+  族名引用、自身不再内联词表；单源守护有测试钉住。
 
 ## 施工顺序
 

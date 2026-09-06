@@ -60,6 +60,21 @@ def _load_probes() -> dict[str, Any]:
     return payload
 
 
+def _expand_lexicons(probes: list[dict]) -> None:
+    """lexicon 族名 → F1 词表 regex（唯一权威=config/answer_audit.yaml，设计门 P1-3）。"""
+
+    from fin_analyse.consultation.answer_audit import load_config
+
+    lexicons = load_config()["lexicons"]
+    for probe in probes:
+        for check in probe.get("checks", []):
+            family = check.get("lexicon")
+            if family:
+                if family not in lexicons:
+                    raise SystemExit(f"behavior-probes: unknown lexicon family {family!r}")
+                check["regex"] = lexicons[family]
+
+
 def _select(probes: list[dict], profile: str, only: list[str] | None) -> list[dict]:
     ceiling = _PROFILE_ORDER[profile]
     chosen = [p for p in probes if _PROFILE_ORDER.get(p.get("profile", "full"), 1) <= ceiling]
@@ -203,6 +218,7 @@ def main() -> int:
     timeout = int(defaults.get("timeout_seconds", 940))
     retries = int(defaults.get("retries", 1))
     probes = _select(payload["probes"], args.profile, args.probe)
+    _expand_lexicons(probes)
     today = datetime.now()
 
     if args.plan:

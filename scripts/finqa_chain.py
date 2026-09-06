@@ -27,6 +27,9 @@ finqa-chain/fallback.tsv)七字段 ts/event/node/rc/stage/detail/call_id:event �
 fallback|success|exhausted,success 行即使用证据与 provenance 数据源;detail 只记
 阶段级 token,不落问题文本与上游输出(家规 3)。session 可丢:各腿照原样留档但
 从不 resume;discard 腿不留档。无熔断:每次调用从首位真试起(人频次,现探现走)。
+答案审计:无头 rc=0 后经 fin_analyse.consultation.answer_audit 做泄漏词表旁路
+落账(audit.tsv,O_APPEND,fail-open,命中≠处置——设计 docs/design/
+consult-answer-audit-v1.md,设计门 2026-09-06;词表=config/answer_audit.yaml)。
 """
 
 from __future__ import annotations
@@ -233,7 +236,7 @@ def _launch_env(harness: str) -> dict[str, str]:
     return environment
 
 
-def _run_node(node: dict, questions: list[str], timeout_seconds: float) -> tuple[int | str, str]:
+def _run_node(node: dict, questions: list[str], timeout_seconds: float, call_id: str | None = None) -> tuple[int | str, str]:
     """Run one node headless. Returns (rc, stage); rc int=process code, str=failure token."""
 
     harness = node["harness"]
@@ -263,6 +266,17 @@ def _run_node(node: dict, questions: list[str], timeout_seconds: float) -> tuple
         return "empty stdout", "run"
     sys.stdout.buffer.write(completed.stdout)
     sys.stdout.flush()
+    if call_id:
+        try:
+            from fin_analyse.consultation.answer_audit import audit_and_log
+
+            audit_and_log(
+                completed.stdout.decode("utf-8", "replace"),
+                call_id=call_id,
+                node_id=node["id"],
+            )
+        except Exception as error:  # 审计 fail-open:绝不影响答案字节与 rc(命中≠处置)
+            print(f"finqa-chain: audit skipped: {error}", file=sys.stderr)
     return 0, "ok"
 
 
@@ -376,7 +390,7 @@ def _answer_via_legs(nodes: list[dict], questions: list[str], timeout_seconds: f
     attempts: list[str] = []
     for index, node in enumerate(nodes):
         node_id = node["id"]
-        rc, stage = _run_node(node, questions, timeout_seconds)
+        rc, stage = _run_node(node, questions, timeout_seconds, call_id=call_id)
         if rc == 0 and stage == "ok":
             _tsv_row("success", node_id, 0, stage, "-", call_id=call_id)
             _banner(f"served-by {node_id} call_id={call_id} rc=0")
