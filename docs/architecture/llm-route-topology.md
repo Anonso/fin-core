@@ -71,7 +71,7 @@
 
 ## 已知跨表动作（恢复类，防漂移）
 
-- opencode-go 恢复（429 解除）：需**两处**各翻一个开关——`finqa_nodes.yaml` codex 节点 + `llm.yaml` deepseek_flash_opencode，缺一则两链行为分叉。
+- opencode-go 恢复（429 解除）：需翻**两处**——`llm.yaml` 池条目 `codex-opencode`（问询链 codex 腿总开关）+ `llm.yaml` api 条目 `deepseek_flash_opencode`（提取链 DS 槽位）。两处都在本表；缺一则问询/提取两链行为分叉。渠道凭据前提：llm.env 的 OPENCODE_GO_* 与 auth.json 的 opencode-go 条目在位（缺失=启用后 fail-visible 跳过，需先补 key）。
 
 ## 已退役
 
