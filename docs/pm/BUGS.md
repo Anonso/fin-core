@@ -1442,3 +1442,10 @@
 
 - ①行情技术数字不标截止时点（MA/RSI/布林只跟「9/3 收盘参考」，未区分 9/2 完整日线 vs 9/3 盘中）；②产业证据被评分替代（双主业票单边叙事，另一半盈利来源零分析，用评分下滑替代产业证据）；③入场质量不做自我审计（避险线领涨日买入被定性「左侧抄底」，不按自引方针审计入场本身）。
 - 状态：留档（2026-09-06）。①可与 BUG-049 同批施工（同属引用纪律）；②③等真实失效样本或随人格修订顺带。
+
+## BUG-055 评审者链主评审者（cmd·ds-pro）无头评审静默截断：工具权限被拒→CLI 假成功，launcher 信任 rc 透传半份评审
+
+- 发现：2026-09-06，D-049 审计门补跑。cmd·deepseek-v4-pro 连续两次「截断」——review.md 只有开场白/中途旁白（106B/292B）即停，exit=0 无报错；替补 glm·glm-5.3 同 packet 一次完整（327s/5221B）。
+- 根因：两层。①cmd CLI（1.49.1，闭源）`-p` 无头模式工具权限被拒时（本 packet 要求读工作区外 `~/fin-data/consult-agent/CLAUDE.md`，工作区外读需审批、无头无人批）**终止整个 run**，result 行 `subtype:"success"`+rc=0/9 不稳定，`stopReason:"permission_denied"` 是唯一真话；②`codex_open.sh` 信任 rc=0 即透传，无任何输出完整性校验。昨日同 launcher 成功（finqa-chain 门）系 packet 未引工作区外文件，非版本差异。
+- 修复：`run_cmd_capture` 固定 `--output-format json`，只认 result 行 `stopReason=="end_turn"` 且 finalText 非空；不完整（rc≠0 或假成功）按失败走既存 glm 替补+fallback.tsv，stderr 留痕改提取后半份文本（防 NDJSON 数 MB 灌入）。回归：`tests/scripts/test_codex_open_cmd_guard.py` 5 用例（stub cmd/codex：end_turn 透传/rc0 假成功/rc9 拒绝/garbage/empty）；真 CLI e2e 实测拒绝被拦、替补完成、tsv 落账。已知残余：cmd 无头读不了工作区外文件是 CLI 结构性圈界，遇域外引用即替补（能力弱于 glm read-only 沙箱，可接受）。
+- 状态：已修复（2026-09-06，24dd709 事故当日；commit 见 git log）。诊断证据：`design-gate/d049-anti-nag-narrow-audit-20260906/review.attempt{1,2}.md` + /tmp 探针（NDJSON `stopReason:"permission_denied"` 实锤，临时件已清）。

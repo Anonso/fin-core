@@ -187,17 +187,44 @@ fi
 
 # —— 无头评审：主评审者输出先捕获，成功才透传；失败丢弃半份输出（留存追溯）
 #    并落 fallback.tsv 后以替补重发同参 ——
+# BUG-055：cmd -p 在工具权限被拒时以 rc=0/subtype=success 结束（result 行
+# stopReason=permission_denied），stdout 止于工具调用前；rc 不可信。cmd 路径
+# 固定 --output-format json，只认 stopReason=end_turn 且 finalText 非空，
+# 透传面=finalText；否则按失败处理走替补。glm 路径（codex exec）文本输出不变。
 run_cmd_capture() {
     local out="$1"
     shift
     translate_cmd "$@"
+    local cli_rc=0
     if [[ -n $STDIN_NULL ]]; then
-        "$CMD_BIN" --skip-onboarding --no-auto-update --no-session -p --effort max \
-            -m "$CMD_MODEL" "${CMD_ARGS[@]}" < "$STDIN_NULL" > "$out"
+        "$CMD_BIN" --skip-onboarding --no-auto-update --no-session -p \
+            --output-format json --effort max \
+            -m "$CMD_MODEL" "${CMD_ARGS[@]}" < "$STDIN_NULL" > "$out" || cli_rc=$?
     else
-        "$CMD_BIN" --skip-onboarding --no-auto-update --no-session -p --effort max \
-            -m "$CMD_MODEL" "${CMD_ARGS[@]}" > "$out"
+        "$CMD_BIN" --skip-onboarding --no-auto-update --no-session -p \
+            --output-format json --effort max \
+            -m "$CMD_MODEL" "${CMD_ARGS[@]}" > "$out" || cli_rc=$?
     fi
+    # 完整性判定先于 rc 分支：end_turn 且 finalText 非空才算成功；rc≠0 或
+    # permission_denied/截断/坏输出一律走失败路径（含 rc=0 的假成功形态）。
+    if [[ $cli_rc -eq 0 ]] \
+        && "$JQ_BINARY" -ers \
+            '[.[] | select(.type=="result")][-1] // empty
+             | select(.stopReason=="end_turn" and (.finalText|length>0))
+             | .finalText' \
+            "$out" > "${out}.text"; then
+        mv "${out}.text" "$out"
+        return 0
+    fi
+    # 失败路径：尽力提取半份文本供 stderr 追溯，避免 NDJSON 原样灌入 stderr
+    # （大评审可达数 MB）；提取失败留原始尾部 2000B。
+    if ! "$JQ_BINARY" -ers \
+        '[.[] | select(.type=="result")][-1] // empty | .finalText // ""' \
+        "$out" 2>/dev/null > "${out}.text"; then
+        tail -c 2000 "$out" > "${out}.text"
+    fi
+    mv "${out}.text" "$out"
+    return $(( cli_rc != 0 ? cli_rc : 3 ))
 }
 
 run_glm_capture() {
