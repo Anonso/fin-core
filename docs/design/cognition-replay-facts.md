@@ -8,7 +8,8 @@
 2. mapping schema 细化：entries 只存 term→{group_id, 语义, confidence}，codes/weights/role 收进 groups 表（组级取数一次，词条可复用组）；
 3. nomination 用 **maturity（matured|open）与 proposed_relation 分离**表达「未到期」——化解 v2 里 not_matured 叙述与五值 relation 闭集的表述冲突；
 4. 快照行形态定稿：组级一行、`by_code[code][date]→OHLCV`；
-5. 施工记录：`AKShareProvider.get_index_history` 增量方法（个股路径喂指数代码会静默拿错标的，指数必须走 `stock_zh_index_daily`）；8 月批次（20260904）对拍 fixture 11/11 PASS、幂等（剔 retrieved_at 内容等价）与护栏（空锚/无 pending 规则/缺基准拒绝）探针全绿、单测 30 绿（含 jargon 回归 21）。
+5. 触发面变更（owner 2026-09-06 拍板授权，解除原「不挂 scheduler」非目标）：事实层新增每日 23:00 systemd user timer（`fin-cognition-replay-daily.service/.timer` + `scripts/cognition_replay_daily.sh`）；`snapshot --require-today` 交易日门——当日无收盘行=skip rc0（节假日空转），**全组取数失败=rc1 硬错误**（网络/代理/源故障不得伪装成节假日静默丢日，09-06 实测代理抖动踩中后加守卫）；nominate 在 skip 日同步跳过；正文吸收仍走 owner 扫批，timer 只写机器面。
+6. 施工记录：`AKShareProvider.get_index_history` 增量方法（个股路径喂指数代码会静默拿错标的，指数必须走 `stock_zh_index_daily`）；8 月批次（20260904）对拍 fixture 11/11 PASS、幂等（剔 retrieved_at 内容等价）与护栏（空锚/无 pending 规则/缺基准拒绝）探针全绿、单测 30 绿（含 jargon 回归 21）。
 
 ## 1. 问题与目标
 
@@ -22,7 +23,7 @@
 - **裁决层机器提名、owner 扫批**：窗口到期自动算好到期摘要生成提案；不自动写回放线正文（归属权与裁决权留 owner）；
 - **口径纪律**：主张类型驱动检查口径；方向类 spec 必须钉窗+基准（首立即须有锚，见 §2.2），否则 unscoreable；窗口到期即判，改窗=retire 旧 spec+立新 spec，manifest 按批留痕，不回头改。
 
-非目标：不改写回放线正文/G 原文；不动 readmodel schema（replay_state 进 readmodel 列 v2，需使用证据）；不做 G 正误总分（分维度出数）；不自动执行「纠正 G 历史认知」；不挂 cron/scheduler（硬边界 2 + 家规 11）。
+非目标：不改写回放线正文/G 原文；不动 readmodel schema（replay_state 进 readmodel 列 v2，需使用证据）；不做 G 正误总分（分维度出数）；不自动执行「纠正 G 历史认知」；不挂 cron/scheduler（硬边界 2 + 家规 11；——**09-06 owner 拍板授权解除**：事实层每日 23:00 systemd user timer，见勘误 5；正文裁决层仍不自动化）。
 
 ## 2. 设计
 

@@ -39,6 +39,8 @@ def main() -> int:
                     help="显式脱代理（运行旋钮；默认透传环境 proxy）")
     ap.add_argument("--lookback-days", type=int, default=40,
                     help="窗口起点向前取数缓冲（自然日，默认 40）")
+    ap.add_argument("--require-today", action="store_true",
+                    help="as_of 当日在任一组序列中无收盘行（节假日/数据未就绪）则跳过不写——供每日定时调用")
     args = ap.parse_args()
 
     as_of = dt.datetime.strptime(args.as_of, "%Y%m%d").date()
@@ -114,6 +116,23 @@ def main() -> int:
         "gaps": gaps,
         "written_at": fetched_at,
     }
+
+    # 取数全败（网络/代理/源故障）≠ 节假日：硬错误退出，防真实交易日被静默跳过。
+    if not lines:
+        print(json.dumps({
+            "mode": "error", "batch": batch, "gaps": gaps,
+            "reason": "all groups failed to fetch (network/proxy/source) — not a holiday skip",
+        }, ensure_ascii=False))
+        _log("all groups failed to fetch; rc=1")
+        return 1
+
+    if args.require_today and not any(fetch_end in l["by_code"] for l in lines):
+        print(json.dumps({
+            "mode": "skip", "batch": batch,
+            "reason": f"no close row dated {fetch_end} in any group (节假日/数据未就绪)",
+        }, ensure_ascii=False))
+        _log(f"require-today: skip batch {batch}")
+        return 0
 
     if not args.apply:
         print(json.dumps({
