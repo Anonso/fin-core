@@ -6,8 +6,9 @@
 #   codex-open "<prompt>"                                            # TTY 交互
 #   stdin 无参或 '-' 传 prompt；非 TTY 自动补 exec；首参 exec|e|review 同义
 # cmd profile：吸收 --sandbox/-C/--skip-git-repo-check；权限放大旗标与未识别
-#   旗标 fail-closed（exit 78）。glm profile：zcode 无头（owner 2026-09-06 拍板
-#   换替——codex-glm 路由退役后 GLM 无头统一走 zcode；harness 本体保留）。
+#   旗标 fail-closed（exit 78）。glm profile：claudecode 无头（owner 2026-09-06
+#   拍板——GLM 替补终版为 CC（--model 逐次指定），当日曾短暂指 zcode 后换出；
+#   zcode 单旋钮锚定 flash，仅存停用测试腿）。
 # fallback：主评审者 precheck 失败或运行非零 → stdout 横幅 + fallback.tsv 落账
 #   → 替补重发同参。换主评审者改 DEFAULT_PROFILE 一行。
 # tsv 行语义 = fallback 事件（非最终结论；双挂时 glm 的失败 rc 见 stderr）。
