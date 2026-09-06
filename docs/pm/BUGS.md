@@ -1389,3 +1389,16 @@
   走码等值、否则名称子串（纯码行为不变）；补带后缀回归测试；真实注册表复现
   matched 0→9 / ok 4；read_capabilities+ingestion 107 绿。
 - 状态：代码修复完成（2026-09-06）。
+- 追记（2026-09-06 调查收口）：①根因硬证据——事故会话（zcode consult
+  「做个持仓分析」，09-06 07:21）实录 FIN 传参
+  `["601899.SH","601958.SH","002185.SZ"]`，返回 matched=0 +
+  `instrument_scores_no_match`，结果 as_of 与 trace 第 3 条微秒级一致；
+  同会话 read_market_snapshot 用同形后缀符号成功（行情管线自归一），
+  是 Agent 误信后缀格式通用的来源。②同族嫌疑 watchlist_write.py:129
+  排除：带后缀 ref 走名称路径后被 B3 canonical 逐字节校验类型化拒收
+  （`watchlist_ref_not_canonical_name`，零写入，实证 601899.SH REJECTED /
+  601899 与紫金矿业 RESOLVED）；存量自选库 23 条全规范；trace 10 次真实
+  写零 ref 拒收——契约如此（工具描述明写 six-digit code or exact
+  canonical name），decision_journal 接受后缀归一是后建新缝的差异化
+  契约，非同病。③trace 另两次零命中（09-05 12:04/17:53）发起侧存储
+  不可达（hermes session.db 空），不可考。
