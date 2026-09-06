@@ -8,7 +8,7 @@
 2. mapping schema 细化：entries 只存 term→{group_id, 语义, confidence}，codes/weights/role 收进 groups 表（组级取数一次，词条可复用组）；
 3. nomination 用 **maturity（matured|open）与 proposed_relation 分离**表达「未到期」——化解 v2 里 not_matured 叙述与五值 relation 闭集的表述冲突；
 4. 快照行形态定稿：组级一行、`by_code[code][date]→OHLCV`；
-5. 触发面变更（owner 2026-09-06 拍板授权，解除原「不挂 scheduler」非目标）：事实层新增每日 23:00 systemd user timer（`fin-cognition-replay-daily.service/.timer` + `scripts/cognition_replay_daily.sh`）；`snapshot --require-today` 交易日门——当日无收盘行=skip rc0（节假日空转），**全组取数失败=rc1 硬错误**（网络/代理/源故障不得伪装成节假日静默丢日，09-06 实测代理抖动踩中后加守卫）；nominate 在 skip 日同步跳过；正文吸收仍走 owner 扫批，timer 只写机器面。
+5. 触发面变更（owner 2026-09-06 拍板授权，解除原「不挂 scheduler」非目标）：事实层新增每日 23:00 systemd user timer（`fin-cognition-replay-daily.service/.timer` + `scripts/cognition_replay_daily.sh`）；`snapshot --require-today` 交易日门——当日无收盘行=skip rc0（节假日空转），**全组取数失败=rc1 硬错误**（网络/代理/源故障不得伪装成节假日静默丢日；守卫经单测实证 rc=1，代理×新浪兼容实测无碍——早前「代理抖动实测踩中」系会话误报，已更正）；nominate 在 skip 日同步跳过；正文吸收仍走 owner 扫批，timer 只写机器面。
 6. 施工记录：`AKShareProvider.get_index_history` 增量方法（个股路径喂指数代码会静默拿错标的，指数必须走 `stock_zh_index_daily`）；8 月批次（20260904）对拍 fixture 11/11 PASS、幂等（剔 retrieved_at 内容等价）与护栏（空锚/无 pending 规则/缺基准拒绝）探针全绿、单测 30 绿（含 jargon 回归 21）。
 
 ## 1. 问题与目标

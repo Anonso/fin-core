@@ -140,3 +140,66 @@ def test_resolve_state_root_respects_xdg(tmp_path, monkeypatch):
     root = lib.resolve_state_root(environ={"XDG_STATE_HOME": str(tmp_path)})
     assert root == tmp_path / "fin-analyse" / "cognition-replay-evidence"
     assert (root.stat().st_mode & 0o777) == 0o700
+
+
+# ── snapshot CLI：硬错误守卫与 require-today 门 ───────────────
+
+def _bootstrap_state(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    root = lib.resolve_state_root(environ={"XDG_STATE_HOME": str(tmp_path)})
+    jargon = json.loads((tmp_path / "jargon.json").read_text()) if False else None
+    import hashlib
+    jargon_path = lib.Path(__file__).resolve().parents[2] / "config" / "zsxq_jargon.json"
+    jargon = json.loads(jargon_path.read_text())
+    sha = lib.canonical_sha256(jargon)
+    lib.atomic_write_json(root / "mapping.v1.json", {
+        "schema_version": "fin.cognition-replay-mapping/v1",
+        "updated_at": "2026-09-06",
+        "jargon_source_sha256": sha,
+        "entries": {"老登": {"group_id": "g1", "meaning": "x", "confidence": "owner_confirmed",
+                             "kind": "指代", "evidence": [], "note": ""}},
+        "groups": {"g1": {"codes": ["sh000001"], "weights": [1.0], "role": "reference"}},
+    })
+    lib.atomic_write_json(root / "specs.v1.json", {
+        "schema_version": "fin.cognition-replay-specs/v1",
+        "specs": [_spec()],
+    })
+    return root
+
+
+def _load_snapshot_cli():
+    import importlib.util
+    path = lib.Path(__file__).resolve().parents[2] / "scripts" / "cognition_replay_snapshot.py"
+    spec = importlib.util.spec_from_file_location("crs", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_snapshot_cli_all_fetch_fail_is_hard_error(tmp_path, monkeypatch, capsys):
+    from fin_analyse.market.providers.akshare import AKShareProvider
+    root = _bootstrap_state(tmp_path, monkeypatch)
+    mod = _load_snapshot_cli()
+    monkeypatch.setattr(AKShareProvider, "get_index_history", lambda self, t, s, e: [])
+    monkeypatch.setattr("sys.argv", ["crs", "--as-of", "20260904", "--require-today", "--apply"])
+    rc = mod.main()
+    assert rc == 1
+    assert '"mode": "error"' in capsys.readouterr().out
+    assert not (root / "snapshot-20260904.jsonl").exists()
+
+
+def test_snapshot_cli_require_today_skips_without_close_row(tmp_path, monkeypatch, capsys):
+    from fin_analyse.market.providers.base import OHLCV
+    from fin_analyse.market.providers.akshare import AKShareProvider
+    root = _bootstrap_state(tmp_path, monkeypatch)
+    mod = _load_snapshot_cli()
+    rows = [OHLCV(date="2026-09-03", open=1, high=1, low=1, close=3900.0, volume=0)]
+
+    def fake(self, t, s, e):
+        return [r for r in rows if s <= r.date <= e]
+    monkeypatch.setattr(AKShareProvider, "get_index_history", fake)
+    monkeypatch.setattr("sys.argv", ["crs", "--as-of", "20260904", "--require-today", "--apply"])
+    rc = mod.main()
+    assert rc == 0
+    assert '"mode": "skip"' in capsys.readouterr().out
+    assert not (root / "snapshot-20260904.jsonl").exists()
