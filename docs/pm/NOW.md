@@ -68,7 +68,17 @@ codex_routes 交互路由链（glm-official enabled / opencode-go disabled，
 读方 = codex-proxy 三件套 + guo_teacher_research 默认路径）**无真实使用者**，
 改挂退役候选（考后处置；`codex-routes/codex-glm/` 认证/模型目录为 codex_open.sh
 评审替补腿资产，退役时保留）。09-05「生产问询路由单腿 codex-glm」的考试风险
-提示作废——考试链路走 finqa，与 codex_routes 无关。2026-09-06 CLI 收口（D-050）：唯一
+提示作废——考试链路走 finqa，与 codex_routes 无关。
+**退役已执行（2026-09-06 owner 令「现在退役」）**：闭包定论后移出
+codex_routes.yaml + codex-proxy 三脚本 + codex-proxy-a/b-manual 状态目录
+（含 sqlite 会话档，无运行进程/无 crontab/systemd 指向，静止态 mv）→
+备份 `/home/ypk/fin-backups/codex-routes-retirement-20260906/`（0700/0600，
+MANIFEST 含 sha256，目录结构镜像可恢复）；`manage-fin-codex-routes` skill
+同删（Git 即归档）；`codex-glm/` 认证/模型目录保留。悬空读方后置项（不阻塞）：
+`tools/effect_evaluation/fin_arm_capture.py` `_ROUTE_CONFIG`（Hermes 时代评估栈
+provenance 字段）、`guo_teacher_research` 孤立子模块 codex_route_config/
+codex_runtime/runtime_diagnostics（包外无活调用方，5 测试在护）、
+`fin_tool_usage_audit.py:28` 指向已不存在的 codex-proxy-a（退役前即悬空）。2026-09-06 CLI 收口（D-050）：唯一
 入口 `finqa`（--node 钉腿 + -i 交互），launcher=起腿知识唯一权威；测试腿
 zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_version_pin
 单源 + bashrc 六函数退役（finqa-c/-cmd 过渡别名）；设计门 3 发现全采纳
