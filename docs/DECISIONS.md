@@ -512,4 +512,4 @@
 - 为什么：「问询→持仓变化」现无关联记录（快照覆盖写无历史、journal 本机空置、trace 问题只存 digest），留账靠 owner 想起来才记；自动递草稿把「记不记」的决定权留给 owner、把「想起来记」的成本降为零。D-042 不催纪律其余面（一次未确认不追问、不代 owner 陈述、headless 只 preview）全部保留。
 - 否决了什么：①自动/免确认 apply（journal 是 owner-stated 事实史，助手代陈述即污染账本）；②发布流追加变更日志（durable 新状态，按家规 10 等草稿机制真实使用后再评估，本轮不做）；③server trace 落问题原文（digest 是有意的隐私取向，不动）。
 - 功能面： 决策日志
-- 状态：active · 证据：fin_analyse/read_capabilities/server.py record_decision 描述 + ~/fin-data/consult-agent/CLAUDE.md 规则 8（2026-09-06 修订注）；效果判定=留账率与噪音感受，随 finq 记账观察一至两周。
+- 状态：active · 证据：fin_analyse/read_capabilities/server.py record_decision 描述 + ~/fin-data/consult-agent/CLAUDE.md 规则 8（2026-09-06 修订注）；审计门补跑过（24dd709，R3 字面命中追认；cmd·ds-pro 两连截断→glm·glm-5.3 ≈327s，0 P1/0 P2/1 P3，P3=新建议 reset 边界措辞挂观察期，台账 design-gate/d049-anti-nag-narrow-audit-20260906/）；效果判定=留账率与噪音感受，随 finq 记账观察一至两周。
