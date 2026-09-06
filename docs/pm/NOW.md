@@ -179,7 +179,7 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 | G 准入/工作集 | G 注入新鲜度 | 在用（manifest 契约失配已消〔08-29 晚六题 g_context 零失配码〕；fresh pair 专项探针 09-02 ✅） | 老师体系问题，验 fresh pair | [../design/g-cognition.md](../design/g-cognition.md)；CC 收口 b2da8d9c |
 | 知识脑 knowledge_brain | 方法论知识卡 | 问询验收中（09-04 接口B read_shared_brain 上线〔12 只读工具，c1da3ea〕+件3 已 apply〔40 卡：38 卡带激活词+三新卡，施工门 14 发现 12 采纳，幂等复验过，三新卡实弹第一顺位点亮〕+压测验收门 PASS〔双腿 12/12+四维不退化，台账 state/analysis-mindset-stress-20260904*/〕；09-06 persona-gov 三卡入册〔管理层检查/护城河验证/反向预期，43 卡：词面重叠零冲突+幂等复验+激活探针正3负2含挤占全过+双腿抽查卡命中〔CC+cmd〕，台账 state/fin-analyse/persona-governance-3cards-20260906/〕；残余=finq 真实使用记账照常） | 方法论类问题，验 read_shared_brain 被调+卡命中+边界收紧 | [analysis-mindset-v1](../design/analysis-mindset-v1.md)；D-039；seed_methodology_qa.py（541368d8） |
 | 薄 server 装配 | 十三工具可用性（12 只读+1 写，单缝失败隔离降级） | 在用 | 任一问询，验 gaps 可查 | read_capabilities/ |
-| 回放证据层 cognition-replay-facts | G 认知线市场验证的接续/口径（验证会话手动 CLI，不入问询链） | 文件层（设计门 glm 替补 18 发现全采纳 18/18；8 月批次对拍 11/11+幂等/护栏探针绿+单测 30 绿；待 owner 扫批首批 nominations 并钉方向类窗口） | 验证批次跑 snapshot/nominate CLI 对拍黄金值 | [design/cognition-replay-facts](../design/cognition-replay-facts.md)；台账 design-gate/cognition-replay-facts-20260906/ |
+| 回放证据层 cognition-replay-facts | G 认知线市场验证的接续/口径（验证会话手动 CLI，不入问询链） | 文件层（设计门 glm 替补 18 发现全采纳；8 月批次对拍 11/11+幂等/护栏探针绿+单测 30 绿；09-06 首批扫批已落回放线正文〔1 supports/5 open〕+方向类窗口暂钉 9/30+扩篮子拍板不扩；下次 ingest 双触发自动重建 readmodel） | 验证批次跑 snapshot/nominate CLI 对拍黄金值 | [design/cognition-replay-facts](../design/cognition-replay-facts.md)；台账 design-gate/cognition-replay-facts-20260906/ |
 
 ### 其他产品面
 
