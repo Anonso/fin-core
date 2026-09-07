@@ -60,7 +60,7 @@ N=${#QUESTIONS[@]}
 for ((i=1; i<=N; i++)); do
   q="${QUESTIONS[$((i-1))]}"
   for attempt in 1 2; do
-    FINQA_NODE_TIMEOUT=900 timeout 940 "${FINQA[@]}" --node zcode "$q" \
+    FINQA_NODE_TIMEOUT=1800 timeout 1860 "${FINQA[@]}" --node zcode "$q" \
       > "$STATE/q${i}.md" 2> "$STATE/q${i}.err"
     rc=$?
     [[ $rc -eq 0 ]] && break

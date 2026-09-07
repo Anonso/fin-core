@@ -18,7 +18,7 @@ bashrc 旧六函数已退役(finqa-c/-cmd 为过渡别名),README 平行文本�
                                   #   enabled:false 测试腿仅此路可达)
   finqa --node <id> -i [透传...]  # 交互式:同 argv 去 -p,os.execvpe 前台透传,
                                   #   rc 透传(zcode/codex 不支持,报错 exit 2)
-环境:FINQA_NODE_TIMEOUT=秒(默认 900,仅无头)。
+环境:FINQA_NODE_TIMEOUT=秒(默认 1800,仅无头;下限口径=LLM 超时≥1800s,owner 2026-09-07)。
 
 退出码:0 = 有腿答出(stdout=答案,stderr 末行 served-by 元信息);78 = 全部
 可用腿失败(stderr 列各腿 rc/阶段);2 = 用法/配置错误;交互式 = 子引擎 rc。
@@ -51,7 +51,7 @@ _CONSULT_WORKSPACE = Path.home() / "fin-data" / "consult-agent"
 _LLM_ENV_FILE = Path.home() / ".config" / "fin-analyse" / "llm.env"
 _EXIT_USAGE = 2
 _EXIT_EXHAUSTED = 78
-_DEFAULT_TIMEOUT_SECONDS = 900
+_DEFAULT_TIMEOUT_SECONDS = 1800.0
 _INTERACTIVE_UNSUPPORTED = {
     "zcode": "zcode 本机无 TUI(前端未随装),仅无头钉腿;模型/effort 单旋钮在 ~/.zcode/cli/config.json",
     "codex": "codex harness 休眠(opencode-go 429),interactive 未接;复活时在 launcher 补分支",
