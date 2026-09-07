@@ -374,6 +374,7 @@ def render_wsl_consumer_poller_service(
     llm_config = _systemd_path(llm_config_path, label="LLM config path")
     if _RUN_ID.fullmatch(not_before_run_id) is None:
         raise ValueError("not-before run ID has invalid format")
+    capture_slots = ",".join(_EXPECTED_TIMES)
     return f"""[Unit]
 Description=FIN ZSXQ capture-folder poller ({source_commit})
 After=network-online.target
@@ -391,9 +392,11 @@ Environment=PATH={release}/.venv/bin:{home_path}/.local/bin:/usr/local/bin:/usr/
 EnvironmentFile={llm_env}
 Environment=LLM_CONFIG_PATH={llm_config}
 UMask=0077
-ExecStart={release}/.venv/bin/python -I -B -u {release}/scripts/consume_zsxq_capture_folder.py --runs-root {runs} --source-commit {source_commit} --not-before-run-id {not_before_run_id} --ingest-deadline-seconds 3600
+ExecStart={release}/.venv/bin/python -I -B -u {release}/scripts/consume_zsxq_capture_folder.py --runs-root {runs} --source-commit {source_commit} --not-before-run-id {not_before_run_id} --ingest-deadline-seconds 3600 --capture-slots {capture_slots}
 # 协作 deadline 3600s（owner 2026-09-07 拍板，consume 透传 ingest --deadline-seconds）：
 # 深读多阶段 LLM 串行 + 供应商降级 fallback 链，20min 预算常把深读切半成多轮 churn；
+# consumer 按 --capture-slots（渲染期自 _EXPECTED_TIMES 派生）把预算封顶到
+# 「距下一采集点-60s」（下限 15min），防 1h 预算跨时点占死下一窗口（最紧 14:40→15:30 仅 50min）。
 # 尾部余量（terminalize/G 发布）计入 TimeoutStartSec。
 TimeoutStartSec=70min
 # 75 = coalesced（前 run 仍在跑，本次合并），是良性收编；consumer 单元不得加

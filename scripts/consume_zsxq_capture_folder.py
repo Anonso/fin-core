@@ -16,9 +16,11 @@ import re
 import tempfile
 from contextlib import redirect_stdout, suppress
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fin_analyse.adjudication import AdjudicationInbox, AdjudicationItem
 from fin_analyse.adjudication.config import load_adjudication_config
@@ -41,6 +43,39 @@ _CANDIDATES_AUDIT_NAME = "mainline-candidates.v1.jsonl"
 _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _RUN_ID = re.compile(r"^[0-9]{8}T[0-9]{9}-[1-9][0-9]*$")
+_CAPTURE_SLOT = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
+_SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
+# 触发点重合防护下限：低于此预算一次 ingest 连扫描+落库+G 发布都走不完，
+# 与其截半不如让它越过一个时点（首个空 tick 会接手下一产物）。
+_INGEST_DEADLINE_FLOOR_SECONDS = 900.0
+# 下一班 Windows capture 落地（~slot+2min）前要腾出服务；留 60s 调度余量。
+_NEXT_SLOT_MARGIN_SECONDS = 60.0
+
+
+def _effective_ingest_deadline(
+    configured: float,
+    capture_slots: tuple[str, ...],
+    now: datetime,
+) -> float:
+    """Cap the ingest budget so this pass ends before the next capture lands.
+
+    A one-hour budget that spans the next slot occupies the service through the
+    next whole 30-minute poller window (tightest pair: 14:40→15:30, 50min), so
+    that slot's artifact would wait hours for its first consume tick.  Slot
+    schedule is render-time bound via --capture-slots; without it (manual
+    invocation) the configured budget runs uncapped.
+    """
+    anchors = []
+    for raw in capture_slots:
+        hour, minute = (int(part) for part in raw.split(":"))
+        candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if candidate <= now:
+            candidate += timedelta(days=1)
+        anchors.append(candidate)
+    if not anchors:
+        return configured
+    budget = (min(anchors) - now).total_seconds() - _NEXT_SLOT_MARGIN_SECONDS
+    return min(configured, max(budget, _INGEST_DEADLINE_FLOOR_SECONDS))
 _DUPLICATE_EXIT = 64
 _INTERNAL_ERROR_EXIT = 70
 _TEMPFAIL_EXIT = 75
@@ -179,6 +214,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-id")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--ingest-deadline-seconds", type=float, default=1200.0)
+    parser.add_argument(
+        "--capture-slots",
+        default="",
+        help="comma-separated daily capture times (HH:MM, Asia/Shanghai); "
+        "render-time bound from _EXPECTED_TIMES; enables next-slot deadline capping",
+    )
     return parser
 
 
@@ -813,6 +854,12 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--run-id has invalid format")
     if not 30.0 <= args.ingest_deadline_seconds <= 3600.0:
         parser.error("--ingest-deadline-seconds must be within [30, 3600]")
+    capture_slots = tuple(
+        raw.strip() for raw in args.capture_slots.split(",") if raw.strip()
+    )
+    for slot in capture_slots:
+        if _CAPTURE_SLOT.fullmatch(slot) is None:
+            parser.error('--capture-slots entries must look like "HH:MM"')
     selection = _pending_artifacts(
         runs_root,
         source_commit=args.source_commit,
@@ -874,7 +921,13 @@ def main(argv: list[str] | None = None) -> int:
                     "--trigger",
                     "schedule",
                     "--deadline-seconds",
-                    repr(args.ingest_deadline_seconds),
+                    repr(
+                        _effective_ingest_deadline(
+                            args.ingest_deadline_seconds,
+                            capture_slots,
+                            datetime.now(_SHANGHAI_TZ),
+                        )
+                    ),
                 ]
             )
         output = captured_stdout.getvalue()

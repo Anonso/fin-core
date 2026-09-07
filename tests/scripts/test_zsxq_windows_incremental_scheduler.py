@@ -100,8 +100,11 @@ def test_rendered_poller_service_is_release_bound_oneshot_without_run_id() -> No
         f"ExecStart={_RELEASE_DIR}/.venv/bin/python -I -B -u "
         f"{_RELEASE_DIR}/scripts/consume_zsxq_capture_folder.py "
         f"--runs-root {_WSL_RUNS_ROOT} --source-commit {_RELEASE_SHA} "
-        f"--not-before-run-id {_NOT_BEFORE_RUN_ID}"
+        "--not-before-run-id "
+        f"{_NOT_BEFORE_RUN_ID} --ingest-deadline-seconds 3600 "
+        "--capture-slots 08:45,12:20,14:40,15:30,18:00,20:20"
     ) in service
+    assert "TimeoutStartSec=70min" in service
     assert "--run-id" not in service
     assert "OnCalendar=" not in service
     assert "WantedBy=" not in service

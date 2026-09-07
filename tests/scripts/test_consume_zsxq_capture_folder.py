@@ -1389,3 +1389,29 @@ def test_ingest_success_survives_rebuild_failure(
         )["status"]
         == "ready"
     )
+
+
+def test_effective_ingest_deadline_caps_before_next_capture_slot() -> None:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from scripts.consume_zsxq_capture_folder import _effective_ingest_deadline
+
+    now = datetime(2026, 9, 7, 14, 41, tzinfo=ZoneInfo("Asia/Shanghai"))
+    slots = ("08:45", "12:20", "14:40", "15:30", "18:00", "20:20")
+
+    # 最紧 14:40→15:30：剩余 49min - 60s 余量 = 48min 预算。
+    assert (
+        _effective_ingest_deadline(3600.0, slots, now) == 48 * 60.0
+    )
+    # 宽间隔班次（12:20→14:40）拿满配置上限。
+    noon = datetime(2026, 9, 7, 12, 21, tzinfo=ZoneInfo("Asia/Shanghai"))
+    assert _effective_ingest_deadline(3600.0, slots, noon) == 3600.0
+    # 跨天：20:20 之后下一采集点是次日 08:45，不受限。
+    night = datetime(2026, 9, 7, 20, 25, tzinfo=ZoneInfo("Asia/Shanghai"))
+    assert _effective_ingest_deadline(3600.0, slots, night) == 3600.0
+    # 已到时点边缘：预算不足保底值时取 15min 下限。
+    edge = datetime(2026, 9, 7, 15, 26, tzinfo=ZoneInfo("Asia/Shanghai"))
+    assert _effective_ingest_deadline(3600.0, slots, edge) == 900.0
+    # 无时点表（手工调用）不封顶。
+    assert _effective_ingest_deadline(3600.0, (), now) == 3600.0
