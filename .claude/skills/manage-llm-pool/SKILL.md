@@ -1,6 +1,6 @@
 ---
 name: manage-llm-pool
-description: Operate the FIN LLM pool — enable/disable a model node or harness leg (启用/禁用 LLM 节点/腿/渠道, 翻 enabled, 渠道恢复/限额解除/429 好了, 换 DS 槽位, 加/撤一个模型), or diagnose "pinned leg refused: pool disabled" and probe a channel before flipping. Covers the two-table flag map (config/llm.yaml api vs harness entries + finqa_nodes.yaml), credential prerequisites, dual-client channel probes, the post-commit snapshot render, the verification ladder and 落账 surfaces. Not for launcher/runtime code changes (see fin-release-launcher-chain) or capture scheduling (see manage-zsxq-capture).
+description: Operate the FIN LLM pool — enable/disable a model node or harness leg (启用/禁用 LLM 节点/腿/渠道, 翻 enabled, 渠道恢复/限额解除/429 好了, 换 DS 槽位, 加/撤一个模型), or diagnose "pinned leg refused: pool disabled" / "interactive 不支持" refusals and probe a channel before flipping. Covers the two-table flag map (config/llm.yaml api vs harness entries + finqa_nodes.yaml), credential prerequisites, dual-client channel probes, the two-gate revival (pool flag + launcher interactive blacklist), the post-commit snapshot render, the verification ladder and 落账 surfaces. Not for launcher/runtime code changes (see fin-release-launcher-chain) or capture scheduling (see manage-zsxq-capture).
 ---
 
 # Manage LLM Pool（节点/渠道启用 · 禁用 · 恢复）
@@ -22,8 +22,15 @@ description: Operate the FIN LLM pool — enable/disable a model node or harness
 - **失败语义（设计内，不是故障）**：池禁/conn_ref 悬空 ⇒ 链序静默跳过
   （fail-visible 横幅）；**钉腿（`--node`，含 -i）遇池禁 = 拒绝 rc=2**
   （`finqa_chain.py`：静默换腿会把池禁伪装成腿失败，污染对照归因）。
-  `finqa-x` 报 `pinned leg refused: codex: pool disabled: codex-opencode`
-  就是这个，别试图修它——翻池条目即可。
+  报 `pinned leg refused: <leg>: pool disabled: <conn>` 就是这个，别当故障
+  修——翻池条目即可。
+- **复活有两道门**（2026-09-07 codex 实证，连撞两次）：翻完池条目，钉腿
+  `-i` 仍可能被 `interactive 不支持 <harness>: …` 拒——那是 `finqa_chain.py`
+  的 `_INTERACTIVE_UNSUPPORTED` 黑名单（休眠期交互分支没接，报错原文会写
+  「复活时在 launcher 补分支」）。处置：查 `_launch_argv`/`_launch_env`/
+  `_run_interactive` 是否已预埋该 harness 的交互路径（argv 去 exec 旗标/
+  键注入/cwd），**预埋在=摘黑名单一行即通；没预埋=先接分支再摘**。
+  验证交互式用伪终端（见操作 7c）。
 - 恢复语义惯例（finqa_nodes 头注）：节点本体常态 `true`，**恢复只翻池条目一处**。
 - 分辨两类禁用缘由（注释/NOW.md 里都记着）：**渠道故障**（429 限额、key 失效
   ——渠道恢复即可翻）vs **角色决定**（弱腿不入生产链序——需 owner 拍板）。
@@ -69,4 +76,11 @@ description: Operate the FIN LLM pool — enable/disable a model node or harness
       ~/.config/fin-analyse/llm.env`——runtime-configs 路径没有 project .env）；
    c. **实弹探针走真实边界**：`finqa --node <leg> "自检探针:只回复两个字——正常"`
       无头一发，rc=0 + 回复正常 + tsv 落账 `served-by` 才叫「跑通」
-      （家规 7；提取链节点用其真实消费入口验证）。
+      （家规 7；提取链节点用其真实消费入口验证）。交互式（-i）无法无头验证，
+      用伪终端实测起框：
+      ```bash
+      TERM=xterm-256color timeout 12 script -qec "<venv python> scripts/finqa_chain.py --node <leg> -i" /dev/null </dev/null
+      ```
+      exit=124（超时杀=进程一直活着）+ 输出含 TUI 渲染帧/横幅 = 接线通；
+      TERM=dumb 会被 codex 自拒（`Refusing to start the interactive TUI`），
+      属终端环境非接线问题，换 xterm 即过。终判以 owner 真终端使用为准。
