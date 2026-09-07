@@ -914,8 +914,8 @@
   即退，无持久标签可泄漏），Windows Chrome 收敛 ZSXQ 专用 + 仓库守卫测试
   固化；opencli 资产迁入 scraper 域、market 反向依赖断开。实弹校准：无头
   兜底需 RLIMIT_FSIZE 余量（Chrome profile 内部写）且「Clash 代理 + 浏览器
-  TLS 栈」对 push2his 间歇可达（直连仍恒被墙）。存量 5 张死页 owner 手动
-  关闭；BUG-026 状态 = 已被 D-052 结构性取代。
+  TLS 栈」对 push2his 间歇可达（直连仍恒被墙）。存量 5 张死页已由 owner 手动关闭
+  （2026-09-07 确认）；BUG-026 状态 = 已被 D-052 结构性取代，闭合。
 
 ## BUG-030 CC 腿交易日历盲点：把非交易日当交易日写操作预案（2026-09-04 复压测发现，CC 立案）
 - 编号注：立案时误编 BUG-026，与本日更早的「行情 fallback opencli kline 泄漏」条
