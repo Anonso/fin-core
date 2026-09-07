@@ -77,6 +77,15 @@ HermesCliMessageSender，不走 MCP）。
 - 工作流闭环：起草会话起草+机验 → g_draft_list 呈报 → owner 飞书逐单元
   approve/reject → 起草会话按裁决入档。G 写入执行仍在本地确定性链
   （Hermes LLM 不直写标注文档），飞书只承载呈报与裁决。
+- 本地执行半边（2026-09-08 落地，批 9/05-09/07 首跑）：发布 =
+  `python -m fin_analyse.guo_teacher_research.mainline_draft_manifest`
+  （机验过的起草稿→manifest，0600，首行 _meta+逐单元 title/逐字摘录/
+  topic_id）；裁决消费 = `python -m
+  fin_analyse.guo_teacher_research.mainline_batch_merge`：全单元有裁决才动
+  （未决即拒），reject=该单元不入档（语义改稿仍走起草会话），拼合→
+  canonical 上机验→原子替换→as_of 滚至最新裁决时点→rebuild→清空 manifest
+  （g_draft_list 回空表）。四点拼接确定性无 LLM；首跑即真实批次
+  （25 单元，gen 59）。
 
 ## v1.2 修订（2026-09-07，owner 要求「G 批次能在 Hermes 批注，提供能判断的信息」）
 

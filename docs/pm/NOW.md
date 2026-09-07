@@ -193,7 +193,7 @@ codex 节点本体常态 true 未动。
 | 产品面 | 状态 | 验收手段 | 指针 |
 | --- | --- | --- | --- |
 | Daily 简报 | 问询验收中（**09-01 起 D-030 停推**，复验并入 D-031；带伤班次主因 BUG-015/016/017 已修并经 09-01 morning 真实班 gaps=[] 确认；盘前概览 gap 已随 BUG-002 09-04 闭环消解〔盘前形态=设计内 PARTIAL〕；更早施工叙事入 Git/BUGS） | 四班交付记录 + B1 盲评 | 【最后】D-031（最后9）；[../design/daily-delivery.md](../design/daily-delivery.md)；BUG-002/008/015/016/017 |
-| 裁决收件箱 | 运行态（09-06 建〔D-051〕：`fin-adjudication` CLI + SQLite 收件箱 + 工作日 09:00 飞书摘要 timer；首推冒烟真发+指纹去重过；v0.3 producer×3=G 标注批次 + 回放线提名 + 评分 needs_review 闭环（D-051 追记 #2/#3；owner 定位=只放裁决入库生效类）；箱内真实项 2（G 批次落后 2 天/3 篇；评分 needs_review 积压 179 条；回放批 20260904 已落账正确不开项）；裁决执行留在各功能原确认面） | `fin-adjudication list`；`journalctl --user -u fin-adjudication-digest` | 短设计按规则 5 归档（git 史 adjudication-inbox）；D-051；数据=$STATE/fin-analyse/adjudication-inbox-v1/ |
+| 裁决收件箱 | 运行态（09-06 建〔D-051〕：`fin-adjudication` CLI + SQLite 收件箱 + 工作日 09:00 飞书摘要 timer；首推冒烟真发+指纹去重过；v0.3 producer×3=G 标注批次 + 回放线提名 + 评分 needs_review 闭环（D-051 追记 #2/#3；owner 定位=只放裁决入库生效类）；箱内真实项 1（评分 needs_review 积压 179 条；回放批 20260904 已落账正确不开项；G 批次 9/05-09/07 已入档 09-08 消项——勾选→起草→机验→飞书终审〔MCP v1.4〕→确定性合并全链首跑）；裁决执行留在各功能原确认面） | `fin-adjudication list`；`journalctl --user -u fin-adjudication-digest` | 短设计按规则 5 归档（git 史 adjudication-inbox）；D-051；数据=$STATE/fin-analyse/adjudication-inbox-v1/ |
 
 ## 待办队列（只放未决项）
 
@@ -226,7 +226,6 @@ codex 节点本体常态 true 未动。
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
 | 旁路·随手 | 31 | 日线第三源施工：短设计已备（docs/design/daily-bar-third-source.md，候选源待实弹核验，owner 09-05 拍板立项）；施工前跑设计门 | D3 建造静默结束后 |
 | 旁路·使用触发 | 32 | 裁决收件箱 portfolio 接线（D-051 v0 砍出项）：持仓写路径回生产时挂 `save`/`confirm` 挂点，终态映射按 ConfirmStatus 8 值闭集（PUBLISHED/UNCHANGED→resolve，NO_PENDING_REVIEW/BUSY→no-op，其余不动） | 持仓写路径回生产时 |
-| 旁路·owner | 34 | G 批次 9/05-09/07 起草完成（2026-09-08 会话）：22 篇 keep → 25 单元（9/05×6、9/06×8 含 3600 亿特刊混合单元+省流亲笔合并起草、9/07×11）+3 演化节点行，机验 PASS（150 span 逐字⊆原文、25 单元整份校验）；草稿 $STATE/fin-analyse/g-batch-draft-20260905-0907/annotation-draft.md（drop 3 篇已记不立单元） | owner 终审后合并入档（步骤在草稿文末）+滚 as_of+重建+重跑机验 |
 | 旁路·owner | 33 | run-design-gate skill §0 增一行注册协议判据（D-051：新增 preview→确认/提名→扫批/需人工确认警告面必须接裁决收件箱 seam）——skill 文件本机未定位到（workspace/用户 skills 均无），owner 指认实际落点后补 | owner 指认 skill 位置 |
 | 旁路·owner | 35 | 行为纪律护栏常态（施工+三腿基线+owner 终裁 09-07/08 全清，r21 已收口）：audit.tsv 按期人工裁决（三腿累计 20+ 行命中，flash/zcode 泄漏族同弱、生产腿干净）；人格修订走闸（r20 立双闸+r21 首次实弹过闸：主线聚焦豁免钉死窄口径=点名仅解锁研究覆盖与观察清单、买入建议仍不给〔zcode mainline 探针改判 FAIL 依据〕，q1/q4 锚各扩一次完成态措辞，backups 至 r20 快照、现行 r21）；出闸判定生产腿复跑。三腿基线台账=\$STATE/…/behavior-regression/{20260907-002342(flash),20260907-052216(生产),20260907-235133(zcode)}/adjudication.md；批跑承载定版=systemd 用户单元（会话后台与 setsid 三次被环境回收的教训，unit=behavior-zcode-batch）；设计稿已按家规5删转 Git 史（7f8de2a 起、344e944 终版、43472b3 收官） | owner 按期 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
