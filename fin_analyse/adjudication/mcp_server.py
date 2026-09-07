@@ -374,6 +374,60 @@ def _make_g_batch_select_handler():
     return handler
 
 
+def _make_g_draft_list_handler():
+    def handler() -> dict[str, object]:
+        "List drafted G annotation units awaiting owner final review (empty until the drafting session publishes its manifest)."
+        from fin_analyse.runtime.state_roots import adjudication_inbox_state_root
+
+        manifest = adjudication_inbox_state_root() / "g-batch-draft.v1.jsonl"
+        if not manifest.exists():
+            return {"ok": True, "units": [], "hint": "起草会话尚未发布 g-batch-draft.v1.jsonl"}
+        units = []
+        for line in manifest.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                units.append(json.loads(line))
+        return {"ok": True, "units": units}
+
+    handler.__name__ = "g_draft_list"
+    return handler
+
+
+def _make_g_draft_verdict_handler():
+    def handler(unit_ids: list[str], verdict: str, note: str | None = None) -> dict[str, object]:
+        "Record owner's final review verdict (approve|reject) per drafted unit_id; the local drafting session applies verdicts (archive or revise). Audited."
+        from fin_analyse.runtime.state_roots import (
+            adjudication_inbox_state_root,
+            ensure_private_state_directory,
+        )
+
+        if verdict not in ("approve", "reject"):
+            return _err("verdict_invalid", detail="verdict must be approve|reject")
+        if not unit_ids or not all(isinstance(u, str) and u.strip() for u in unit_ids):
+            return _err("unit_ids_required")
+        root = ensure_private_state_directory(adjudication_inbox_state_root())
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%S+08:00")
+        sidecar = root / "g-batch-verdicts.v1.jsonl"
+        lines = [
+            json.dumps(
+                {"at": stamp, "unit_id": u.strip(), "verdict": verdict,
+                 "note": note, "via": "mcp"},
+                ensure_ascii=False, sort_keys=True,
+            )
+            for u in unit_ids
+        ]
+        descriptor = os.open(sidecar, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        try:
+            os.fchmod(descriptor, 0o600)
+            os.write(descriptor, ("\n".join(lines) + "\n").encode("utf-8"))
+        finally:
+            os.close(descriptor)
+        _append_audit(action="g_draft_verdict", target=",".join(u.strip() for u in unit_ids), note=verdict)
+        return {"ok": True, "recorded": len(unit_ids), "verdict": verdict}
+
+    handler.__name__ = "g_draft_verdict"
+    return handler
+
+
 # -- digest handler ---------------------------------------------------------
 
 
@@ -414,6 +468,8 @@ _SCORE_DROP = _make_score_drop_handler()
 _SCORE_GET = _make_score_get_handler()
 _G_BATCH_LIST = _make_g_batch_list_handler()
 _G_BATCH_SELECT = _make_g_batch_select_handler()
+_G_DRAFT_LIST = _make_g_draft_list_handler()
+_G_DRAFT_VERDICT = _make_g_draft_verdict_handler()
 _DIGEST_SEND = _make_digest_send_handler()
 
 mcp.tool(
@@ -434,6 +490,10 @@ mcp.tool(
     annotations=ToolAnnotations(readOnlyHint=True),
 )(_G_BATCH_LIST)
 mcp.tool()(_G_BATCH_SELECT)
+mcp.tool(
+    annotations=ToolAnnotations(readOnlyHint=True),
+)(_G_DRAFT_LIST)
+mcp.tool()(_G_DRAFT_VERDICT)
 mcp.tool()(_DIGEST_SEND)
 
 

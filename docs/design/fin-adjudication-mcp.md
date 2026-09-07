@@ -66,6 +66,18 @@ HermesCliMessageSender，不走 MCP）。
 - 实测动因：owner 飞书剔除 ddc1c72f（港股科伦博泰）成功后，该行数小时内第三次
   复活——其文章在水位重析窗口内，每 tick 重发。墓碑前「剔了又长」，墓碑后终局。
 
+## v1.4 修订（2026-09-07 深夜，owner 问「终审能通过飞书审吗」→ 闭环到最后一步）
+
+- 新增第 10/11 工具：`g_draft_list()`（readOnly）= 列出起草会话发布的待终审
+  单元（manifest `$STATE/fin-analyse/adjudication-inbox-v1/g-batch-draft.v1.jsonl`，
+  未发布时 ok+空表+提示）；`g_draft_verdict(unit_ids, verdict approve|reject,
+  note)` = owner 终审裁决落
+  `g-batch-verdicts.v1.jsonl` sidecar，起草会话消费执行（approve→写标注文档
+  →机验→入档；reject→修改或弃）。动作落 mcp-ops 审计。
+- 工作流闭环：起草会话起草+机验 → g_draft_list 呈报 → owner 飞书逐单元
+  approve/reject → 起草会话按裁决入档。G 写入执行仍在本地确定性链
+  （Hermes LLM 不直写标注文档），飞书只承载呈报与裁决。
+
 ## v1.2 修订（2026-09-07，owner 要求「G 批次能在 Hermes 批注，提供能判断的信息」）
 
 - 新增第 8/9 工具：`g_batch_list()`（readOnly）= as_of 之后全部老师文章的判断

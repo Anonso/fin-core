@@ -163,6 +163,8 @@ def test_registry_closed_set_registered() -> None:
         "score_get",
         "g_batch_list",
         "g_batch_select",
+        "g_draft_list",
+        "g_draft_verdict",
         "score_confirm",
         "score_drop",
         "digest_send",
@@ -281,8 +283,14 @@ def test_stdio_roundtrip_lists_tool_closed_set(env: Path) -> None:
             "score_get",
             "g_batch_list",
             "g_batch_select",
+            "g_draft_list",
+            "g_draft_verdict",
+        "g_draft_list",
+        "g_draft_verdict",
         "g_batch_list",
         "g_batch_select",
+        "g_draft_list",
+        "g_draft_verdict",
             "score_confirm",
             "score_drop",
             "digest_send",
@@ -385,3 +393,32 @@ def test_score_drop_writes_tombstone_blocking_rebirth(env: Path) -> None:
                         "to_dict": staticmethod(lambda: {"record_id": "hk1"})})()],
     )
     assert load_records(registry).get("hk1") is None
+
+
+def test_g_draft_review_loop(env: Path) -> None:
+    """v1.4：终审飞书化——起草会话发 manifest，owner 经 Hermes approve/reject。"""
+
+    from fin_analyse.runtime.state_roots import adjudication_inbox_state_root
+
+    lst = srv._make_g_draft_list_handler()()
+    assert lst == {"ok": True, "units": [], "hint": "起草会话尚未发布 g-batch-draft.v1.jsonl"}
+
+    manifest = adjudication_inbox_state_root() / "g-batch-draft.v1.jsonl"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps({"unit_id": "CU-0907-01", "statement": "藤壶流是条件概率",
+                    "excerpt": "条件概率，不是躺赢通", "topic_id": "55521144242545114"},
+                   ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    out = srv._make_g_draft_list_handler()()
+    assert out["ok"] is True and out["units"][0]["unit_id"] == "CU-0907-01"
+
+    verdict = srv._make_g_draft_verdict_handler()
+    assert verdict(["CU-0907-01"], "bogus")["error"] == "verdict_invalid"
+    assert verdict([], "approve")["error"] == "unit_ids_required"
+    assert verdict(["CU-0907-01"], "approve", note="摘录核对无误")["recorded"] == 1
+    sidecar = adjudication_inbox_state_root() / "g-batch-verdicts.v1.jsonl"
+    rows = [json.loads(l) for l in sidecar.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert rows[0]["verdict"] == "approve" and rows[0]["via"] == "mcp"
+    assert _audit_lines()[-1]["action"] == "g_draft_verdict"
