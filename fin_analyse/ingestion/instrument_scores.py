@@ -486,8 +486,14 @@ class InstrumentScoreRecord:
 
 
 def _required_missing(draft: Mapping[str, Any]) -> list[str]:
+    """身份门（owner 2026-09-07 拍板的政策化）：只有 name/code 缺失才 needs_review。
+
+    分析维度（core_business/sector/lihao/consensus）缺失 = 老师帖表的正常形状
+    （实测占历史 pending 的 ~85%），状态照发 ok、字段如实空着——读面已验证
+    null 安全。跨源冲突是独立的视觉质量哨兵，不受本门影响。
+    """
     missing: list[str] = []
-    for key in ("name", "code", "core_business", "sector", "lihao", "consensus"):
+    for key in ("name", "code"):
         value = draft.get(key)
         if value is None or (isinstance(value, str) and not value.strip()):
             missing.append(key)

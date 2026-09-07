@@ -189,8 +189,9 @@ def test_parse_code_first_inline_rows() -> None:
     assert by_code["600584"].consensus_score == 8.8
     assert by_code["600584"].article_score == 6.8
     assert by_code["600584"].parser_version == "v4"
-    assert by_code["688200"].status == "needs_review"
-    assert by_code["688200"].review_reason == "missing_fields:consensus"
+    # 身份门后：缺共识度不再入人工队列
+    assert by_code["688200"].status == "ok"
+    assert by_code["688200"].consensus_score is None
 
 
 def test_parse_inline_rows_normalizes_a_share_suffix() -> None:
@@ -272,7 +273,8 @@ def test_parse_article_records_name_map_fixes_drafts() -> None:
     assert by_name["赛微电子"] == "300456"
 
 
-def test_missing_consensus_marks_needs_review() -> None:
+def test_missing_consensus_stays_ok_under_identity_gate() -> None:
+    """身份门（owner 2026-09-07 政策化）：仅缺分析维度 = 正常形状，状态 ok。"""
     article = {
         "source_id": "zsxq-article-1",
         "topic_id": "topic-1",
@@ -291,8 +293,8 @@ def test_missing_consensus_marks_needs_review() -> None:
 """
     records = parse_article_records(article=article, md_text=md, source_record=None)
     assert len(records) == 1
-    assert records[0].status == "needs_review"
-    assert records[0].review_reason == "missing_fields:consensus"
+    assert records[0].status == "ok"
+    assert records[0].consensus_score is None  # 缺维度如实空着，不再拦进人工队列
 
 
 def test_same_code_two_rows_both_kept() -> None:

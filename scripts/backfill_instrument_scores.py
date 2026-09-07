@@ -7,6 +7,11 @@ record_id 唯一键 (source_id, code, 行序号)；内容 hash 变化才覆盖�
 用法：
   python scripts/backfill_instrument_scores.py            # dry-run 统计
   python scripts/backfill_instrument_scores.py --write     # 真写
+
+⚠ 重析复活语义（2026-09-07 实证）：--write 会按解析器口径重写范围内全部行，
+  覆盖人工处置（confirm/drop）。重析后需按处置台账重放：
+  $STATE/fin-analyse/adjudication-inbox-v1/bulk-disposition-20260907.jsonl
+  （身份门政策化后，confirm 类大部分由解析器自动承继，仅 drop/C 档需重放。）
 """
 
 from __future__ import annotations
