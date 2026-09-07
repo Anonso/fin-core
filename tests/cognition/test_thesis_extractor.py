@@ -734,7 +734,7 @@ def test_sentinel_empty_skips_nudge_and_uses_next_backend(tmp_path: Path) -> Non
     working = _WorkingBackend()
     extractor = LlmZsxqThesisExtractor(llm=None)
     original = extractor._get_llm_chain
-    extractor._get_llm_chain = lambda: [
+    extractor._get_llm_chain = lambda source=None: [
         CognitionLLM(backend=failing),
         CognitionLLM(backend=working),
     ]
@@ -765,7 +765,7 @@ def test_sentinel_exhausting_chain_returns_retryable_failure(tmp_path: Path) -> 
     failing = _SentinelBackend()
     extractor = LlmZsxqThesisExtractor(llm=None)
     original = extractor._get_llm_chain
-    extractor._get_llm_chain = lambda: [CognitionLLM(backend=failing)]
+    extractor._get_llm_chain = lambda source=None: [CognitionLLM(backend=failing)]
     try:
         extraction = extractor.extract(source)
     finally:
@@ -791,7 +791,7 @@ def test_empty_backend_chain_returns_typed_unavailable(tmp_path: Path) -> None:
 
     ex = LlmZsxqThesisExtractor(llm=None)
     original = ex._get_llm_chain
-    ex._get_llm_chain = lambda: []  # 模拟全熔断
+    ex._get_llm_chain = lambda source=None: []  # 模拟全熔断
     try:
         extraction = ex.extract(source)
     finally:
