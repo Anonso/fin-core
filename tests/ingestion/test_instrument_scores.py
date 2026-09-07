@@ -18,6 +18,8 @@ from fin_analyse.ingestion.instrument_scores import (
     parse_rows_from_text,
     update_instrument_scores,
     upsert_records,
+    record_tombstones,
+    load_tombstones,
 )
 
 
@@ -528,3 +530,22 @@ def test_update_instrument_scores_skips_below_threshold_and_other_columns(
     report = update_instrument_scores(tmp_path, saved_ids=["low", "qa"])
     assert report.candidates == 0
     assert not instrument_scores_path(tmp_path).exists()
+
+
+def test_tombstone_blocks_reupsert(tmp_path: Path) -> None:
+    """墓碑：owner 剔除的 record_id 在重析/采集重放时不再复活（D-053 闭环）。"""
+
+    path = tmp_path / "nested" / "instrument_scores.jsonl"
+    record = InstrumentScoreRecord(
+        source_id="s", topic_id="t", column="普通", title="题",
+        article_date="2026-08-01", published_at=None, article_score=7.0,
+        code="600000", name="示例", core_business=None, sector=None,
+        lihao_score=8.0, consensus_score=None, launch_in=None, horizon=None,
+        status="ok", review_reason=None, raw_origin="article_md.body",
+        provenance=None, record_id="deadbeef",
+    )
+    upsert_records(path, [record])
+    record_tombstones(path.parent, ["deadbeef"], reason="owner 剔除")
+    upsert_records(path, [record])  # 水位重析重放
+    assert load_records(path).get("deadbeef") is None
+    assert record_tombstones(tmp_path, [], reason="noop") == 0

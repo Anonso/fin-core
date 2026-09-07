@@ -669,6 +669,60 @@ def instrument_scores_path(knowledge_base_root: Path) -> Path:
     return Path(knowledge_base_root) / "runtime" / "cognition" / "instrument_scores.jsonl"
 
 
+def instrument_scores_tombstones_path(cognition_dir: Path) -> Path:
+    return Path(cognition_dir) / "instrument_scores_tombstones.v1.jsonl"
+
+
+def load_tombstones(cognition_dir: Path) -> set[str]:
+    """被 owner 永久剔除的 record_id 集合（重析/采集不再复活，D-053 闭环）。
+
+    参数 = registry 所在的 cognition 目录（与 upsert_records 内部推导同源）。
+    """
+
+    path = instrument_scores_tombstones_path(cognition_dir)
+    if not Path(path).exists():
+        return set()
+    out: set[str] = set()
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except (ValueError, UnicodeDecodeError):
+            continue
+        record_id = record.get("record_id")
+        if record_id:
+            out.add(str(record_id))
+    return out
+
+
+def record_tombstones(
+    cognition_dir: Path, record_ids: Iterable[str], *, reason: str
+) -> int:
+    """追加墓碑行（0600）；owner score_drop 的持久化半边。参数 = cognition 目录。"""
+
+    path = instrument_scores_tombstones_path(cognition_dir)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).isoformat()
+    lines = [
+        json.dumps(
+            {"record_id": str(rid), "reason": reason, "tombstoned_at": stamp},
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        for rid in record_ids
+    ]
+    if not lines:
+        return 0
+    descriptor = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+        os.write(descriptor, ("\n".join(lines) + "\n").encode("utf-8"))
+    finally:
+        os.close(descriptor)
+    return len(lines)
+
+
 def load_records(path: Path) -> dict[str, dict[str, Any]]:
     if not Path(path).exists():
         return {}
@@ -722,7 +776,13 @@ def _upsert_records_locked(
     remove_record_ids: Iterable[str] = (),
 ) -> tuple[int, int]:
     existing = load_records(target)
+    tombstoned = load_tombstones(target.parent)
     removed = 0
+    if tombstoned:
+        records = [record for record in records if record.record_id not in tombstoned]
+        for tombstoned_id in tombstoned:
+            if existing.pop(tombstoned_id, None) is not None:
+                removed += 1  # 存量清除：早前写入的墓碑行一并出清
     for record_id in remove_record_ids:
         if existing.pop(str(record_id), None) is not None:
             removed += 1

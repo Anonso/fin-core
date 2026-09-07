@@ -74,16 +74,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "confirm":
         upsert_records(path, [_Record(record)])
     else:
-        body = "\n".join(
-            json.dumps(value, ensure_ascii=False, default=str)
-            for value in records.values()
+        # 永久剔除：走唯一写缝 + 落墓碑（重析/采集不再复活，与 MCP drop 同权）
+        from fin_analyse.ingestion.instrument_scores import record_tombstones
+
+        upsert_records(path, [], remove_record_ids=[args.record_id])
+        record_tombstones(
+            path.parent, [args.record_id],
+            reason=(f"owner CLI drop {args.record_id}"),
         )
-        if body:
-            body += "\n"
-        temporary = path.with_name(path.name + ".tmp")
-        temporary.write_text(body, encoding="utf-8")
-        temporary.chmod(0o600)
-        os.replace(temporary, path)
     print(f"{args.action}: {args.record_id}")
     return 0
 

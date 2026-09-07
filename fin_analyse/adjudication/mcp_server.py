@@ -241,6 +241,13 @@ def _make_score_drop_handler():
         upsert_records(path, [], remove_record_ids=[resolved])
         if resolved in load_records(path):  # 写后读：被并发写者抢先回写才算失败
             return _err("record_not_found", record_id=record_id)
+        # 永久剔除：落墓碑，重析/采集水位不再复活（D-053 闭环补全）
+        from fin_analyse.ingestion.instrument_scores import record_tombstones
+
+        record_tombstones(
+            _registry_path().parent, [resolved],
+            reason=(note or "owner score_drop via Feishu/MCP"),
+        )
         _append_audit(action="score_drop", target=resolved, note=note)
         return {"ok": True, "status": "dropped", "record_id": resolved}
 

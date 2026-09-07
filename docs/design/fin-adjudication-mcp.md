@@ -57,6 +57,15 @@ HermesCliMessageSender，不走 MCP）。
 - 净复杂度 = 1 模块 + 6 工具 + 1 审计文件；零新 durable store（复用 inbox.sqlite
   与 score registry）。
 
+## v1.3 修订（2026-09-07 深夜，owner 飞书实测暴露复活洞）
+
+- 新增 registry 墓碑层：`instrument_scores_tombstones.v1.jsonl`（cognition 目录，
+  0600）。`score_drop`（MCP 与 CLI 同权）剔除成功即落墓碑；`upsert_records`
+  唯一写入口统一过滤——新行不收、存量即清。采集水位重析/手动 backfill 重放
+  均不再复活已剔行。
+- 实测动因：owner 飞书剔除 ddc1c72f（港股科伦博泰）成功后，该行数小时内第三次
+  复活——其文章在水位重析窗口内，每 tick 重发。墓碑前「剔了又长」，墓碑后终局。
+
 ## v1.2 修订（2026-09-07，owner 要求「G 批次能在 Hermes 批注，提供能判断的信息」）
 
 - 新增第 8/9 工具：`g_batch_list()`（readOnly）= as_of 之后全部老师文章的判断

@@ -356,3 +356,32 @@ def test_g_batch_list_and_select(env: Path) -> None:
     rows = [json.loads(l) for l in sidecar.read_text(encoding="utf-8").splitlines() if l.strip()]
     assert [(r["topic_id"], r["verdict"]) for r in rows] == [("t1", "keep"), ("t2", "keep")]
     assert _audit_lines()[-1]["action"] == "g_batch_select"
+
+
+def test_score_drop_writes_tombstone_blocking_rebirth(env: Path) -> None:
+    """v1.3：剔除必须落墓碑——水位重析/重放不再复活已剔行（owner 飞书实测复活洞）。"""
+
+    from fin_analyse.ingestion.instrument_scores import (
+        instrument_scores_tombstones_path,
+        load_records,
+        upsert_records,
+    )
+
+    registry = instrument_scores_path(env)
+    registry.parent.mkdir(parents=True, exist_ok=True)
+    registry.write_text(
+        json.dumps({"record_id": "hk1", "code": None, "name": "科伦博泰",
+                    "status": "needs_review"}),
+        encoding="utf-8",
+    )
+    handler = srv._make_score_drop_handler()
+    assert handler("hk1", note="港股缺码剔除")["status"] == "dropped"
+    tombstones = instrument_scores_tombstones_path(registry.parent)
+    assert tombstones.exists() and "hk1" in tombstones.read_text(encoding="utf-8")
+    # 模拟水位重析复活：同 id 再 upsert 必须被墓碑拦截
+    upsert_records(
+        registry,
+        [type("R", (), {"record_id": "hk1",
+                        "to_dict": staticmethod(lambda: {"record_id": "hk1"})})()],
+    )
+    assert load_records(registry).get("hk1") is None
