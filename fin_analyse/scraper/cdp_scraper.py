@@ -14,6 +14,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import math
 import os
 import re
@@ -59,7 +61,9 @@ _IMAGE_VISION_RESERVE_SECONDS = 90.0
 #: 只暴露类型，不携带配置、异常文本或 secret。
 _DEEP_READ_LLM_CONFIG_INVALID = "deep_read_llm_config_invalid"
 #: 每轮 ingest 排空的存量非新鲜 strict-G 深化上限（有界，防 LLM 突发）。
-_DEEP_READ_BACKLOG_DRAIN_LIMIT = 3
+_DEEP_READ_BACKLOG_DRAIN_LIMIT = 8
+_DEEP_READ_MAX_WORKERS = 4
+_IMAGE_MAX_WORKERS = 3
 GROUP_URL = "https://wx.zsxq.com/group/15522441811252"
 
 
@@ -1409,14 +1413,14 @@ class CdpBridgeScraper:
                 self._deadline_at - timedelta(seconds=_IMAGE_DEADLINE_RESERVE_SECONDS),
             )
 
-        results: list[dict] = []
-        for i, img in enumerate(images):
+        def _process_image(item: tuple[int, dict]) -> dict | None:
+            """单图全流程（下载→保存→OCR→vision）。返回 None＝预算耗尽未处理。"""
+            i, img = item
             if (
                 budget_deadline is not None
                 and datetime.now(budget_deadline.tzinfo) >= budget_deadline
             ):
-                logger.warning("[IMG] 图片处理预算耗尽，跳过剩余 %d 张", len(images) - i)
-                break
+                return None
             # F-03：单次下载超时按剩余预算封顶——图片请求不可能越过 run deadline
             # 拖垮文字保存与 G 发布。
             request_timeout = 30.0
@@ -1425,7 +1429,7 @@ class CdpBridgeScraper:
                 request_timeout = max(1.0, min(30.0, remaining))
             src = img.get("src", "")
             if not src:
-                continue
+                return {"skipped": True}
             try:
                 resp = session.get(
                     src,
@@ -1436,7 +1440,7 @@ class CdpBridgeScraper:
                     },
                 )
                 if resp.status_code != 200:
-                    continue
+                    return {"skipped": True}
                 ext = "jpg" if "jpeg" in resp.headers.get("Content-Type", "") else "png"
                 filename = f"{i:03d}.{ext}"
                 local_path = f"images/{post_id}/{filename}"
@@ -1445,7 +1449,7 @@ class CdpBridgeScraper:
                 abs_path.write_bytes(resp.content)
 
                 # F-03：OCR/vision 前检查预算储备——剩余 < 储备（vision 最坏 ~90s）
-                # 则跳过剩余图片的 OCR/vision，图片处理不可能越过 run deadline。
+                # 则本图跳过 OCR/vision，图片处理不可能越过 run deadline。
                 if budget_deadline is not None:
                     remaining_for_vision = (
                         budget_deadline - datetime.now(budget_deadline.tzinfo)
@@ -1453,12 +1457,12 @@ class CdpBridgeScraper:
                     if remaining_for_vision < _IMAGE_VISION_RESERVE_SECONDS:
                         logger.warning(
                             "[IMG] OCR/vision 预算储备不足（剩余 %.0fs < %.0fs），"
-                            "跳过剩余 %d 张图片的 OCR/vision",
+                            "跳过 %03d 的 OCR/vision",
                             remaining_for_vision,
                             _IMAGE_VISION_RESERVE_SECONDS,
-                            len(images) - i,
+                            i,
                         )
-                        break
+                        return {"skipped": True}
 
                 # OCR fallback (always run for text extraction)
                 ocr_text = ""
@@ -1473,23 +1477,38 @@ class CdpBridgeScraper:
 
                 # Vision analysis with structured provenance (mimo → GLM-4.6V-Flash → SiliconFlow → OCR)
                 provenance = describe_image_with_provenance(str(abs_path))
-                llm_desc = provenance.llm_desc
-
-                results.append(
-                    {
-                        "filename": filename,
-                        "path": local_path,
-                        "ocr_text": ocr_text,
-                        "llm_desc": llm_desc,
-                        "vision_provider": provenance.vision_provider,
-                        "vision_model": provenance.vision_model,
-                        "fallback_chain": provenance.fallback_chain,
-                        "error": provenance.error,
-                    }
-                )
                 time.sleep(0.5)
+                return {
+                    "filename": filename,
+                    "path": local_path,
+                    "ocr_text": ocr_text,
+                    "llm_desc": provenance.llm_desc,
+                    "vision_provider": provenance.vision_provider,
+                    "vision_model": provenance.vision_model,
+                    "fallback_chain": provenance.fallback_chain,
+                    "error": provenance.error,
+                }
             except Exception as e:
                 logger.warning("[IMG] %s: %s", src, e)
+                return {"skipped": True}
+
+        workers = min(_IMAGE_MAX_WORKERS, max(1, len(images)))
+        if workers <= 1:
+            outcomes = [(i, _process_image((i, img))) for i, img in enumerate(images)]
+        else:
+            with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="img") as pool:
+                outcomes = list(pool.map(_process_image, enumerate(images)))
+        results: list[dict] = []
+        budget_exhausted_logged = False
+        for _i, res in sorted(outcomes, key=lambda pair: pair[0]):
+            if res is None:
+                if not budget_exhausted_logged:
+                    logger.warning("[IMG] 图片处理预算耗尽，跳过后续图片")
+                    budget_exhausted_logged = True
+                continue
+            if res.get("skipped"):
+                continue
+            results.append(res)
 
         return results
 
@@ -3417,48 +3436,85 @@ image_provenance: [{", ".join(vision_providers)}]
                 )
             return 0
 
-        created = 0
-        for article_id, article_path in needs_generation:
-            self._surface_checkpoint()
+        def _ensure_one(
+            article_id: str, article_path: Path
+        ) -> tuple[str, dict[str, Any] | None, Exception | None]:
             try:
                 status = (
                     service.ensure_artifacts(article_id, article_path)
-                    if control is None
+                    if worker_control is None
                     else service.ensure_artifacts(
                         article_id,
                         article_path,
-                        control=control,
+                        control=worker_control,
                     )
                 )
-                if status.get("status") == "generated":
-                    created += 1
-                    logger.info(
-                        "[DEEP-READ] generated: %s (%s)",
-                        article_id,
-                        status.get("generated_at", ""),
-                    )
-                elif status.get("status") == "cache_hit":
-                    logger.info("[DEEP-READ] cache hit: %s", article_id)
-                elif status.get("status") == "retryable":
-                    result.deep_read_retryable += 1
-                    msg = f"[DEEP-READ] {article_id}: retryable"
-                    logger.warning(msg)
-                    result.warnings.append(msg)
-                else:
-                    result.deep_read_error += 1
-                    svc_warnings = status.get("warnings", [])
-                    msg = (
-                        f"[DEEP-READ] {article_id}: {status.get('status', '?')}"
-                        f" — {'; '.join(svc_warnings[:2])}"
-                    )
-                    logger.warning(msg)
-                    result.warnings.append(msg)
-            except Exception as e:
+                return article_id, status, None
+            except Exception as e:  # noqa: BLE001 — 逐篇兜底，单篇失败不拖垮整批
+                return article_id, None, e
+
+        created = 0
+        workers = min(_DEEP_READ_MAX_WORKERS, len(needs_generation))
+        worker_control: CognitionCompletionControl | None
+        if control is None or workers <= 1:
+            # 无 deadline（测试注入）或单 worker：保持串行原语义（含逐项 checkpoint）
+            worker_control = control
+            outcomes = []
+            for article_id, article_path in needs_generation:
+                self._surface_checkpoint()
+                aid, status, exc = _ensure_one(article_id, article_path)
+                self._surface_checkpoint()
+                outcomes.append((aid, status, exc))
+        else:
+            # worker 侧只查 deadline 栅栏、不碰 repo（SQLite 连接绑定主线程，
+            # 见 docs/design/zsxq-deep-read-parallel.md 不变量 2）；续租由主线程
+            # 等待循环周期执行，栅栏过期时未启动任务取消、在跑任务自查快速终止。
+            worker_control = CognitionCompletionControl(
+                fence=ExecutionFence(self._deadline_at),
+                checkpoint=lambda: None,
+            )
+            with ThreadPoolExecutor(
+                max_workers=workers, thread_name_prefix="deep-read"
+            ) as pool:
+                futures = [
+                    pool.submit(_ensure_one, aid, path) for aid, path in needs_generation
+                ]
+                pending = set(futures)
+                while pending:
+                    done, pending = wait(pending, timeout=10, return_when=FIRST_COMPLETED)
+                    self._surface_checkpoint()
+            outcomes = [fut.result() for fut in futures]
+
+        for article_id, status, exc in outcomes:
+            if exc is not None:
                 result.deep_read_error += 1
-                msg = f"[DEEP-READ] failed for {article_id}: {e}"
+                msg = f"[DEEP-READ] failed for {article_id}: {exc}"
                 logger.warning(msg)
                 result.warnings.append(msg)
-            self._surface_checkpoint()
+                continue
+            if status.get("status") == "generated":
+                created += 1
+                logger.info(
+                    "[DEEP-READ] generated: %s (%s)",
+                    article_id,
+                    status.get("generated_at", ""),
+                )
+            elif status.get("status") == "cache_hit":
+                logger.info("[DEEP-READ] cache hit: %s", article_id)
+            elif status.get("status") == "retryable":
+                result.deep_read_retryable += 1
+                msg = f"[DEEP-READ] {article_id}: retryable"
+                logger.warning(msg)
+                result.warnings.append(msg)
+            else:
+                result.deep_read_error += 1
+                svc_warnings = status.get("warnings", [])
+                msg = (
+                    f"[DEEP-READ] {article_id}: {status.get('status', '?')}"
+                    f" — {'; '.join(svc_warnings[:2])}"
+                )
+                logger.warning(msg)
+                result.warnings.append(msg)
 
         return created
 

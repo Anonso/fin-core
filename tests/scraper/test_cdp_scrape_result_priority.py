@@ -781,3 +781,59 @@ class TestDeepReadArtifactsHook:
         second_ensure.assert_called_once()
         assert second_result.warnings == []
         assert second_result.deep_read_eligible == 1
+
+
+class TestDeepReadParallel:
+    """批次 3 并发化：多文章深读并行执行且结果完整聚合。"""
+
+    def _preflight_ok(self):
+        from unittest.mock import patch
+
+        return patch(
+            "fin_analyse.scraper.cdp_scraper.CdpBridgeScraper._deep_read_llm_preflight",
+            return_value=True,
+        )
+
+    def test_two_articles_run_concurrently_and_aggregate(self, tmp_path):
+        import time as _time
+        from datetime import datetime, timedelta
+        from unittest.mock import patch
+
+        from fin_analyse.scraper.cdp_scraper import CdpBridgeScraper, ScrapeResult
+
+        calls: list[str] = []
+
+        def slow_ensure(article_id, article_path, control=None):
+            calls.append(article_id)
+            _time.sleep(0.6)
+            return {"article_id": article_id, "status": "generated", "generated_at": "g"}
+
+        scraper = CdpBridgeScraper(
+            knowledge_base_root=tmp_path,
+            deadline_at=datetime.now(TZ) + timedelta(minutes=5),
+        )
+        for aid in ("aid_p1", "aid_p2"):
+            article = tmp_path / "articles" / f"{aid}.md"
+            article.parent.mkdir(exist_ok=True)
+            article.write_text("article", encoding="utf-8")
+            scraper._index[aid] = {"id": aid, "column": "星大派特刊", "file": f"{aid}.md"}
+
+        with (
+            self._preflight_ok(),
+            patch(
+                "fin_analyse.cognition.deep_read_artifacts.DeepReadArtifactService.ensure_artifacts",
+                side_effect=slow_ensure,
+            ),
+        ):
+            result = ScrapeResult()
+            t0 = _time.monotonic()
+            created = scraper._ensure_deep_read_artifacts_for_new(
+                result, ["aid_p1", "aid_p2"]
+            )
+            elapsed = _time.monotonic() - t0
+
+        assert created == 2
+        assert sorted(calls) == ["aid_p1", "aid_p2"]
+        # 串行两篇 ≥1.2s；4 workers 并行应显著低于 1.2s
+        assert elapsed < 1.2, f"expected parallel execution, took {elapsed:.2f}s"
+        assert result.deep_read_error == 0
