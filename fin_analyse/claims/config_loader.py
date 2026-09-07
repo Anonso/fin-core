@@ -48,7 +48,7 @@ class BackendPlan(NamedTuple):
     extra_body: dict[str, Any] | None
 
 
-_CONFIG_KEYS = {"models", "vision", "cross_validation", "priorities"}
+_CONFIG_KEYS = {"models", "vision", "cross_validation", "priorities", "routing"}
 _MODEL_KEYS = {
     "provider",
     "model",
@@ -335,9 +335,37 @@ def configured_backend_order(tier: str, fallback: tuple[str, ...]) -> tuple[str,
     return get_backend_priority(config, tier, fallback)
 
 
+def content_filter_routing(
+    config_path: str | None = None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """owner 2026-09-07：内容过滤路由表。
+
+    返回 (column_markers, backend_names)：source.column 命中任一 marker 的
+    文章，认知链跳过列出的后端（coding 端点对汇总类帖输出过滤 1301 实证）。
+    未配置/读失败返回空二元组——fail-open 走完整链。
+    """
+    try:
+        config = load_llm_config(config_path=config_path, load_dotenv=False)
+    except Exception as exc:
+        logger.warning("Could not read LLM content-filter routing: %s", exc)
+        return (), ()
+    routing = config.get("routing")
+    if not isinstance(routing, Mapping):
+        return (), ()
+    skip = routing.get("content_filter_skip")
+    if not isinstance(skip, Mapping):
+        return (), ()
+    columns = tuple(str(c) for c in skip.get("columns", ()) if isinstance(c, str) and c)
+    backends = tuple(str(b) for b in skip.get("skip_backends", ()) if isinstance(b, str) and b)
+    return columns, backends
+
+
 def compile_backend_plan(config: Mapping[str, object]) -> tuple[BackendPlan, ...]:
     if not set(config).issubset(_CONFIG_KEYS):
         raise LLMConfigError("LLM config contains unknown top-level keys")
+    routing = config.get("routing")
+    if routing is not None and not isinstance(routing, Mapping):
+        raise LLMConfigError("LLM config routing must be a mapping")
     models = config.get("models", {})
     vision = config.get("vision", {})
     if not isinstance(models, Mapping) or not isinstance(vision, Mapping):

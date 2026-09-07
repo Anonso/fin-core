@@ -63,3 +63,27 @@ def test_extra_body_must_be_non_empty_mapping():
                 }
             }
         )
+
+
+def test_content_filter_routing_parsed_or_fail_open(tmp_path):
+    from fin_analyse.claims.config_loader import content_filter_routing
+
+    cfg = tmp_path / "llm.yaml"
+    cfg.write_text(
+        """
+models: {}
+routing:
+  content_filter_skip:
+    columns: ["每日热点"]
+    skip_backends: [glm53_flash]
+""",
+        encoding="utf-8",
+    )
+    columns, backends = content_filter_routing(config_path=str(cfg))
+    assert columns == ("每日热点",)
+    assert backends == ("glm53_flash",)
+
+    empty = tmp_path / "empty.yaml"
+    empty.write_text("models: {}\n", encoding="utf-8")
+    assert content_filter_routing(config_path=str(empty)) == ((), ())
+    assert content_filter_routing(config_path=str(tmp_path / "missing.yaml")) == ((), ())

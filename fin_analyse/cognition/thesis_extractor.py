@@ -480,7 +480,7 @@ class LlmZsxqThesisExtractor:
         try:
             if control is not None:
                 control.checkpoint_or_raise()
-            llm = self._get_llm()
+            llm = self._get_llm(source)
             result = llm.complete_json(
                 prompt,
                 expected_type="CentralIdea",
@@ -535,14 +535,36 @@ class LlmZsxqThesisExtractor:
     def __init__(self, llm: object | None = None) -> None:
         self._llm = llm
 
-    def _get_llm(self) -> CognitionLLM:
+    def _route_names(
+        self,
+        names: tuple[str, ...] | list[str],
+        source: ZsxqCognitionSource | None,
+    ) -> list[str]:
+        """汇总类帖跳过内容过滤确定性命中的后端（llm.yaml routing 配置）。
+
+        coding 端点对汇总类帖输出过滤（1301 实证）——命中文章在进链前移除
+        对应 backend，省掉注定失败的尝试；未命中/路由表缺失 fail-open。
+        """
+        if source is None:
+            return list(names)
+        columns, backends = _content_filter_routing()
+        if not columns or not backends:
+            return list(names)
+        column = source.column or ""
+        if not any(marker in column for marker in columns):
+            return list(names)
+        return [name for name in names if name not in backends]
+
+    def _get_llm(self, source: ZsxqCognitionSource | None = None) -> CognitionLLM:
         from fin_analyse.cognition.llm import CognitionLLM
 
         if self._llm is not None:
             return CognitionLLM(backend=self._llm)
-        return CognitionLLM.from_config(preferred=_cognition_preferred())
+        return CognitionLLM.from_config(
+            preferred=tuple(self._route_names(_cognition_preferred(), source))
+        )
 
-    def _get_llm_chain(self) -> list[CognitionLLM]:
+    def _get_llm_chain(self, source: ZsxqCognitionSource | None = None) -> list[CognitionLLM]:
         """主提取的升级链：按 priorities.cognition 排序的可用 backend。
 
         注入测试 backend 时链长 1（升级仍在同 backend 上以重试指令进行）。
@@ -556,7 +578,7 @@ class LlmZsxqThesisExtractor:
         backends = create_backends_from_config()
         chain = [
             CognitionLLM(backend=backends[name])
-            for name in _cognition_preferred()
+            for name in self._route_names(_cognition_preferred(), source)
             if name in backends
         ]
         if not chain:
@@ -608,7 +630,7 @@ class LlmZsxqThesisExtractor:
         exhausted_bare_empty = True
         sentinel_details: list[str] = []
         try:
-            for llm in self._get_llm_chain():
+            for llm in self._get_llm_chain(source):
                 for attempt_prompt in (prompt, prompt + _EMPTY_ESCALATION_NUDGE):
                     if control is not None:
                         control.checkpoint_or_raise()
@@ -787,3 +809,9 @@ def _cognition_preferred() -> tuple[str, ...]:
     from fin_analyse.claims.config_loader import configured_backend_order
 
     return configured_backend_order("cognition", _COGNITION_PREFERRED_FALLBACK)
+
+
+def _content_filter_routing() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    from fin_analyse.claims.config_loader import content_filter_routing
+
+    return content_filter_routing()

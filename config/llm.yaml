@@ -179,6 +179,14 @@ models:
 # owner 2026-09-05 设计：DS 槽位 = opencode ds flash → cmd ds flash 两节点，
 # 每节点 enabled 独立开关，声明序固定——opencode 禁用时链自动落到 cmd 节点，
 # 恢复翻回 enabled: true 即回第一位，无其他改动）。
+# owner 2026-09-07：汇总类帖在 coding 端点触发生成内容过滤（1301 实证，
+# 标准端点不受限），认知链按 column 子串命中跳过 coding 端点后端；
+# 未命中类型 fail-open 走完整链。实证样本扩充时在此追加类目。
+routing:
+  content_filter_skip:
+    columns: ["每日热点"]
+    skip_backends: [glm53_flash]
+
 priorities:
   t0: [glm53, deepseek, qwen]
   t1: [glm53_flash, deepseek, qwen]
