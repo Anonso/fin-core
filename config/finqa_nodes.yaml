@@ -26,7 +26,7 @@ schema_version: fin.finqa-nodes/v2
 cmd_version_pin: "1.50.0"  # cmd 客户端版本钉单源;读方=codex_open.sh + persona_regression.sh
                            # (闭源客户端升级先落替补,读不到 fail-closed;2026-09-07 随 cmd update 1.49.1→1.50.0 同步 bump)
 nodes:
-  - id: commandcode       # Command Code + ds-pro——链序唯一生产腿
+  - id: commandcode       # Command Code + ds-pro——生产链序第一腿(codex 09-07 复活居次,非唯一)
     conn_ref: commandcode-pro
     alias: cmd            # 短打别名(--node cmd 等效);tsv/横幅仍落规范 id
     enabled: true
