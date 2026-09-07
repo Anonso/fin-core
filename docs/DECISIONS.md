@@ -538,3 +538,10 @@
 - 实弹校准：push2his 直连恒被墙（curl/Windows Chrome 同证），「Clash 代理 + 浏览器 TLS 栈」间歇可达（curl 走代理仍被掐 = OpenSSL 指纹同杀）；无头 Chrome 需 RLIMIT_FSIZE 独立余量（profile 内部写被打死会无限重启挂满预算）。
 - 功能面： 行情证据
 - 状态：active · 证据：设计门 1 轮（cmd·ds-pro，1P1/2P2/4P3 全采纳折入施工）；market+scraper+common 2716 绿；实弹 = push2delay 0.5s/200、push2his 338,989B 真实 K 线过全门槛、FIN-ZSXQ Chrome tab list 前后均空；台账 `$STATE/fin-analyse/design-gate/eastmoney-wsl-fallback-20260907/`。
+
+## D-053 · 2026-09-07 · FIN↔Hermes 分工重钉 + fin-adjudication MCP 接口缝：Hermes 功能归 Hermes，FIN 只供接口（owner 拍板「hermes 飞书裁决/清零重建 profile/可以考虑 mcp」）
+- 决策：飞书裁决闭环按 MCP 路线落——FIN 侧唯一新面 = `fin_analyse/adjudication/mcp_server.py`（stdio，工具闭集 6：adjudication_list/done、score_list/confirm/drop、digest_send；typed 返回 + mcp-ops.v1.jsonl 审计；record_id 唯一前缀匹配），契约冻结 v1 见设计稿（合入即 Git 归档）；Hermes 侧（fin profile 清零重建、极简 skill、MCP 注册、飞书 allowlist）归 Hermes 域会话按契约施工，互不等待，契约修订需双侧确认。registry 唯一写串行化点收敛至 upsert_records（内部 flock + 唯一 tmp 名，采集/CLI/MCP 三写者全收口）。
+- 为什么：旧 profile 是停用咨询范式的沉积（739MB、13 个无关技能包、死 cron、悬空 MCP 引用），叠加成本高于重建；文件桥方案（LLM 转写 jsonl + 消费器）被 MCP 取代——类型化工具少一整层，LLM 误写被服务端校验兜住。08-27 停用的咨询面不翻案（本通道只覆盖裁决操作，无咨询能力）。
+- 否决了什么：①decision 文件桥 + .path consumer（多两层机制）；②Hermes 直调 FIN CLI（LLM 上下文里执行命令，风险面大于类型化工具）；③重开咨询面（范围外）。
+- 边界注记：硬边界 3 定向豁免 = score_list 评分明细经 Hermes 进 owner 本人飞书私信，仅此一流（owner 拍板在案，豁免行落模块 docstring 防蒸发）。
+- 状态：active · 证据：设计门 cmd·ds-pro（台账 design-gate/fin-adjudication-mcp-20260907/，1P1/4P2/3P3 全采纳：digest 异常面 typed、registry flock 收口、drop 走 remove_record_ids、guard/startup/roundtrip 测试补齐、豁免落 docstring、前缀匹配）；tests/adjudication 13 绿（含真子进程 stdio roundtrip）+ 全仓 2710+640 绿；Hermes 侧交接 = 契约文档（Git 史）+ 启动命令 `/home/ypk/fin-core/.venv/bin/python -m fin_analyse.adjudication.mcp_server`（env FIN_KNOWLEDGE_BASE_ROOT 必需）。

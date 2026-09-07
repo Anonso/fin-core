@@ -18,10 +18,12 @@ v4（同夜裁决）：锚点后零字段命中的行不产出（散文「公司
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
 import re
+import secrets
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -675,10 +677,32 @@ def upsert_records(
 
     remove_record_ids 用于代码归一后的旧行替换：先按 record_id 删除，
     再 upsert 新行，避免错码行残留。
+
+    并发硬约束（设计门 20260907）：本函数是 registry 的唯一写串行化点——
+    采集增量入册 / CLI confirm / MCP confirm/drop 全部经此写，函数内部对
+    `<name>.lock` 取 flock；tmp 用唯一名（防并发写者共用 .tmp 撕裂）。
     """
     target = Path(path)
     target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     target.parent.chmod(0o700)
+    lock_fd = os.open(
+        target.with_name(target.name + ".lock"),
+        os.O_CREAT | os.O_WRONLY | os.O_CLOEXEC,
+        0o600,
+    )
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        return _upsert_records_locked(target, records, remove_record_ids)
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
+
+
+def _upsert_records_locked(
+    target: Path,
+    records: list[InstrumentScoreRecord],
+    remove_record_ids: Iterable[str] = (),
+) -> tuple[int, int]:
     existing = load_records(target)
     removed = 0
     for record_id in remove_record_ids:
@@ -708,7 +732,9 @@ def upsert_records(
     )
     if body:
         body += "\n"
-    temporary = target.with_name(target.name + ".tmp")
+    temporary = target.with_name(
+        f"{target.name}.{secrets.token_hex(4)}.tmp"
+    )
     descriptor = os.open(
         temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
     )
