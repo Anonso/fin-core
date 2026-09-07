@@ -1454,6 +1454,8 @@
 - 残余收窄（2026-09-06 owner 拍板配置）：全局 `~/.commandcode/settings.json` 加 `permissions.additionalDirectories: ["/home/ypk/fin-data"]` 后实测——无头读 fin-data 从 permission_denied 转 end_turn（`--add-dir` 旗标仍无效，1.49.1 缺陷嫌疑）；写仍拦且模型优雅说明不终止。「cmd 读不了工作区外文件」的结构性圈界收窄为「fin-data 之外」；packet 引问询域文件不再必落替补。语义=评审者链 cmd 读域 fin-core→+fin-data（仍窄于 glm 替补全盘只读），D-045 语义修订条目待 DECISIONS 空闲时补录。
 - 同日收窄授权面（owner 迁移，项目级验证）：配置从全局迁至项目级 `~/fin-core/.commandcode/settings.json`（随 git 入审计）——设计门 cwd=fin-core 恰好独享该授权；问询 cmd 失去 fin-data 全域直读回归最小权限（其数据面走 MCP 项目级 allowlist，不依赖此授权）；全局文件已清空。双探针验证：门 cwd 读 fin-data end_turn、consult cwd 解析照常（end_turn）。
 - 同族未修面（2026-09-06 追记）：问询机器链 `finqa_chain.py` commandcode 腿同为 `cmd -p` + rc 透传（模块头注释明言 rc 透传），假成功形态同样成立——触发概率低于评审场景（问询主用 MCP 只读工具，无域外读刚需）但非零；防护未覆盖。finqa_chain.py 时有并行施工（finqa-cli-unify 在途），修法随其统一调用面时一并落 JSON+stopReason 白名单，避免双会话碰撞。
+- 防护实弹追认（2026-09-06 晚，cognition-replay-facts 设计门）：packet 评审范围引 `$STATE/fin-analyse`（项目级授权圈 fin-core+fin-data 之外）→ cmd 腿 ≈34s 死于工具拒绝，防护按设计判失败走 glm 替补（fallback.tsv rc=3；推定为 cli_rc 0 假成功归一化，原始 NDJSON 已被 EXIT trap 清）。隔离复跑 1:1 复现（绕脚本，tsv 未增行）：被拒调用=`shell_command` `ls "$STATE/fin-analyse"`，事件流 tool_queued→tool_denied→run_end(stopReason=permission_denied, rc=0/subtype 谎报 success)。两形态修正：①finalText 非空时 stderr **无**「continuation budget exhausted」警告（该签名仅空 finalText 形态必现，本条即无警告实弹）；②`--permission-mode plan` 不扩 cmd 目录圈界（探针实测仍拒绝，与 claude 替补的 plan 语义不同，勿以 plan 旗标救 cmd 域外读）。探针件已归档 design-gate/cognition-replay-facts-20260906/diagnostic-appendix-20260906-cmd-leg/（probe-results.jsonl + v3 评审正文；/tmp 原件易失），交接稿 §7。同晚 20:28 adjudication-inbox-20260906-r2 门同签名复触（packet 冻结设计含 `$XDG_STATE_HOME/…/inbox.sqlite` 域外引用）——涉 `$STATE` durable state 的设计门持续触发，非孤例。
+- 圈界再收窄（2026-09-06 深夜，owner 拍板「配置能解决的必须解决」）：项目级 settings.json `additionalDirectories` 增补 `~/.local/state/fin-analyse`（全部 durable-state 根，含 design-gate 台账/adjudication/knowledge 备份）与 `~/.local/share/fin-analyse`（活体 knowledge-base·标注文档真实落点）。验证链：探针读 $STATE 文件 permission_denied→end_turn；完整 packet 复跑三连——v1 授权前 15s 死（被拒调用 `shell_command ls "$STATE/fin-analyse"`）、v2 仅授权 state 后 9.8min 死于 glob `~/.local/share/fin-analyse`、v3 三根授权齐后 **22min 完整评审 end_turn、0 硬拒绝**（同一 packet 15s→22min）。语义=cmd 读域 fin-core+fin-data+state/fin-analyse+share/fin-analyse（D-045 修订债务同前条累积）。残余两项：①`shell_command` 无头仍拒但为软形态（模型收到拒绝可降级用目录工具继续，实测不终止；与涉及未授权路径时的硬终止不同）；②`~/.config/fin-analyse` **有意未授权**——内含 llm.env/fin.env 凭据与 portfolio 数据，进模型上下文即出本机（硬边界 3），评审如需该根内容走 packet 冻结。cmd 腿主评审地位对涉 durable-state 设计门恢复有效。**owner 拍板为标准处置（"以后再遇到就这么改"；限 cmd 腿圈界致死——问题归属=cmd 客户端自身权限模型，glm/claudecode 无此圈界不适用）：一律按「定位被拒路径→cmd settings 增补其数据根→探针验证→同 packet 复跑到 end_turn」在 cmd 侧配置解决，诊断复跑绕入口直调，不改脚本、不重开门**；操作卡已固化 run-design-gate skill §4。
 
 ## BUG-056 read_market_snapshot 零 instruments 静默返双 gap，agent 误报「行情数据缺口」（2026-09-06 finq 复盘立案，同日修复）
 
@@ -1489,3 +1491,26 @@
   字面）；驳回 0。范围外备案一条：codex 腿 broker 面（local_capability_transport
   独立 FastMCP，不经 server.py 校验）同款零参静默双 gap 仍存，实弹未现、留作
   后续待办候选。裁决后修复提交随当日 git log。
+
+## BUG-057 ZSXQ 采集两段瘫痪：opencli 包被掏空十班连败；重装后 daemon 子树挂死 wrapper -Wait，summary 永 pending 判 corrupt 挡全队列（2026-09-07 当日修复）
+
+- 发现：09-07 08:45 班照常触发但 1.7s 即败 `transport_unavailable`（opencli node/main.js
+  不可解析）。回扫 runs 全量：末次成功=09-05 14:40 班，15:30 起连续 10 班同因全败；
+  `%APPDATA%\npm\node_modules\@jackwener\opencli` 与 `~/.opencli` 同名包均空壳
+  （mtime=09-05 15:02，恰夹在末次成功与首败之间）。
+- 根因①：09-05 下午 opencli 升级/重装把包体掏空（目录壳在、dist 全失）。
+- 根因②（重装后新形态，实弹复现三次）：opencli 1.8.7 首调 spawn 常驻 daemon.js＝
+  采集 node 的后代进程；wrapper `Start-Process -Wait` 等整棵后代树永不返回 → 任务
+  ExecutionTimeLimit PT25M 到点全树强杀（finally 不执行）→ summary 永 capture_pending；
+  consumer 合同「pending+完整产物=corrupt」exit 70，corrupt 按序扫描挡住全部后续班次。
+  修复中另踩 PS 5.1 两坑、各被一次实弹逼出：-PassThru 不带 -Wait 时 `.ExitCode` 恒 null
+  （`.WaitForExit()` 也不救），必须先缓存 `$capture.Handle`。
+- 修复：wrapper 等待语义改 `$null = $capture.Handle` + `$capture.WaitForExit()`
+  （只等采集进程本身；8700168→5e4c25f→cdf63f0 三段落地，34 renderer 测试绿）；
+  三个毒化 run（085352/093914/094909，产物完整但 summary 未 finalize）移
+  `C:\Users\22873\fin-zsxq-capture\backup-20260907\` 隔离未删；09:52 验证班实弹
+  135s 收口 exit 0+ready+sha 绑定；poller 消费实弹落库（多帖 [SAVE] 带分），末态
+  deadline_exceeded＝20min 深读截止设计内收口（exit 2）。
+- 状态：已恢复，12:20 班起全自动。残余：renderer 测试只断言 wrapper 文本存在，未锁
+  「不等后代树/ExitCode 落定」语义，回归钉板待补；09:52 班一条深读报错帖
+  （zsxq-22258844488211811）待 12:20 窗口核对是否续排。
