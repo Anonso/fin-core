@@ -102,7 +102,7 @@ def test_rendered_poller_service_is_release_bound_oneshot_without_run_id() -> No
         f"--runs-root {_WSL_RUNS_ROOT} --source-commit {_RELEASE_SHA} "
         "--not-before-run-id "
         f"{_NOT_BEFORE_RUN_ID} --ingest-deadline-seconds 3600 "
-        "--capture-slots 08:45,12:20,14:40,15:30,18:00,20:20"
+        "--capture-slots 08:45,12:20,14:00,14:40,18:00,20:20"
     ) in service
     assert "TimeoutStartSec=70min" in service
     assert "--run-id" not in service
@@ -147,10 +147,9 @@ def test_poller_timer_calendars_cover_each_slot_plus_thirty_minutes() -> None:
         "*-*-* 08:45..59:00",
         "*-*-* 09:00..15:00",
         "*-*-* 12:20..50:00",
+        "*-*-* 14:00..30:00",
         "*-*-* 14:40..59:00",
         "*-*-* 15:00..10:00",
-        "*-*-* 15:30..59:00",
-        "*-*-* 16:00:00",
         "*-*-* 18:00..30:00",
         "*-*-* 20:20..50:00",
     )
@@ -471,7 +470,7 @@ def _task_xml(wrapper_path: PureWindowsPath) -> str:
         "<Enabled>true</Enabled>"
         "<ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay>"
         "</CalendarTrigger>"
-        for time in ("00:45", "04:20", "06:40", "07:30", "10:00", "12:20")
+        for time in ("00:45", "04:20", "06:00", "06:40", "10:00", "12:20")
     )
     return f'''<?xml version="1.0" encoding="UTF-16"?>
 <Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">

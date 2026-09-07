@@ -45,11 +45,13 @@ def _release_dir_binds_sha(release_dir: PurePosixPath, source_commit: str) -> bo
     except (OSError, subprocess.SubprocessError):
         return False
     return head == source_commit
+# owner 2026-09-07：14:00 预清班（消化 12:20–14:00 积压，39min 预算封顶防黏连
+# 14:40）；15:30 删除（14:00+14:40 覆盖下午，14:40 恢复满额预算）。
 _EXPECTED_TIMES = (
     "08:45",
     "12:20",
+    "14:00",
     "14:40",
-    "15:30",
     "18:00",
     "20:20",
 )

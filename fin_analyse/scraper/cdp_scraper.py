@@ -3348,7 +3348,13 @@ image_provenance: [{", ".join(vision_providers)}]
 
         service = DeepReadArtifactService(self._kb_root)
         found: list[str] = []
-        for article_id, entry in sorted(self._index.items()):
+        # D1（owner 2026-09-07）：排空按文章日期新→旧——新鲜帖先深化先可问询，
+        # 老欠账靠后；无日期条目排最后（空串自然序）。
+        for article_id, entry in sorted(
+            self._index.items(),
+            key=lambda kv: str(kv[1].get("date", "")),
+            reverse=True,
+        ):
             if article_id in exclude or len(found) >= limit:
                 continue
             pair = self._strict_g_entry_pending_pair(article_id, entry)

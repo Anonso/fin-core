@@ -56,15 +56,15 @@ def test_collect_returns_only_stale_strict_g_articles(scraper, tmp_path, monkeyp
     for aid in (stale_id, fresh_id):
         _touch_article(tmp_path, aid)
     scraper._index = {
-        fresh_id: _make_entry(tmp_path, fresh_id),
-        stale_id: _make_entry(tmp_path, stale_id),
+        fresh_id: _make_entry(tmp_path, fresh_id, date="2026-09-05"),
+        stale_id: _make_entry(tmp_path, stale_id, date="2026-09-01"),
     }
     fake = _FakeService(stale_ids={stale_id})
     monkeypatch.setattr(deep_read_module, "DeepReadArtifactService", lambda root: fake)
 
     assert scraper._collect_deep_read_backlog_ids(limit=3, exclude=set()) == [stale_id]
-    # 确定性顺序：index 字典序，'2' < '4'
-    assert fake.checked == [stale_id, fresh_id]
+    # D1 确定性顺序：文章日期新→旧（09-05 先查，09-01 后查）
+    assert fake.checked == [fresh_id, stale_id]
 
 
 def test_collect_skips_ineligible_and_unresolvable_entries(scraper, tmp_path, monkeypatch):
@@ -88,20 +88,26 @@ def test_collect_skips_ineligible_and_unresolvable_entries(scraper, tmp_path, mo
 
 
 def test_collect_respects_limit_and_exclusion(scraper, tmp_path, monkeypatch):
-    ids = ["zsxq-d4", "zsxq-b2", "zsxq-c3", "zsxq-a1"]
+    ids = {
+        "zsxq-d4": "2026-09-04",
+        "zsxq-b2": "2026-09-02",
+        "zsxq-c3": "2026-09-03",
+        "zsxq-a1": "2026-09-01",
+    }
     for aid in ids:
         _touch_article(tmp_path, aid)
-    scraper._index = {aid: _make_entry(tmp_path, aid) for aid in ids}
+    scraper._index = {aid: _make_entry(tmp_path, aid, date=date) for aid, date in ids.items()}
     fake = _FakeService(stale_ids=set(ids))
     monkeypatch.setattr(deep_read_module, "DeepReadArtifactService", lambda root: fake)
 
+    # D1：日期新→旧（09-04 → 09-01），limit=2 取最新两篇
     drained = scraper._collect_deep_read_backlog_ids(limit=2, exclude=set())
-    assert drained == ["zsxq-a1", "zsxq-b2"]
+    assert drained == ["zsxq-d4", "zsxq-c3"]
 
     drained_minus_excluded = scraper._collect_deep_read_backlog_ids(
-        limit=5, exclude={"zsxq-a1"}
+        limit=5, exclude={"zsxq-d4"}
     )
-    assert drained_minus_excluded == ["zsxq-b2", "zsxq-c3", "zsxq-d4"]
+    assert drained_minus_excluded == ["zsxq-c3", "zsxq-b2", "zsxq-a1"]
 
 
 def test_collect_freshness_check_failure_is_skipped_not_fatal(scraper, tmp_path, monkeypatch):
