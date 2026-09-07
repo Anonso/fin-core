@@ -517,6 +517,19 @@ def test_resolve_browser_binary_rejects_invalid_env_pin(
         _resolve_browser_binary()
 
 
+def test_resolve_browser_binary_rejects_windows_side_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """审计 P3-8：/mnt/ 下的 Windows 二进制不得经 env pin 指回兜底
+    （Windows 浏览器只许 ZSXQ，D-052）。"""
+    monkeypatch.setenv("FIN_EASTMONEY_BROWSER_BIN", "/mnt/c/Program Files/Google/chrome.exe")
+    with pytest.raises(
+        EastmoneyOnDemandTransportError,
+        match="^EASTMONEY_ON_DEMAND_BROWSER_UNAVAILABLE$",
+    ):
+        _resolve_browser_binary()
+
+
 def test_resolve_browser_binary_fails_closed_without_candidates(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

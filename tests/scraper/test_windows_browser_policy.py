@@ -2,9 +2,9 @@
 
 ``opencli``/``powershell`` 是 Windows Chrome 的唯一驱动面。扫描域 =
 ``fin_analyse/**.py``，唯一豁免子树 = ``fin_analyse/scraper/``（ZSXQ 抓取域）。
-``scripts/*.cjs`` 等 ZSXQ Windows 资产在扫描域外——非 Python 树，且由
-``tests/scripts/`` 的 zsxq 用例覆盖；守卫只防 Python 生产代码再搭
-Windows 浏览器的车。
+``scripts/`` 下的 ZSXQ Windows 资产（含 ``zsxq_windows_incremental_scheduler.py``
+这类 Python 脚本）不进本守卫——它们属 ZSXQ 域、由 zsxq 自有用例覆盖；本守卫
+只防 fin_analyse 生产树再搭 Windows 浏览器的车（审计 P3-4 域界修正）。
 """
 
 from __future__ import annotations

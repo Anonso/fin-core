@@ -162,7 +162,8 @@ class _EastmoneyOnDemandTransportCore:
         if remaining <= 0:
             raise _error("BROWSER_DEADLINE_REACHED")
         # --user-data-dir 每次全新：无 SingletonLock 残留、不依赖 $HOME；
-        # rmtree 尽力而为，失败时 Chrome 锁文件残留 /tmp、依赖系统 tmp 清理。
+        # rmtree 尽力而为——被墙端点的常态失败路径下每次可残留 ~4MB profile
+        # 于 /tmp，依赖系统 tmp 清理（审计 P2-2 量化照录）。
         user_data_dir = Path(tempfile.mkdtemp(prefix="fin-eastmoney-headless-"))
         try:
             argv = (
@@ -244,13 +245,20 @@ def _error(code: str) -> EastmoneyOnDemandTransportError:
 
 
 def _resolve_browser_binary(
-    which: Callable[[str], str | None] | None = None,
+    which: Callable[[str], str | None] = None,
 ) -> str:
     probe = shutil.which if which is None else which
     configured = os.environ.get("FIN_EASTMONEY_BROWSER_BIN")
     if configured is not None:
         candidate = Path(configured)
-        if candidate.is_absolute() and candidate.is_file() and os.access(candidate, os.X_OK):
+        # 审计 P3-8：拒绝 /mnt/ 下的 Windows 侧二进制——env pin 不得把
+        # Windows Chrome 指回兜底（Windows 浏览器只许 ZSXQ，D-052）。
+        if (
+            candidate.is_absolute()
+            and not str(candidate).startswith("/mnt/")
+            and candidate.is_file()
+            and os.access(candidate, os.X_OK)
+        ):
             return str(candidate)
         raise _error("BROWSER_UNAVAILABLE")
     for name in _BROWSER_CANDIDATES:
@@ -329,6 +337,9 @@ def _response_from_dom(
         _strict_json_value(content)
     except EastmoneyOnDemandTransportError as error:
         raise _error("BROWSER_DOCUMENT_INVALID") from error
+    # status_code=200 为兜底合成值：--dump-dom 观测不到 HTTP 状态码，非 200
+    # 的 JSON 错误体也会过本门槛；数据正确性由下游 envelope（rc==0）校验
+    # fail-closed 兜住（审计 P2-6）。
     return _FallbackResponse(status_code=200, content=content)
 
 
