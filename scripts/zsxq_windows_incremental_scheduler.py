@@ -269,8 +269,14 @@ try {
     try {
         $env:FIN_ZSXQ_CAPTURE_HANDOFF_DIR = $handoffDir
         $capture = Start-Process -FilePath $nodeExe -ArgumentList @($captureArgument) `
-            -WorkingDirectory $captureRoot -NoNewWindow -Wait -PassThru `
+            -WorkingDirectory $captureRoot -NoNewWindow -PassThru `
             -RedirectStandardOutput $captureStdout -RedirectStandardError $captureStderr
+        # -Wait waits out the whole descendant tree: the opencli daemon.js child
+        # never exits, so the run dies at the task PT25M limit before the
+        # summary is finalized. Poll the capture process itself instead.
+        while (-not $capture.HasExited) {
+            Start-Sleep -Milliseconds 500
+        }
         $captureExit = $capture.ExitCode
     }
     finally {
