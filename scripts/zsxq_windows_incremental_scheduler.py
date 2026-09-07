@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import xml.etree.ElementTree as ElementTree
 from collections.abc import Sequence
 from datetime import datetime
@@ -23,6 +24,27 @@ _WINDOWS_SID = re.compile(r"^S-\d(?:-\d+){2,14}$")
 _RUN_ID = re.compile(r"^[0-9]{8}T[0-9]{9}-[1-9][0-9]*$")
 _TASK_NAMESPACE = "{http://schemas.microsoft.com/windows/2004/02/mit/task}"
 _SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
+
+
+def _release_dir_binds_sha(release_dir: PurePosixPath, source_commit: str) -> bool:
+    """Release-dir binding: SHA-named dir, or a checkout whose HEAD is the SHA.
+
+    The deployed poller/consumer units run from the living repo checkout, so a
+    name-string match alone cannot bind them; verify the checkout HEAD instead.
+    """
+    if release_dir.name == source_commit:
+        return True
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(release_dir), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return head == source_commit
 _EXPECTED_TIMES = (
     "08:45",
     "12:20",
@@ -107,8 +129,10 @@ def render_wsl_consumer_service(
 
     source_commit = _require_sha(release_sha, pattern=_FULL_SHA, label="release SHA")
     release = _systemd_path(release_dir, label="release directory")
-    if release_dir.name != source_commit:
-        raise ValueError("release directory must end with the release SHA")
+    if not _release_dir_binds_sha(release_dir, source_commit):
+        raise ValueError(
+            "release directory must end with the release SHA or be a checkout at it"
+        )
     home_path = _systemd_path(home, label="home")
     runs = _systemd_path(runs_root, label="runs root")
     llm_env = _systemd_path(
@@ -337,8 +361,10 @@ def render_wsl_consumer_poller_service(
 
     source_commit = _require_sha(release_sha, pattern=_FULL_SHA, label="release SHA")
     release = _systemd_path(release_dir, label="release directory")
-    if release_dir.name != source_commit:
-        raise ValueError("release directory must end with the release SHA")
+    if not _release_dir_binds_sha(release_dir, source_commit):
+        raise ValueError(
+            "release directory must end with the release SHA or be a checkout at it"
+        )
     home_path = _systemd_path(home, label="home")
     runs = _systemd_path(runs_root, label="runs root")
     llm_env = _systemd_path(
