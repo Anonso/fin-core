@@ -225,6 +225,7 @@ codex 节点本体常态 true 未动。
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
 | 旁路·随手 | 31 | 日线第三源施工：短设计已备（docs/design/daily-bar-third-source.md，候选源待实弹核验，owner 09-05 拍板立项）；施工前跑设计门 | D3 建造静默结束后 |
 | 旁路·使用触发 | 32 | 裁决收件箱 portfolio 接线（D-051 v0 砍出项）：持仓写路径回生产时挂 `save`/`confirm` 挂点，终态映射按 ConfirmStatus 8 值闭集（PUBLISHED/UNCHANGED→resolve，NO_PENDING_REVIEW/BUSY→no-op，其余不动） | 持仓写路径回生产时 |
+| 旁路·会话 | 34 | G 批次 9/05-09/07 起草：勾选已锁定（keep 22/drop 3，台账 $STATE/fin-analyse/adjudication-inbox-v1/g-batch-selections.v1.jsonl 含逐条理由；「星大派锐评」一篇错标普通栏）→ 新会话按台账起草认知单元（摘录 span 逐字⊆原文+节点行）→ verify_mainline_annotation.py 机验 → owner 终审入档 → as_of 滚动自动消项；注意「完成 g.annotation_batch」不能替代入档（producer 会重开） | 新会话按台账直接开工，唯一人工=终审 |
 | 旁路·owner | 33 | run-design-gate skill §0 增一行注册协议判据（D-051：新增 preview→确认/提名→扫批/需人工确认警告面必须接裁决收件箱 seam）——skill 文件本机未定位到（workspace/用户 skills 均无），owner 指认实际落点后补 | owner 指认 skill 位置 |
 | 旁路·owner | 35 | 行为纪律护栏常态（施工+双基线+owner 终裁 09-07 全清）：audit.tsv 按期人工裁决（随无头调用增长，命中走 BUGS 立案）；人格修订走 r20 闸（persona_regression+behavior smoke 并列，改判断循环/动作合同/输出纪律节必跑 smoke、换模型/版本钉跑 full）；出闸判定生产腿复跑（flash 2/3 FAIL vs 生产 2/2 PASS 在案）。双基线台账=\$STATE/…/behavior-regression/{20260907-002342,20260907-052216}/adjudication.md；设计稿已按家规5删转 Git 史（7f8de2a 起、344e944 终版、43472b3 收官） | owner 按期 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
