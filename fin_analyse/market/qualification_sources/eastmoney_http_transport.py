@@ -32,9 +32,11 @@ from fin_analyse.market.qualification_sources.eastmoney_request_contract import 
 _logger = logging.getLogger(__name__)
 _PRIMARY_TIMEOUT_SECONDS = 2.0
 _MIN_FALLBACK_SECONDS = 1.0
-# 兜底浏览器故障记忆：typed 失败后 TTL 内跳过，避免每次请求都重付一次
-# 无头 spawn 的秒级成本（push2his 被墙时每次注定失败）。TTL 过后自动重试。
-_BROWSER_FAILURE_COOLDOWN_SECONDS = 300.0
+# 兜底浏览器故障记忆：typed 失败后 TTL 内跳过。TTL 取 90s（2026-09-07 实测
+# 校准）：被墙路由的失败是快失败（~0.7s，Chrome 错误页），等待成本已不存在；
+# 可达/不可达呈分钟级窗口（秒级连发同态，分钟级翻面），采样频率即捕获概率
+# ——artifact 复用让每次成功捕获永久生效，短 TTL 直接抬升命中上限。
+_BROWSER_FAILURE_COOLDOWN_SECONDS = 90.0
 _BROWSER_FAILED_AT: float | None = None
 # 系统代理策略对无头浏览器同样透传（env 即配置：owner 调整 Clash 分流规则
 # 后无需改代码即可生效）。
