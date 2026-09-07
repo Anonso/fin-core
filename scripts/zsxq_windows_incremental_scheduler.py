@@ -271,12 +271,11 @@ try {
         $capture = Start-Process -FilePath $nodeExe -ArgumentList @($captureArgument) `
             -WorkingDirectory $captureRoot -NoNewWindow -PassThru `
             -RedirectStandardOutput $captureStdout -RedirectStandardError $captureStderr
-        # -Wait waits out the whole descendant tree: the opencli daemon.js child
-        # never exits, so the run dies at the task PT25M limit before the
-        # summary is finalized. Poll the capture process itself instead.
-        while (-not $capture.HasExited) {
-            Start-Sleep -Milliseconds 500
-        }
+        # The -Wait cmdlet parameter waits out the whole descendant tree: the
+        # opencli daemon.js child never exits, so the run dies at the task
+        # PT25M limit before the summary is finalized.  Process.WaitForExit()
+        # waits this process only; without it ExitCode stays null.
+        $capture.WaitForExit()
         $captureExit = $capture.ExitCode
     }
     finally {
