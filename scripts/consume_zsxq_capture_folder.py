@@ -178,6 +178,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--not-before-run-id", required=True)
     parser.add_argument("--run-id")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--ingest-deadline-seconds", type=float, default=1200.0)
     return parser
 
 
@@ -810,6 +811,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--not-before-run-id has invalid format")
     if args.run_id is not None and _RUN_ID.fullmatch(args.run_id) is None:
         parser.error("--run-id has invalid format")
+    if not 30.0 <= args.ingest_deadline_seconds <= 3600.0:
+        parser.error("--ingest-deadline-seconds must be within [30, 3600]")
     selection = _pending_artifacts(
         runs_root,
         source_commit=args.source_commit,
@@ -871,7 +874,7 @@ def main(argv: list[str] | None = None) -> int:
                     "--trigger",
                     "schedule",
                     "--deadline-seconds",
-                    "1200",
+                    repr(args.ingest_deadline_seconds),
                 ]
             )
         output = captured_stdout.getvalue()

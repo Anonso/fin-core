@@ -365,9 +365,11 @@ Environment=PATH={release}/.venv/bin:{home_path}/.local/bin:/usr/local/bin:/usr/
 EnvironmentFile={llm_env}
 Environment=LLM_CONFIG_PATH={llm_config}
 UMask=0077
-ExecStart={release}/.venv/bin/python -I -B -u {release}/scripts/consume_zsxq_capture_folder.py --runs-root {runs} --source-commit {source_commit} --not-before-run-id {not_before_run_id}
-# 协作 deadline 1200s（consume 内 --deadline-seconds）+ 尾部余量（一次 LLM 尾/terminalize/G 发布）
-TimeoutStartSec=25min
+ExecStart={release}/.venv/bin/python -I -B -u {release}/scripts/consume_zsxq_capture_folder.py --runs-root {runs} --source-commit {source_commit} --not-before-run-id {not_before_run_id} --ingest-deadline-seconds 3600
+# 协作 deadline 3600s（owner 2026-09-07 拍板，consume 透传 ingest --deadline-seconds）：
+# 深读多阶段 LLM 串行 + 供应商降级 fallback 链，20min 预算常把深读切半成多轮 churn；
+# 尾部余量（terminalize/G 发布）计入 TimeoutStartSec。
+TimeoutStartSec=70min
 # 75 = coalesced（前 run 仍在跑，本次合并），是良性收编；consumer 单元不得加
 # （其 75 = unavailable 真失败，加了会吞错）。
 SuccessExitStatus=75
