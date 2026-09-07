@@ -1,6 +1,6 @@
 ---
 name: fin-release-launcher-chain
-description: Rebuild and deploy a FIN release when launcher/runtime code or the production consultation chain changed, then verify the candidate through the real product boundary. Use for runtime_unavailable, launcher identity/auth/schema failures, or “重建 release 并上线”; config-only route/model changes go through the connection pool tables (config/finqa_nodes.yaml, config/llm.yaml), and do not use for personal Codex setup.
+description: Rebuild and deploy a FIN release when launcher/runtime code or the production consultation chain changed, then verify the candidate through the real product boundary. Use for runtime_unavailable, launcher identity/auth/schema failures, or “重建 release 并上线”; config-only route/model changes (启用/禁用 LLM 节点、渠道恢复、翻 enabled) go through the connection pool tables (config/finqa_nodes.yaml, config/llm.yaml) via the manage-llm-pool skill, and do not use for personal Codex setup.
 ---
 
 # FIN Release Launcher Chain
