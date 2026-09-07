@@ -52,18 +52,21 @@ ln -sfn /home/ypk/.hermes/node/lib/node_modules/command-code/dist/index.mjs \
 
 1. 版本核对：动过的每个 harness `--version`；`cmd --version` == 钉值。
 2. `cmd status` → `✔ Authentication verified`（评审链 precheck 第 4 条）。
-3. 生产腿探针各一发（一律无头）：
+3. 生产腿探针各一发（一律无头；用 venv python——与 bashrc `finqa()` 包装器
+   同起法，owner 真实入口即此包装器）：
 
    ```sh
-   scripts/finqa_chain.py --node commandcode "连通性探针:只回复两个字——正常"
-   scripts/finqa_chain.py --node codex       "连通性探针:只回复两个字——正常"
-   scripts/finqa_chain.py --node claude      "连通性探针:只回复两个字——正常"
+   PY=/home/ypk/fin-core/.venv/bin/python
+   $PY /home/ypk/fin-core/scripts/finqa_chain.py --node commandcode "连通性探针:只回复两个字——正常"
+   $PY /home/ypk/fin-core/scripts/finqa_chain.py --node codex       "连通性探针:只回复两个字——正常"
+   $PY /home/ypk/fin-core/scripts/finqa_chain.py --node claude      "连通性探针:只回复两个字——正常"
    ```
 
-   判据：正文「正常」+ `served-by <leg>` + `rc=0`。stderr 见
-   `audit skipped: No module named 'fin_analyse'` 属正常——链内审计步
-   fail-open（系统 python 直跑 launcher 时 import 不到仓包），不影响答案
-   字节与 rc，判据不看它。
+   判据：正文「正常」+ `served-by <leg>` + `rc=0`。审计语义：无头调用触发
+   链内 answer_audit，成功时静默落账；交互式 `-i` 是 execvpe 前台透传，
+   本无审计步。stderr 见 `audit skipped: No module named 'fin_analyse'`
+   = 用了系统 python（包只装在 venv site-packages），fail-open 不影响答案
+   与 rc，但该发探针没进审计账——判据不看它，要含审计就换 venv python 重跑。
 4. 评审链 precheck 逐条核（bin 可执行 / 池 model 可读 / 版本==钉值 /
    auth 四条件）——不必真跑整轮评审（成本重），四条件全真即过。
 
