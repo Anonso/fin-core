@@ -57,6 +57,17 @@ HermesCliMessageSender，不走 MCP）。
 - 净复杂度 = 1 模块 + 6 工具 + 1 审计文件；零新 durable store（复用 inbox.sqlite
   与 score registry）。
 
+## v1.2 修订（2026-09-07，owner 要求「G 批次能在 Hermes 批注，提供能判断的信息」）
+
+- 新增第 8/9 工具：`g_batch_list()`（readOnly）= as_of 之后全部老师文章的判断
+  信息面（date/column/能量 score/nominated/title/topic_id，每日热点除外，日期
+  降序，含 lag_days 与 as_of）；`g_batch_select(entries, verdict)`（verdict 闭集
+  keep|drop）= owner 勾选写入 sidecar
+  $STATE/fin-analyse/adjudication-inbox-v1/g-batch-selections.v1.jsonl，
+  本地起草会话消费；动作落 mcp-ops 审计。
+- 边界不变：Feishu 只做**勾选**；起草协议/机验/终审入档仍是本地会话职责
+  （G 认知主线=owner durable 认知数据，不让 Hermes LLM 直写标注文档）。
+
 ## v1.1 修订（2026-09-07，双侧确认）
 
 - 新增第 7 工具 `score_get(record_id)`（readOnly）：返回单条记录**全字段**，

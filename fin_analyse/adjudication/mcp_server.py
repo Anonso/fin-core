@@ -293,6 +293,80 @@ def _make_score_get_handler():
     return handler
 
 
+def _make_g_batch_list_handler():
+    def handler() -> dict[str, object]:
+        "List the pending G annotation batch: every post-as_of teacher article with judging info (date/column/score/nominated/title/topic_id)."
+        from fin_analyse.guo_teacher_research.mainline_candidates import (
+            scan_annotation_batch_view,
+        )
+
+        kb = _kb_root()
+        view = scan_annotation_batch_view(
+            annotation_path=kb / "manual-annotations" / "g-cognition-mainline.md",
+            index_path=kb / "index.json",
+        )
+        if view.disposition != "SCANNED":
+            return _err("g_batch_view_unavailable", detail=str(view.reason))
+        return {
+            "ok": True,
+            "as_of": view.as_of,
+            "lag_days": view.lag_days,
+            "nominated": sum(1 for a in view.articles if a.nominated),
+            "articles": [
+                {
+                    "date": a.date,
+                    "column": a.column,
+                    "score": a.score,
+                    "nominated": a.nominated,
+                    "title": a.title,
+                    "topic_id": a.topic_id,
+                }
+                for a in view.articles
+            ],
+        }
+
+    handler.__name__ = "g_batch_list"
+    return handler
+
+
+def _make_g_batch_select_handler():
+    def handler(entries: list[str], verdict: str) -> dict[str, object]:
+        "Record owner's batch selection (verdict: keep|drop) for article topic_ids into the selection sidecar consumed by the local drafting session; audited."
+        from fin_analyse.runtime.state_roots import (
+            adjudication_inbox_state_root,
+            ensure_private_state_directory,
+        )
+
+        if verdict not in ("keep", "drop"):
+            return _err("verdict_invalid", detail="verdict must be keep|drop")
+        if not entries or not all(isinstance(e, str) and e.strip() for e in entries):
+            return _err("entries_required")
+        root = ensure_private_state_directory(adjudication_inbox_state_root())
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%S+08:00")
+        lines = [
+            json.dumps(
+                {"at": stamp, "topic_id": e.strip(), "verdict": verdict, "via": "mcp"},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            for e in entries
+        ]
+        target = root / "g-batch-selections.v1.jsonl"
+        descriptor = os.open(
+            target, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600
+        )
+        try:
+            os.fchmod(descriptor, 0o600)
+            os.write(descriptor, ("\n".join(lines) + "\n").encode("utf-8"))
+        finally:
+            os.close(descriptor)
+        _append_audit(action="g_batch_select", target=",".join(e.strip() for e in entries), note=verdict)
+        return {"ok": True, "recorded": len(entries), "verdict": verdict}
+
+    handler.__name__ = "g_batch_select"
+    return handler
+
+
 # -- digest handler ---------------------------------------------------------
 
 
@@ -331,6 +405,8 @@ _SCORE_LIST = _make_score_list_handler()
 _SCORE_CONFIRM = _make_score_confirm_handler()
 _SCORE_DROP = _make_score_drop_handler()
 _SCORE_GET = _make_score_get_handler()
+_G_BATCH_LIST = _make_g_batch_list_handler()
+_G_BATCH_SELECT = _make_g_batch_select_handler()
 _DIGEST_SEND = _make_digest_send_handler()
 
 mcp.tool(
@@ -347,6 +423,10 @@ mcp.tool()(_SCORE_CONFIRM)
 mcp.tool(
     annotations=ToolAnnotations(destructiveHint=True),
 )(_SCORE_DROP)
+mcp.tool(
+    annotations=ToolAnnotations(readOnlyHint=True),
+)(_G_BATCH_LIST)
+mcp.tool()(_G_BATCH_SELECT)
 mcp.tool()(_DIGEST_SEND)
 
 

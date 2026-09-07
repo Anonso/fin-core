@@ -426,3 +426,112 @@ def scan_annotation_batch(
             max(unarchived_dates).isoformat() if unarchived_dates else None
         ),
     )
+
+
+@dataclass(frozen=True)
+class BatchArticleView:
+    """单篇批内文章的判断信息（g_batch_list 数据面，D-053 v1.2）。"""
+
+    date: str
+    column: str
+    score: float | None
+    nominated: bool
+    title: str
+    topic_id: str
+    path: str | None
+
+
+@dataclass(frozen=True)
+class BatchViewResult:
+    disposition: str  # SCANNED | SKIPPED
+    reason: str | None = None
+    as_of: str | None = None
+    lag_days: int = 0
+    articles: list[BatchArticleView] = None  # type: ignore[assignment]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "disposition": self.disposition,
+            "reason": self.reason,
+            "as_of": self.as_of,
+            "lag_days": self.lag_days,
+            "articles": [
+                {
+                    "date": a.date,
+                    "column": a.column,
+                    "score": a.score,
+                    "nominated": a.nominated,
+                    "title": a.title,
+                    "topic_id": a.topic_id,
+                    "path": a.path,
+                }
+                for a in (self.articles or [])
+            ],
+        }
+
+
+def scan_annotation_batch_view(
+    *,
+    annotation_path: str | Path,
+    index_path: str | Path | None = None,
+    today: date | None = None,
+) -> BatchViewResult:
+    """批次视图：as_of 之后入库的老师文章全列表（每日热点除外）。
+
+    与 scan_annotation_batch 同谓词，但逐篇带判断字段：日期/栏目/能量/
+    是否机器提名（严格 G 闭集分类）/标题/topic_id/路径。纯读。
+    """
+
+    def _skipped(reason: str) -> BatchViewResult:
+        return BatchViewResult(disposition="SKIPPED", reason=reason, articles=[])
+
+    as_of = _annotation_as_of(Path(annotation_path))
+    if as_of is None:
+        return _skipped("annotation_as_of_missing")
+    if index_path is None:
+        from fin_analyse.runtime.knowledge_root import default_knowledge_base_root
+
+        index_path = default_knowledge_base_root() / "index.json"
+    index = _load_index(Path(index_path))
+    if index is None:
+        return _skipped("index_unreadable")
+
+    today = today or date.today()
+    articles: list[BatchArticleView] = []
+    for raw_entry in index:
+        if not isinstance(raw_entry, dict):
+            continue
+        if raw_entry.get("column") in _BATCH_EXCLUDED_COLUMNS:
+            continue
+        entry_date = _entry_date(raw_entry)
+        if entry_date is None or entry_date <= as_of:
+            continue
+        decision = classify_g_source(
+            raw_entry.get("column"),
+            teacher_original=True,
+            is_qa=raw_entry.get("is_qa") is True,
+            priority_label=raw_entry.get("priority_label"),
+        )
+        nominated = bool(
+            decision.eligible
+            and decision.classification is not None
+            and decision.classification.usage not in _EXCLUDED_USAGES
+        )
+        articles.append(
+            BatchArticleView(
+                date=str(raw_entry.get("date", "")),
+                column=str(raw_entry.get("column", "")),
+                score=raw_entry.get("score") if isinstance(raw_entry.get("score"), (int, float)) else None,
+                nominated=nominated,
+                title=str(raw_entry.get("title", "")),
+                topic_id=str(raw_entry.get("topic_id") or raw_entry.get("id") or ""),
+                path=str(raw_entry.get("path")) if raw_entry.get("path") else None,
+            )
+        )
+    articles.sort(key=lambda a: (a.date, a.title), reverse=True)
+    return BatchViewResult(
+        disposition="SCANNED",
+        as_of=as_of.isoformat(),
+        lag_days=max(0, (today - as_of).days),
+        articles=articles,
+    )

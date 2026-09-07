@@ -161,6 +161,8 @@ def test_registry_closed_set_registered() -> None:
         "adjudication_done",
         "score_list",
         "score_get",
+        "g_batch_list",
+        "g_batch_select",
         "score_confirm",
         "score_drop",
         "digest_send",
@@ -277,6 +279,10 @@ def test_stdio_roundtrip_lists_tool_closed_set(env: Path) -> None:
             "adjudication_done",
             "score_list",
             "score_get",
+            "g_batch_list",
+            "g_batch_select",
+        "g_batch_list",
+        "g_batch_select",
             "score_confirm",
             "score_drop",
             "digest_send",
@@ -308,3 +314,45 @@ def test_score_get_returns_full_record_with_conflict_detail(env: Path) -> None:
     assert out["record"]["conflict_detail"] == detail
     assert out["record"]["code"] == "000960"
     assert handler("zzz")["error"] == "record_not_found"
+
+
+def test_g_batch_list_and_select(env: Path) -> None:
+    """v1.2：G 批次判断信息面 + 勾选 sidecar（起草会话消费）。"""
+
+    kb = Path(os.environ["FIN_KNOWLEDGE_BASE_ROOT"])
+    (kb / "manual-annotations").mkdir(parents=True, exist_ok=True)
+    (kb / "manual-annotations" / "g-cognition-mainline.md").write_text(
+        "as_of=2026-09-04\n", encoding="utf-8"
+    )
+    (kb / "index.json").write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {"date": "2026-09-05 12:00", "column": "普通", "title": "普通帖",
+                     "score": 6.8, "topic_id": "t1"},
+                    {"date": "2026-09-05 10:00", "column": "星大派锐评", "title": "锐评帖",
+                     "topic_id": "t2"},
+                    {"date": "2026-09-05 09:00", "column": "星大派每日热点", "title": "热点",
+                     "topic_id": "t3"},
+                    {"date": "2026-09-03 09:00", "column": "普通", "title": "旧帖",
+                     "topic_id": "t4"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = srv._make_g_batch_list_handler()()
+    assert out["ok"] is True
+    assert out["as_of"] == "2026-09-04"
+    assert out["nominated"] == 1  # 锐评入提名
+    assert [a["topic_id"] for a in out["articles"]] == ["t1", "t2"]  # 日期降序、热点除外
+
+    sel = srv._make_g_batch_select_handler()
+    assert sel(["t1", "t2"], "keep")["recorded"] == 2
+    assert sel(["t3"], "bogus")["error"] == "verdict_invalid"
+    from fin_analyse.runtime.state_roots import adjudication_inbox_state_root
+
+    sidecar = adjudication_inbox_state_root() / "g-batch-selections.v1.jsonl"
+    rows = [json.loads(l) for l in sidecar.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert [(r["topic_id"], r["verdict"]) for r in rows] == [("t1", "keep"), ("t2", "keep")]
+    assert _audit_lines()[-1]["action"] == "g_batch_select"
