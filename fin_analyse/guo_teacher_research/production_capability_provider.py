@@ -12,7 +12,7 @@ typed gaps.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from math import isfinite
 from pathlib import Path
@@ -317,11 +317,9 @@ class ProductionReadCapabilityProvider:
             ),
             gaps=gaps,
         )
-        ref_date = (
-            request.as_of.date()
-            if request.as_of is not None
-            else self._clock().date()
-        )
+        # 画像新鲜度用墙钟（非注入 clock——wiring 的 effective_clock 是市场口径，
+        # 可滞后日历日，会误拒当日新画像）；PIT 查询仍用 as_of。
+        ref_date = request.as_of.date() if request.as_of is not None else date.today()
         calibration = load_meta_calibration_block(
             self._meta_profile_path, ref_date=ref_date
         )

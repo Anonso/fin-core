@@ -200,3 +200,16 @@ def test_bool_max_age_and_cap_enforced(tmp_path):
         validate_meta_profile(
             _profile(dimensions=[dict(_profile()["dimensions"][0], basis=long_basis)])
         )
+
+
+def test_provider_live_query_uses_wall_clock_not_injected_market_clock(tmp_path):
+    """audit 后实弹发现：wiring effective_clock 滞后日历日时，当日新画像曾被误拒。"""
+    from datetime import datetime, UTC
+    from fin_analyse.read_capabilities.types import ProductionReadRequest
+
+    today = date.today().isoformat()
+    path = _write(tmp_path, _profile(as_of=today))
+    provider = _stub_provider(path)
+    provider._clock = lambda: datetime(2020, 1, 1, tzinfo=UTC)  # 滞后市场口径时钟
+    value = provider.read_g_context(ProductionReadRequest(question="x")).value
+    assert value["meta_calibration"]["as_of"] == today
