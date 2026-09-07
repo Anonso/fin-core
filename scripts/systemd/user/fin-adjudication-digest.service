@@ -6,6 +6,9 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 Environment=HOME=/home/ypk
+# PATH 必须含 ~/.local/bin：HermesCliMessageSender 以裸名调 hermes（8ef 后补——
+# 09-07 首班推送因 systemd 默认 PATH 找不到 hermes 失败，fail-closed 未落账）。
+Environment=PATH=/home/ypk/fin-core/.venv/bin:/home/ypk/.local/bin:/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=/home/ypk/.config/fin-analyse/daily-workspace-target.env
 Environment=PYTHONSAFEPATH=1
 Environment=PYTHONDONTWRITEBYTECODE=1

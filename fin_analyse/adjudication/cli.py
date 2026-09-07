@@ -161,6 +161,9 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return _EXIT_ERROR
+    except Exception as error:  # noqa: BLE001 - CLI 边界：journal 里一行带类型，不带 traceback
+        print(f"fin-adjudication: {type(error).__name__}: {error}", file=sys.stderr)
+        return _EXIT_ERROR
 
 
 if __name__ == "__main__":  # pragma: no cover
