@@ -907,6 +907,15 @@
   压到 1 个/请求且下一请求即回收。daemon 重启后的存量残留不可编程回收。
 - 状态：代码修复完成（2026-09-04，market 套件 293 绿含 5 新用例）；存量
   14 个残留 tab 待 owner 在 Chrome 手动关闭。
+- 复发（2026-09-07）：01:31–02:12 又泄漏 ~5 张（Chrome History WAL 实证，
+  owner 上午发现）。教训：入口 sweep 与 close 同源（都走 opencli），vsock
+  stall 期间一起失效，「1 个/请求」上界在 stall 窗口不成立。结构性处置
+  （owner 指令，D-052）：兜底换 WSL 无头 Chrome 子进程（--dump-dom 用完
+  即退，无持久标签可泄漏），Windows Chrome 收敛 ZSXQ 专用 + 仓库守卫测试
+  固化；opencli 资产迁入 scraper 域、market 反向依赖断开。实弹校准：无头
+  兜底需 RLIMIT_FSIZE 余量（Chrome profile 内部写）且「Clash 代理 + 浏览器
+  TLS 栈」对 push2his 间歇可达（直连仍恒被墙）。存量 5 张死页 owner 手动
+  关闭；BUG-026 状态 = 已被 D-052 结构性取代。
 
 ## BUG-030 CC 腿交易日历盲点：把非交易日当交易日写操作预案（2026-09-04 复压测发现，CC 立案）
 - 编号注：立案时误编 BUG-026，与本日更早的「行情 fallback opencli kline 泄漏」条

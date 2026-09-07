@@ -4,8 +4,8 @@
 每次浏览器操作都是一次有界、无状态的 PowerShell 子进程调用：客户端零常驻状态，
 失败形态从 "ACK 后无响应" 变成可精确定位的 ``OPENCLI_*`` 错误码。
 
-底层复用 ``eastmoney_http_transport`` 已验证的 opencli 资产（resolve/invoke/
-WSL_INTEROP 环境/严格 JSON），scraper 的 DOM 解析与增量逻辑不动。
+opencli 驱动资产（resolve/invoke/WSL_INTEROP 环境/严格 JSON）为本域私有
+（2026-09-07 自 market 传输层迁入，D-052），scraper 的 DOM 解析与增量逻辑不动。
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 import subprocess
 import time
 from collections.abc import Callable, Sequence
@@ -21,12 +22,6 @@ from pathlib import Path
 from typing import Any
 
 from fin_analyse.common.bounded_process import run_bounded_command
-from fin_analyse.market.qualification_sources.eastmoney_http_transport import (
-    _POWERSHELL,
-    _RESOLVE_OPENCLI,
-    _opencli_environment,
-    _strict_json_value,
-)
 from fin_analyse.scraper.cdp_diagnostics import (
     CdpBatchResult,
     CdpBatchStepResult,
@@ -36,6 +31,22 @@ from fin_analyse.scraper.cdp_diagnostics import (
     classify_cdp_error,
 )
 from fin_analyse.scraper.cdp_probe_identity import PROBE_TOKEN_ENV, probe_token_is_valid
+
+# opencli 驱动资产为本域私有（2026-09-07 自 market 传输层迁入——东财兜底已改
+# WSL 无头浏览器，Windows Chrome 收敛为 ZSXQ 专用，owner 决策 D-052）。
+_POWERSHELL = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+_RESOLVE_OPENCLI = (
+    "$ErrorActionPreference='Stop';"
+    "$expected=Join-Path $env:APPDATA 'npm\\opencli.ps1';"
+    "$resolved=(Resolve-Path -LiteralPath $expected).ProviderPath;"
+    "$item=Get-Item -LiteralPath $resolved;"
+    "if($item.PSIsContainer -or "
+    "(($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)){exit 3};"
+    "[Console]::Out.Write((ConvertTo-Json -Compress @{path=$item.FullName}))"
+)
+_WSL_RUN_ROOT = Path("/run")
+_WSL_INTEROP_ROOT = _WSL_RUN_ROOT / "WSL"
+_WSL_INTEROP_ALIAS = _WSL_INTEROP_ROOT / "1_interop"
 
 _ZSXQ_SESSION = "fin-zsxq-scraper-v1"
 _EXPAND_DETAILS_SCRIPT = """(function() {
@@ -136,6 +147,76 @@ def _npm_dir_from_main_js(main_js: str) -> str:
     if parts[-6:] != ["node_modules", "@jackwener", "opencli", "dist", "src", "main.js"]:
         raise _error("PATH_INVALID")
     return "\\".join(parts[:-6])
+
+
+def _opencli_environment(environ: dict[str, str] | None = None) -> dict[str, str]:
+    source = os.environ if environ is None else environ
+    environment = {
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "PATH": "/usr/bin:/bin",
+    }
+    wsl_interop = source.get("WSL_INTEROP")
+    if wsl_interop:
+        environment["WSL_INTEROP"] = wsl_interop
+    elif wsl_interop is None:
+        trusted_alias = _trusted_wsl_interop_alias()
+        if trusted_alias is not None:
+            environment["WSL_INTEROP"] = trusted_alias
+    return environment
+
+
+def _trusted_wsl_interop_alias(
+    *,
+    lstat_path: Callable[[Path], os.stat_result] | None = None,
+    resolve_path: Callable[[Path], Path] | None = None,
+    stat_path: Callable[[Path], os.stat_result] | None = None,
+) -> str | None:
+    """Return the fixed WSL socket alias only when root controls its full path."""
+    read_link_metadata = Path.lstat if lstat_path is None else lstat_path
+    read_target_metadata = Path.stat if stat_path is None else stat_path
+    try:
+        for parent in (_WSL_RUN_ROOT, _WSL_INTEROP_ROOT):
+            metadata = read_link_metadata(parent)
+            if (
+                not stat.S_ISDIR(metadata.st_mode)
+                or metadata.st_uid != 0
+                or metadata.st_mode & 0o022
+            ):
+                return None
+        alias_metadata = read_link_metadata(_WSL_INTEROP_ALIAS)
+        if not stat.S_ISLNK(alias_metadata.st_mode) or alias_metadata.st_uid != 0:
+            return None
+        resolved = (
+            _WSL_INTEROP_ALIAS.resolve(strict=True)
+            if resolve_path is None
+            else resolve_path(_WSL_INTEROP_ALIAS)
+        )
+        if resolved.parent != _WSL_INTEROP_ROOT:
+            return None
+        target_metadata = read_target_metadata(resolved)
+        if not stat.S_ISSOCK(target_metadata.st_mode) or target_metadata.st_uid != 0:
+            return None
+    except (OSError, RuntimeError):
+        return None
+    return str(_WSL_INTEROP_ALIAS)
+
+
+def _strict_json_value(payload: bytes) -> object:
+    try:
+        return json.loads(
+            payload.decode("utf-8"),
+            object_pairs_hook=_unique_json_object,
+        )
+    except (UnicodeError, ValueError) as error:
+        raise _error("OUTPUT_INVALID") from error
+
+
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result = dict(pairs)
+    if len(result) != len(pairs):
+        raise ValueError("duplicate JSON key")
+    return result
 
 
 def _node_environment(opencli_path: str) -> dict[str, str]:

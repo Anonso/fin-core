@@ -87,3 +87,33 @@ def test_timeout_kills_the_exact_process_group_and_descendant(tmp_path: Path) ->
         time.sleep(0.01)
     assert not _process_exists(child_pid)
 
+
+
+def test_fsize_limit_override_relaxes_child_file_writes(tmp_path: Path) -> None:
+    """fsize 覆盖给会写自身 profile 的进程留余量；stdout 上限仍独立强制。"""
+    script = (
+        "import sys;"
+        f"open({str(tmp_path / 'big.bin')!r},'wb').write(b'x' * 8 * 1024 * 1024);"
+        "print('ok')"
+    )
+    completed = run_bounded_command(
+        ("/usr/bin/python3", "-c", script),
+        cwd=tmp_path,
+        env={"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "PATH": "/usr/bin:/bin"},
+        timeout=30,
+        max_output_bytes=4096,
+        fsize_limit_bytes=64 * 1024 * 1024,
+    )
+    assert completed.stdout.strip() == "ok"
+    assert (tmp_path / "big.bin").stat().st_size == 8 * 1024 * 1024
+
+    # 缺省行为不变：fsize 与输出上限同源，超限写直接 SIGXFSZ。
+    tight = run_bounded_command(
+        ("/usr/bin/python3", "-c", script),
+        cwd=tmp_path,
+        env={"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "PATH": "/usr/bin:/bin"},
+        timeout=30,
+        max_output_bytes=4096,
+    )
+    assert (tmp_path / "big.bin").stat().st_size < 4096 * 2
+    assert tight.returncode != 0

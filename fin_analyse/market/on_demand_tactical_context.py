@@ -157,8 +157,8 @@ class _FallbackDailyBarReader:
     """Eastmoney qfq bars first, Tencent qfq bars when the primary fails.
 
     Major indices bypass the chain entirely (tencent only): eastmoney's index
-    secid serves empty payloads and its opencli fallback is minute-scale,
-    which would burn the request deadline before the tencent attempt runs.
+    secid serves empty payloads and its headless-browser fallback burns
+    seconds of the request deadline before the tencent attempt runs.
     Bypass means bypass — a tencent failure propagates, it does not fall back
     to eastmoney (snapshot-index-support §2.4).
     """

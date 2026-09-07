@@ -49,8 +49,15 @@ def run_bounded_command(
     max_output_bytes: int,
     pass_fds: tuple[int, ...] = (),
     error_prefix: str = "bounded_process",
+    fsize_limit_bytes: int | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run one argv-only process with bounded files and descendant cleanup."""
+    """Run one argv-only process with bounded files and descendant cleanup.
+
+    ``fsize_limit_bytes`` overrides the child's RLIMIT_FSIZE (默认 =
+    ``max_output_bytes + 1``，与输出上限同源)。给会写自己 profile/缓存的
+    进程（如无头浏览器）留文件写余量时使用——stdout 上限仍由轮询与
+    ``max_output_bytes`` 单独强制，不受该余量放宽。
+    """
 
     _validate_error_prefix(error_prefix)
     if not argv or not all(
@@ -70,10 +77,17 @@ def run_bounded_command(
         raise TypeError("max_output_bytes must be an integer")
     if max_output_bytes <= 0:
         raise ValueError("max_output_bytes must be positive")
+    if fsize_limit_bytes is not None and (
+        isinstance(fsize_limit_bytes, bool)
+        or not isinstance(fsize_limit_bytes, int)
+        or fsize_limit_bytes <= 0
+    ):
+        raise ValueError("fsize_limit_bytes must be a positive integer or None")
 
     require_root_controlled_executable(_PRLIMIT, error_prefix=error_prefix)
     _, hard_limit = resource.getrlimit(resource.RLIMIT_FSIZE)
-    requested_limit = max_output_bytes + 1
+    # fsize 至少容纳 stdout 上限（输出临时文件由子进程写入，受子进程 fsize 约束）。
+    requested_limit = max(max_output_bytes + 1, fsize_limit_bytes or 0)
     effective_limit = (
         requested_limit
         if hard_limit == resource.RLIM_INFINITY
