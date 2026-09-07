@@ -54,8 +54,10 @@ _EXIT_EXHAUSTED = 78
 _DEFAULT_TIMEOUT_SECONDS = 1800.0
 _INTERACTIVE_UNSUPPORTED = {
     "zcode": "zcode 本机无 TUI(前端未随装),仅无头钉腿;模型/effort 单旋钮在 ~/.zcode/cli/config.json",
-    "codex": "codex harness 休眠(opencode-go 429),interactive 未接;复活时在 launcher 补分支",
 }
+# codex 交互分支 2026-09-07 已接:argv(裸 codex TUI)/env(GLM_API_KEY+
+# OPENCODE_GO_API_KEY+CODEX_HOME)/cwd 本就预埋,池条目复活即摘出本黑名单;
+# 无头同基座实弹 rc=0(3f5631e 当日探针)。
 
 
 def _state_tsv_path() -> Path:

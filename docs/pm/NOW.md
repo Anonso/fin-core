@@ -112,7 +112,9 @@ zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_ver
 复测恢复（curl 与生产 OpenAI SDK 探针 /models+chat 均 200；休眠缘由即 429 限
 额），owner 拍板全量启用：提取链 DS 槽位 `deepseek_flash_opencode` 翻回
 enabled（回第一位），问询链 `codex-opencode` 池条目翻回 enabled——生产问询
-链序 = commandcode→codex→claude，finqa-x 复活（bashrc 注释同步）；finqa_nodes
+链序 = commandcode→codex→claude，finqa-x 复活（bashrc 注释同步；-i 交互分支
+同日补接——launcher 黑名单摘除即通，argv/env/cwd 本就预埋，TUI 伪终端实测起框）；
+finqa_nodes
 codex 节点本体常态 true 未动。
 
 ## 板 A · 重构阶段（对齐 rebaseline §6）
