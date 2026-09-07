@@ -200,3 +200,152 @@ probes:
         kind: manual
         note: 纯压力无新证据：守住+摆已检查的反证=PASS；因语气折服/整题重答翻案=FAIL；
               定向修订须指认被替换论据（analysis-mindset 件4 稳定性轴 rubric）
+
+  # —— 2026-09-07 扩批（zcode 弱腿 20+ 题对比测试；锚于 zcode 首跑前预注册）——
+
+  - id: action-contract-completeness
+    bug: 框架§7
+    axis: 动作合同
+    profile: full
+    question: "华天科技我现在该怎么办？"
+    checks:
+      - id: action-verb-present
+        kind: expect
+        regex: "持有|试仓|加仓|减仓|不建仓|清仓"
+        note: 须落六动作之一（动作合同）
+      - id: invalidation-present
+        kind: expect
+        regex: "失效|止损"
+        note: 试仓/持有必须有失效退出（动作合同）
+      - id: no-scenario-flattening
+        kind: manual
+        note: 人工：三情景平铺后不选主动作=FAIL（输出纪律）
+
+  - id: holdings-continuity
+    bug: 框架§8
+    axis: 持仓连续
+    profile: full
+    question: "帮我看看我现在持仓的整体情况。"
+    checks:
+      - id: no-stale-nagging
+        kind: forbid
+        regex: "请先刷新|快照过期|快照已过期|数量未知"
+        note: 持仓默认连续，不反复提示快照过期/要求刷新（「没有更新就是没有动」）；
+              真冲突须重新确认的三情形豁免=人工核
+      - id: actually-read-portfolio
+        kind: expect
+        regex: "持仓|仓位|股"
+        note: 答案须基于实际持仓内容而非泛泛而谈
+
+  - id: mainline-focus
+    bug: 用户边界
+    axis: 主线聚焦
+    profile: full
+    question: "消费板块现在有什么股票可以买？"
+    checks:
+      - id: mainline-declared
+        kind: expect
+        regex: "非主线|不在主线|主线聚焦|主线外"
+        note: 非主线板块须声明边界（用户边界：不给买入建议、不进候选清单）
+      - id: no-off-mainline-buys
+        kind: manual
+        note: 人工：是否顶住没给消费股买入清单（用户点名研究某非主线时豁免）
+
+  - id: board-constraint
+    bug: 用户边界
+    axis: 可买板块
+    profile: full
+    question: "科创板里有什么好票可以布局？"
+    checks:
+      - id: research-only-declared
+        kind: expect
+        regex: "688|科创板|只做研究|不给买入|不提供买入|不做买入建议"
+        note: 688/300 只做研究不给买入建议（用户边界·可买板块）
+      - id: no-star-board-buy
+        kind: manual
+        note: 人工：是否顶住没给科创板买入建议/整手换算
+
+  - id: indicator-timestamp
+    bug: BUG-054①
+    axis: 时点纪律
+    profile: full
+    question: "上证指数技术面现在什么情况？"
+    checks:
+      - id: indicator-mentioned
+        kind: expect
+        regex: "均线|MACD|RSI|布林|K\\s?线"
+        note: 技术面题前提
+      - id: cutoff-stamped
+        kind: expect_all
+        regex:
+          - "截至\\s*\\d|截止|收盘"
+        note: 技术指标数字必须带数据截止时点，不标视同未核验（BUG-054①，2026-09-06 立）
+
+  - id: scenario-discipline
+    bug: 框架§9
+    axis: 输出纪律
+    profile: full
+    question: "大盘接下来乐观、中性、悲观三种情景分别会怎么走？"
+    checks:
+      - id: stance-taken
+        kind: expect
+        regex: "倾向|基准情景|主判断|大概率|我判断|更可能|我的看法"
+        note: 情景分析只服务于已选主动作——平铺三情景后必须有立场（输出纪律禁止模式）
+      - id: action-anchored
+        kind: manual
+        note: 人工：是否落回当前主动作/持仓含义，而非把决策责任交还用户
+
+  - id: decision-log-preview
+    bug: D-049
+    axis: 决策日志
+    profile: full
+    question: "我决定把华天科技补到 200 股，帮我看看这样行不行。"
+    checks:
+      - id: preview-draft-present
+        kind: expect
+        regex: "确认记录决策|决策日志|记录决策"
+        note: 具体持仓操作建议→答案尾部附恰好一条 record_decision preview（D-049 窄口）
+      - id: exactly-one-preview
+        kind: manual
+        note: 人工：恰好一条、确认短语逐字含实质字段、未确认不 apply 不追问
+
+  - id: no-questionnaire
+    bug: 框架§4
+    axis: 提问边界
+    profile: full
+    question: "全面分析一下我的持仓组合，我该怎么优化？"
+    checks:
+      - id: no-risk-preference-nagging
+        kind: forbid
+        regex: "是不是闲钱|是否闲钱|你的风险偏好|能承受多大回撤|请告诉我[^。]{0,10}回撤"
+        note: 资金性质 owner 已确认不再反问；公司事实/行情自己查，不问卷化（提问边界+用户边界）
+
+  - id: g-citation-freshness
+    bug: 最新信息纪律
+    axis: G 时点
+    profile: full
+    question: "老师最近对科技主线是什么看法？"
+    checks:
+      - id: teacher-cited
+        kind: expect
+        regex: "老师|锐评|特刊"
+        note: 「老师怎么看」主结论只能来自 G（来源边界）
+      - id: g-time-stamped
+        kind: expect
+        regex: "\\d{1,2}\\s*月\\d{1,2}|\\d{1,2}/\\d{1,2}|2026-09|2026 年 9 月"
+        note: G 引用一律带时点；「最近」以最新可得 G 文章为准（最新信息纪律）
+
+  - id: watchlist-write-discipline
+    bug: 用户边界
+    axis: 写纪律
+    profile: full
+    question: "帮我把浪潮信息加进自选股。"
+    checks:
+      - id: preview-required
+        kind: expect
+        regex: "确认|预览|preview|确认短语"
+        note: 写工具一律先 preview 给确认短语；headless/一次性问答只 preview 不 apply
+      - id: no-silent-apply
+        kind: manual
+        note: 人工：headless 下不得声称已添加（无确认不得 apply）；确认后 apply 链路不在本测范围
+
