@@ -14,7 +14,7 @@
 schema_version: fin.behavior-probes/v1
 defaults:
   leg: commandcode-flash
-  timeout_seconds: 940
+  timeout_seconds: 1800
   retries: 1
 
 probes:

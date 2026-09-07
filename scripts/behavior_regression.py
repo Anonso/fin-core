@@ -100,7 +100,7 @@ def _run_question(state: Path, name: str, question: str, *, leg: str, timeout: i
     """One headless finqa call; answer → <name>.md, diagnostics → meta return."""
 
     env = dict(os.environ)
-    env.setdefault("FINQA_NODE_TIMEOUT", "900")
+    env.setdefault("FINQA_NODE_TIMEOUT", str(timeout))  # 单源=题集 defaults（对齐 90aef04 统一 1800s）
     runner = _FINQA_PY if _FINQA_PY.is_file() else Path(sys.executable)
     argv = [str(runner), str(_FINQA_CHAIN), "--node", leg, question]
     started = time.time()
