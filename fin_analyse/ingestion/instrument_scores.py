@@ -477,6 +477,9 @@ class InstrumentScoreRecord:
     extracted_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     schema_version: str = SCHEMA_VERSION
     parser_version: str = PARSER_VERSION
+    # 跨源冲突详情（cross_source_conflict 专用）：同码各载体的 {origin,lihao,consensus}
+    # 全量保留——评审定案「只留旗标丢数值=无法裁决」（2026-09-07）。
+    conflict_detail: list[dict[str, Any]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -595,6 +598,7 @@ def parse_article_records(
         carriers.append(("article_md.body", md_text, None))
 
     by_code: dict[str, InstrumentScoreRecord] = {}
+    carrier_values: dict[str, list[dict[str, Any]]] = {}
     conflict_codes: set[str] = set()
     for raw_origin, text, provenance in carriers:
         if not text.strip():
@@ -605,6 +609,13 @@ def parse_article_records(
             code = draft.get("code") or str(draft.get("name") or "")
             if not code:
                 continue
+            carrier_values.setdefault(code, []).append(
+                {
+                    "origin": raw_origin,
+                    "lihao": draft.get("lihao"),
+                    "consensus": draft.get("consensus"),
+                }
+            )
             existing = by_code.get(code)
             if existing is None:
                 record = build_record(
@@ -638,6 +649,7 @@ def parse_article_records(
                             **record.to_dict(),
                             "status": "needs_review",
                             "review_reason": "cross_source_conflict",
+                            "conflict_detail": carrier_values.get(record.code, []),
                         }
                     )
                 )

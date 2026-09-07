@@ -333,6 +333,13 @@ def test_cross_carrier_conflict_marks_needs_review() -> None:
     assert len(records) == 1
     assert records[0].status == "needs_review"
     assert records[0].review_reason == "cross_source_conflict"
+    # v1.1：双源数值全量保留——裁决必须能看到两边各说了什么（2026-09-07）
+    detail = records[0].conflict_detail
+    assert detail is not None and len(detail) == 2
+    assert {(entry["origin"], entry["lihao"]) for entry in detail} == {
+        ("zsxq_sources.image_descriptions", 9.0),
+        ("zsxq_sources.image_ocr", 8.0),
+    }
 
 
 def test_upsert_store_is_atomic_and_idempotent(tmp_path: Path) -> None:

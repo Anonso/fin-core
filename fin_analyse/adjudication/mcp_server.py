@@ -277,6 +277,22 @@ class _DictRecord:
         return self._value
 
 
+def _make_score_get_handler():
+    def handler(record_id: str) -> dict[str, object]:
+        "Fetch one score record with ALL fields (incl. conflict_detail for cross-source rows). id = exact or unique-prefix."
+        try:
+            records = load_records(_registry_path())
+        except OSError as exc:
+            return _err("registry_unreadable", detail=str(exc))
+        resolved, resolve_error = _resolve_record_id(records, record_id)
+        if resolved is None:
+            return _err(resolve_error, record_id=record_id)
+        return {"ok": True, "record": records[resolved]}
+
+    handler.__name__ = "score_get"
+    return handler
+
+
 # -- digest handler ---------------------------------------------------------
 
 
@@ -314,6 +330,7 @@ _DONE = _make_adjudication_done_handler()
 _SCORE_LIST = _make_score_list_handler()
 _SCORE_CONFIRM = _make_score_confirm_handler()
 _SCORE_DROP = _make_score_drop_handler()
+_SCORE_GET = _make_score_get_handler()
 _DIGEST_SEND = _make_digest_send_handler()
 
 mcp.tool(
@@ -323,6 +340,9 @@ mcp.tool()(_DONE)
 mcp.tool(
     annotations=ToolAnnotations(readOnlyHint=True),
 )(_SCORE_LIST)
+mcp.tool(
+    annotations=ToolAnnotations(readOnlyHint=True),
+)(_SCORE_GET)
 mcp.tool()(_SCORE_CONFIRM)
 mcp.tool(
     annotations=ToolAnnotations(destructiveHint=True),

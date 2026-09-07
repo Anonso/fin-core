@@ -1,4 +1,9 @@
-# fin-adjudication-mcp · 设计页（裁决收件箱 MCP 接口缝 · D-052）
+# fin-adjudication-mcp · 接口契约（D-053 · v1.1 活文档）
+
+> 状态修订：本页不再是「合入即删」的一次性设计稿——Hermes 域按此契约并行施工，
+> 它是双侧的**活契约**（v1 冻结于 065add8；v1.1 修订见文末，双侧会话确认于
+> 2026-09-07：owner 经 Hermes 反馈「看不到冲突详情无法裁决」→ 增 score_get +
+> conflict_detail）。稳定后按规则 5 归档。
 
 > 依据：owner 2026-09-07 拍板两件——①Hermes fin profile 清零重建（Hermes 侧会话执行，
 > 本仓不碰 profile）；②「Hermes 的功能让 Hermes 自己实现，FIN 只做好自己功能、提供
@@ -51,6 +56,16 @@ HermesCliMessageSender，不走 MCP）。
   环节被类型化工具取代）；重开咨询面（范围外）。
 - 净复杂度 = 1 模块 + 6 工具 + 1 审计文件；零新 durable store（复用 inbox.sqlite
   与 score registry）。
+
+## v1.1 修订（2026-09-07，双侧确认）
+
+- 新增第 7 工具 `score_get(record_id)`（readOnly）：返回单条记录**全字段**，
+  含 `conflict_detail`（cross_source_conflict 专用：同码各载体
+  `{origin, lihao, consensus}` 全量）；id = 精确或唯一前缀。
+- registry schema 增列 `conflict_detail`（ingestion.instrument_scores 写入侧，
+  解析时保留双源数值，替代「只留旗标丢数值」）。
+- 语义澄清：cross_source_conflict 实测=**同篇同码两行不同评分**（两载体互证
+  一致），即文内双表，非跨文章打架；详情见 conflict_detail。
 
 ## 契约附注（v1 冻结面细化，评审 S3 采纳）
 
