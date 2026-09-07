@@ -274,7 +274,9 @@ try {
         # The -Wait cmdlet parameter waits out the whole descendant tree: the
         # opencli daemon.js child never exits, so the run dies at the task
         # PT25M limit before the summary is finalized.  Process.WaitForExit()
-        # waits this process only; without it ExitCode stays null.
+        # waits this process only; PS 5.1 also needs the handle cached before
+        # exit or .ExitCode stays null even after a clean exit.
+        $null = $capture.Handle
         $capture.WaitForExit()
         $captureExit = $capture.ExitCode
     }
