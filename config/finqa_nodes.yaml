@@ -23,8 +23,8 @@
 # 测试腿原则(owner 2026-09-05 拍板):flash 非生产、仅测试用,FAIL 先分辨
 # 执行方差与人格回归。
 schema_version: fin.finqa-nodes/v2
-cmd_version_pin: "1.49.1"  # cmd 客户端版本钉单源;读方=codex_open.sh + persona_regression.sh
-                           # (闭源客户端升级先落替补,读不到 fail-closed)
+cmd_version_pin: "1.50.0"  # cmd 客户端版本钉单源;读方=codex_open.sh + persona_regression.sh
+                           # (闭源客户端升级先落替补,读不到 fail-closed;2026-09-07 随 cmd update 1.49.1→1.50.0 同步 bump)
 nodes:
   - id: commandcode       # Command Code + ds-pro——链序唯一生产腿
     conn_ref: commandcode-pro
