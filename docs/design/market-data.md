@@ -85,7 +85,7 @@
 
 - **东财 push2his 不可达** → 腾讯 qfq 日线 fallback（`_FallbackDailyBarReader` 东财优先、腾讯兜底、OHLCV 行序、cutoff 严格过滤；目录条目）。
 - **午间 D-1 generation 污染收盘后 D generation** → artifact key 绑定 provider-version/symbol/trading-day/completed-through-date（目录条目）。
-- **OpenCLI transport 反复失败** → 300s TTL 进程内 cooldown + 每次请求单次尝试、无 daemon、无无限 retry；opencli 路径只是同一 source 的 transport fallback，不计第二来源（目录条目）。
+- **东财 transport 反复失败** → 进程内 cooldown（2026-09-07 实测校准 90s：失败为快失败、可达呈分钟级窗口，采样频率即捕获概率；D-052）+ 每次请求单次尝试、无 daemon、无无限 retry；兜底自 D-052 起为 WSL 无头 Chrome 子进程（用完即退），Windows Chrome 收敛 ZSXQ 专用；兜底路径只是同一 source 的 transport fallback，不计第二来源（目录条目）。
 - **官方记录分页有限** → `DOCUMENTS_TRUNCATED` 显式标记，不把有限页伪装为全量（目录条目）。
 - **概览 top-page 畸形行** → 形状级破损（截断/计数失配/分节缺失）与指数投影
   不完整仍整体 `UNKNOWN`；排名分节行投影不完整自 2026-08-31 起按源降级
