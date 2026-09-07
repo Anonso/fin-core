@@ -42,8 +42,9 @@ models:
   # 节点 enabled 开关，声明序固定不挪动）：
   #   cognition 链 = glm53_flash → deepseek_flash_opencode → deepseek_flash_cmd
   #   → qwen。
-  # deepseek_flash_opencode（当前禁用中：opencode-go 429 长期故障，owner
-  # 2026-09-05 拍板；恢复 = enabled 翻 true，即回 DS 槽位第一位，无其他改动。
+  # deepseek_flash_opencode（opencode-go 429 长期故障曾于 owner 2026-09-05
+  # 拍板禁用；owner 2026-09-07 复测渠道已恢复〔curl 与生产 OpenAI SDK 探针
+  # /models+chat 均 200〕后令翻回 enabled，即回 DS 槽位第一位，无其他改动。
   # 前提：llm.env 的 OPENCODE_GO_* 与 auth.json 的 opencode-go 条目仍在位——
   # 若已清理，启用后节点会被 fail-visible 跳过（非静默），需先补 key）。
   deepseek_flash_opencode:
@@ -58,7 +59,7 @@ models:
       - name: opencode-authjson
         api_key: ${AUTHJSON:opencode-go}
         base_url: ${OPENCODE_GO_BASE_URL}
-    enabled: false
+    enabled: true
 
   # deepseek_flash_cmd（opencode 禁用期顶上 DS 槽位；Command Code chat
   # completions，09-05 实测 GET /models 与 flash 均 200）。
@@ -154,7 +155,7 @@ models:
     harness: codex
     model: deepseek-v4-pro
     auth_note: "consult-agent/.codex + llm.env OPENCODE_GO_*（模型实际由该 home config 决定）"
-    enabled: false   # opencode-go 429 长期故障（owner 2026-09-05 拍板）；恢复只翻此处
+    enabled: false   # 渠道 429 已于 09-07 复测恢复，但 09-06 腿角色重排后 codex 腿休眠属角色决定（翻回=按声明序插回生产问询链），需 owner 拍板
 
 # 消费方候选顺序（家规规则 6：会变的选择进配置不写死代码）。
 # t0 = 难题质量锚（先用 glm5.3）；t1 = 简单任务吞吐（先用 glm5.3-flash）。
