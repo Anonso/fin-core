@@ -39,6 +39,7 @@ class OpenAICompatibleBackend:
         timeout: float | None = None,
         backend_name: str | None = None,
         endpoints: list[dict[str, Any]] | None = None,
+        extra_body: dict[str, Any] | None = None,
     ):
         self.model = model
         self.backend_name = backend_name or model
@@ -47,6 +48,7 @@ class OpenAICompatibleBackend:
         self.reasoning_effort = reasoning_effort
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.extra_body = dict(extra_body) if isinstance(extra_body, dict) else None
         self._client: Any = None
         self.last_failure: dict[str, Any] | None = None
         self.records_backend_health = True
@@ -84,6 +86,9 @@ class OpenAICompatibleBackend:
                 kwargs["base_url"] = endpoint["base_url"]
             if self.timeout is not None:
                 kwargs["timeout"] = self.timeout
+            # 重试语义归 backend 自身的升级梯（nudge/倍增/换链），客户端层
+            # 不叠加——否则一次挂死最坏 3×timeout。
+            kwargs["max_retries"] = 0
             client = OpenAI(**kwargs)
             self._clients[endpoint_index] = client
             if endpoint_index == 0 and not self.endpoints:
@@ -117,16 +122,20 @@ class OpenAICompatibleBackend:
             if isinstance(body, dict):
                 err = body.get("error", {})
                 if isinstance(err, dict):
-                    if err.get("message"):
-                        info["error_message"] = str(err["message"])
-                    if err.get("type"):
-                        info["error_type"] = str(err["type"])
+                        if err.get("message"):
+                            info["error_message"] = str(err["message"])
+                        if err.get("type"):
+                            info["error_type"] = str(err["type"])
+                        if err.get("code") is not None:
+                            info["error_code"] = str(err["code"])
                 # Flat body: only used when no nested "error" dict is present
                 if not isinstance(body.get("error"), dict):
-                    if body.get("message"):
-                        info["error_message"] = str(body["message"])
-                    if body.get("type"):
-                        info["error_type"] = str(body["type"])
+                        if body.get("message"):
+                            info["error_message"] = str(body["message"])
+                        if body.get("code") is not None:
+                            info["error_code"] = str(body["code"])
+                        if body.get("type"):
+                            info["error_type"] = str(body["type"])
         except Exception:
             pass
         return info
@@ -174,7 +183,33 @@ class OpenAICompatibleBackend:
                 failure["base_url"] = f"{parsed.scheme}://{parsed.netloc}"
             except Exception:
                 failure["base_url"] = safe_base_url
+        if self._looks_like_content_filter(exc):
+            # owner 2026-09-07：平台侧内容过滤事件单独留痕，journalctl grep
+            # CONTENT_FILTER 即查；只记元数据不落正文（家规 3）。过滤是
+            # 确定性的，恒不可重试——路由层据此快速失败并积累路由证据。
+            failure["content_filter"] = True
+            failure["retryable"] = False
+            logger.warning(
+                "CONTENT_FILTER backend=%s model=%s endpoint=%s status=%s code=%s",
+                failure.get("backend_name"),
+                failure.get("model"),
+                failure.get("base_url"),
+                failure.get("http_status"),
+                failure.get("error_code"),
+            )
         return failure
+
+    @staticmethod
+    def _looks_like_content_filter(exc: Exception) -> bool:
+        """Platform-side content-filter rejection (e.g. bigmodel 1301)."""
+        try:
+            body = getattr(exc, "body", None)
+            if isinstance(body, dict) and "contentFilter" in body:
+                return True
+            text = str(exc)
+            return "contentFilter" in text or "1301" in text or "敏感" in text
+        except Exception:
+            return False
 
     @staticmethod
     def _response_text(response: Any) -> str:
@@ -233,6 +268,8 @@ class OpenAICompatibleBackend:
                     }
                     if endpoint_reasoning_effort:
                         kwargs["reasoning_effort"] = endpoint_reasoning_effort
+                    if self.extra_body:
+                        kwargs["extra_body"] = self.extra_body
                     response = client.chat.completions.create(**kwargs)
                     finish_reason = (
                         getattr(response.choices[0], "finish_reason", None)
@@ -369,6 +406,8 @@ class OpenAICompatibleBackend:
                     }
                     if endpoint_reasoning_effort:
                         kwargs["reasoning_effort"] = endpoint_reasoning_effort
+                    if self.extra_body:
+                        kwargs["extra_body"] = self.extra_body
                     response = bounded_client.chat.completions.create(**kwargs)
                     finish_reason = (
                         getattr(response.choices[0], "finish_reason", None)
@@ -510,6 +549,8 @@ class OpenAICompatibleBackend:
                     }
                     if endpoint_reasoning_effort:
                         kwargs["reasoning_effort"] = endpoint_reasoning_effort
+                    if self.extra_body:
+                        kwargs["extra_body"] = self.extra_body
                     response = client.chat.completions.create(**kwargs)
                     if isinstance(response, str):
                         if response.strip():

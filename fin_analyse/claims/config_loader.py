@@ -45,6 +45,7 @@ class BackendPlan(NamedTuple):
     reasoning_effort: str | None
     max_tokens: int
     timeout_seconds: float | None
+    extra_body: dict[str, Any] | None
 
 
 _CONFIG_KEYS = {"models", "vision", "cross_validation", "priorities"}
@@ -58,6 +59,7 @@ _MODEL_KEYS = {
     "reasoning_effort",
     "max_tokens",
     "timeout",
+    "extra_body",
 }
 _ENDPOINT_KEYS = {"name", "api_key", "base_url", "model", "reasoning_effort"}
 _HARNESS_MODEL_KEYS = {"type", "harness", "model", "auth_note", "managed", "enabled"}
@@ -395,9 +397,19 @@ def compile_backend_plan(config: Mapping[str, object]) -> tuple[BackendPlan, ...
             timeout = float(timeout)
             if not math.isfinite(timeout) or not 0 < timeout <= 3600:
                 raise LLMConfigError(f"LLM model '{name}' timeout is invalid")
+        extra_body = raw_model.get("extra_body")
+        if extra_body is not None:
+            # 供应商原语透传（如智谱 thinking、siliconflow enable_thinking）。
+            # 只收映射，值域交由各端点校验——这里防的是类型写错导致请求体坏形。
+            if not isinstance(extra_body, dict) or not extra_body:
+                raise LLMConfigError(f"LLM model '{name}' extra_body must be a non-empty mapping")
         endpoints = _compile_backend_endpoints(name, raw_model.get("endpoints", ()))
         if adapter_id != "openai_compatible" and (
-            endpoints or base_url is not None or reasoning_effort is not None or max_tokens != 4096
+            endpoints
+            or base_url is not None
+            or reasoning_effort is not None
+            or max_tokens != 4096
+            or extra_body is not None
         ):
             raise LLMConfigError(f"LLM model '{name}' uses unsupported adapter fields")
         if enabled:
@@ -412,6 +424,7 @@ def compile_backend_plan(config: Mapping[str, object]) -> tuple[BackendPlan, ...
                     reasoning_effort=cast(str | None, reasoning_effort),
                     max_tokens=max_tokens,
                     timeout_seconds=cast(float | None, timeout),
+                    extra_body=cast(dict[str, Any] | None, extra_body),
                 )
             )
     return tuple(plans)
@@ -491,6 +504,7 @@ def _openai_backend(plan: BackendPlan) -> LLMBackend:
         max_tokens=plan.max_tokens,
         timeout=plan.timeout_seconds,
         backend_name=plan.name,
+        extra_body=plan.extra_body,
     )
 
 

@@ -498,3 +498,17 @@ def _task_xml(wrapper_path: PureWindowsPath) -> str:
   </Actions>
 </Task>
 '''
+
+
+def test_rendered_wrapper_waits_only_the_capture_process() -> None:
+    """BUG-057 残余钉板：-Wait 会连 opencli daemon 子树一起等（PT25M 强杀、
+    summary 永 pending），wrapper 必须保持 Handle 缓存 + WaitForExit() 语义。"""
+    wrapper = render_windows_incremental_wrapper(
+        release_sha=_RELEASE_SHA,
+        capture_sha256=_CAPTURE_SHA256,
+        capture_root=_CAPTURE_ROOT,
+        state_root=_STATE_ROOT,
+    )
+    assert "$null = $capture.Handle" in wrapper
+    assert "$capture.WaitForExit()" in wrapper
+    assert "-NoNewWindow -Wait" not in wrapper

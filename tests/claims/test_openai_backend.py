@@ -906,3 +906,67 @@ class TestBackendFailureRecording:
         assert result == "fallback answer"
         assert seen == [0, 1]
         assert backend.last_failure is None
+
+
+
+def test_extra_body_is_merged_into_bounded_request(monkeypatch):
+    """owner 2026-09-07：per-model extra_body（如智谱 thinking 关闭）必须到达请求体。"""
+    monkeypatch.setattr(
+        OpenAICompatibleBackend,
+        "complete_bounded",
+        _ORIGINAL_COMPLETE_BOUNDED,
+    )
+    captured: dict = {}
+
+    class _Completions:
+        @staticmethod
+        def create(**kwargs):
+            captured.update(kwargs)
+            return '{"units": []}'
+
+    class _Client:
+        chat = type("Chat", (), {"completions": _Completions()})()
+
+        def with_options(self, **kwargs):
+            return self
+
+    backend = OpenAICompatibleBackend(
+        model="glm-5.3-flash",
+        api_key="sk-test",
+        extra_body={"thinking": {"type": "disabled"}},
+    )
+    monkeypatch.setattr(backend, "_get_client", lambda _index=0: _Client())
+
+    backend.complete_bounded(
+        "prompt",
+        total_timeout_seconds=120,
+        wire_timeout_seconds=90,
+        before_attempt=lambda: None,
+    )
+    assert captured["extra_body"] == {"thinking": {"type": "disabled"}}
+
+
+def test_content_filter_failure_is_flagged_and_non_retryable(caplog):
+    """owner 2026-09-07：平台内容过滤（1301/contentFilter）单独留痕、恒不重试。"""
+    request = httpx.Request("POST", "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions")
+    response = httpx.Response(status_code=400, request=request)
+    error = InternalServerError(
+        message="Error code: 400",
+        response=response,
+        body={
+            "contentFilter": [{"level": 1, "role": "assistant"}],
+            "error": {
+                "code": "1301",
+                "message": "系统检测到输入或生成内容可能包含不安全或敏感内容",
+                "type": "content_filter_error",
+            },
+        },
+    )
+    backend = OpenAICompatibleBackend(model="glm-5.3-flash", api_key="sk-test")
+    with caplog.at_level("WARNING"):
+        failure = backend._failure_from_exception(exc=error)
+    assert failure.get("content_filter") is True
+    assert failure.get("retryable") is False
+    assert failure.get("error_code") == "1301"
+    assert not backend._is_retryable_failure(failure)
+    assert any("CONTENT_FILTER" in r.getMessage() for r in caplog.records)
