@@ -71,7 +71,7 @@
 
 ## 已知跨表动作（恢复类，防漂移）
 
-- opencode-go 恢复（429 解除）：`llm.yaml` api 条目 `deepseek_flash_opencode`（提取链 DS 槽位）已于 **2026-09-07 翻回 enabled**（渠道复测 curl/生产 OpenAI SDK 探针均 200，owner 令）。`codex-opencode` 池条目（问询链 codex 腿）仍 enabled=false：渠道已恢复，但 09-06 腿角色重排后 codex 腿休眠属角色决定——翻回会令其按声明序插回生产问询链（commandcode→codex→claude），需 owner 拍板。渠道凭据前提：llm.env 的 OPENCODE_GO_* 与 auth.json 的 opencode-go 条目在位（缺失=启用后 fail-visible 跳过，需先补 key）。
+- opencode-go 恢复（429 解除）：`llm.yaml` 两处均已翻回 enabled——api 条目 `deepseek_flash_opencode`（提取链 DS 槽位第一位）与池条目 `codex-opencode`（问询链 codex 腿），均 2026-09-07（渠道复测 curl/生产 OpenAI SDK 探针均 200；owner 拍板「休眠缘由即限额，恢复即全部启用」）。生产问询链序 = commandcode→codex→claude。渠道凭据前提：llm.env 的 OPENCODE_GO_* 与 auth.json 的 opencode-go 条目在位（缺失=启用后 fail-visible 跳过，需先补 key）。
 
 ## 已退役
 

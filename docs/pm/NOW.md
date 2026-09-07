@@ -109,10 +109,11 @@ skill，落稿时需知悉。2026-09-06 CLI 收口（D-050）：唯一
 zcode-flash/commandcode-flash（低一档·effort max）+ 探针接线 + cmd_version_pin
 单源 + bashrc 六函数退役（finqa-c/-cmd 过渡别名）；设计门 3 发现全采纳
 （台账 design-gate/finqa-cli-unify-20260906/）。2026-09-07 opencode-go 渠道
-复测恢复（curl 与生产 OpenAI SDK 探针 /models+chat 均 200），owner 令提取链
-DS 槽位 `deepseek_flash_opencode` 翻回 enabled（回第一位，无其他改动）；
-问询链 `codex-opencode` 池条目仍禁用——09-06 腿角色重排后休眠属角色决定，
-翻回=按声明序插回生产链序，待 owner 拍板。
+复测恢复（curl 与生产 OpenAI SDK 探针 /models+chat 均 200；休眠缘由即 429 限
+额），owner 拍板全量启用：提取链 DS 槽位 `deepseek_flash_opencode` 翻回
+enabled（回第一位），问询链 `codex-opencode` 池条目翻回 enabled——生产问询
+链序 = commandcode→codex→claude，finqa-x 复活（bashrc 注释同步）；finqa_nodes
+codex 节点本体常态 true 未动。
 
 ## 板 A · 重构阶段（对齐 rebaseline §6）
 

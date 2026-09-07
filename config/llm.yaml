@@ -155,7 +155,7 @@ models:
     harness: codex
     model: deepseek-v4-pro
     auth_note: "consult-agent/.codex + llm.env OPENCODE_GO_*（模型实际由该 home config 决定）"
-    enabled: false   # 渠道 429 已于 09-07 复测恢复，但 09-06 腿角色重排后 codex 腿休眠属角色决定（翻回=按声明序插回生产问询链），需 owner 拍板
+    enabled: true    # owner 2026-09-07 拍板翻回（休眠缘由即 429 限额，渠道复测探针 200；按声明序插回生产问询链第二位）
 
 # 消费方候选顺序（家规规则 6：会变的选择进配置不写死代码）。
 # t0 = 难题质量锚（先用 glm5.3）；t1 = 简单任务吞吐（先用 glm5.3-flash）。

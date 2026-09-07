@@ -12,8 +12,9 @@
 # 报错)、effort=launcher 单点 max。
 # 使用实况(owner 2026-09-06 定调):owner 真实问询=有头手动(终端 CC/Windows
 # ZCode 连 WSL),无头链流量≈测试。
-# 生产链序 = commandcode(ds-pro)→ claude(CC·glm-5.3 备用,owner 2026-09-07 启用);
-#   codex 池禁休眠自动跳过。flash 腿不入生产链序(测试腿原则 2026-09-05)。
+# 生产链序 = commandcode(ds-pro)→ codex(ds-pro·opencode-go,owner 2026-09-07 拍板
+#   复活:休眠缘由即 429 限额,渠道复测 200)→ claude(CC·glm-5.3 备用,owner
+#   2026-09-07 启用)。flash 腿不入生产链序(测试腿原则 2026-09-05)。
 # 弱腿名册(enabled:false 不入链序,--node 钉腿可达;flash 非生产):
 #   A zcode             = glm-5.3-flash(弱腿第一+人格回归探针钉腿,owner 2026-09-07 拍板;单旋钮锚定 flash,无逐次模型机制)
 #   B commandcode-flash = ds-flash(弱腿第二)
@@ -29,9 +30,9 @@ nodes:
     conn_ref: commandcode-pro
     alias: cmd            # 短打别名(--node cmd 等效);tsv/横幅仍落规范 id
     enabled: true
-  - id: codex             # codex CLI + opencode-go(休眠:池条目 codex-opencode enabled=false)
+  - id: codex             # codex CLI + opencode-go(owner 2026-09-07 拍板复活:限额恢复)
     conn_ref: codex-opencode
-    enabled: true         # 恢复语义:只翻池条目 enabled 一处,本节点常态 true
+    enabled: true         # 本节点常态 true;恢复语义=只翻池条目一处(09-07 已执行)
   - id: claude             # 生产备用:CC 无头 glm-5.3(非 flash;--model 逐次指定;owner 2026-09-07 启用)
     conn_ref: claude-cc
     enabled: true
