@@ -226,7 +226,7 @@ codex 节点本体常态 true 未动。
 | 旁路·时间（12-01 前） | 29 | BUG-035 交易日历 renewal：生成 2027 artifact + runner/reconcile 到期前告警（CALENDAR_EXPIRING） | 2026-12-01 前 |
 | 旁路·随手 | 31 | 日线第三源施工：短设计已备（docs/design/daily-bar-third-source.md，候选源待实弹核验，owner 09-05 拍板立项）；施工前跑设计门 | D3 建造静默结束后 |
 | 旁路·使用触发 | 32 | 裁决收件箱 portfolio 接线（D-051 v0 砍出项）：持仓写路径回生产时挂 `save`/`confirm` 挂点，终态映射按 ConfirmStatus 8 值闭集（PUBLISHED/UNCHANGED→resolve，NO_PENDING_REVIEW/BUSY→no-op，其余不动） | 持仓写路径回生产时 |
-| 旁路·owner | 33 | run-design-gate skill §0 增一行注册协议判据（D-051：新增 preview→确认/提名→扫批/需人工确认警告面必须接裁决收件箱 seam）——skill 文件本机未定位到（workspace/用户 skills 均无），owner 指认实际落点后补 | owner 指认 skill 位置 |
+| 旁路·会话 | 33 | run-design-gate skill §0 增一行注册协议判据（D-051：新增 preview→确认/提名→扫批/需人工确认警告面必须接裁决收件箱 seam）——落点已定位 `.claude/skills/run-design-gate/SKILL.md`（在仓内，2026-09-08 核）；该文件有并行在途改动，待其收口后一并落行，勿单独动文件防扫入他人 hunk | 并行 SKILL.md 变更收口时 |
 | 旁路·owner | 35 | 行为纪律护栏常态（施工+三腿基线+owner 终裁 09-07/08 全清，r21 已收口）：audit.tsv 按期人工裁决（三腿累计 20+ 行命中，flash/zcode 泄漏族同弱、生产腿干净）；人格修订走闸（r20 立双闸+r21 首次实弹过闸：主线聚焦豁免钉死窄口径=点名仅解锁研究覆盖与观察清单、买入建议仍不给〔zcode mainline 探针改判 FAIL 依据〕，q1/q4 锚各扩一次完成态措辞，backups 至 r20 快照、现行 r21）；出闸判定生产腿复跑。三腿基线台账=\$STATE/…/behavior-regression/{20260907-002342(flash),20260907-052216(生产),20260907-235133(zcode)}/adjudication.md；批跑承载定版=systemd 用户单元（会话后台与 setsid 三次被环境回收的教训，unit=behavior-zcode-batch）；设计稿已按家规5删转 Git 史（7f8de2a 起、344e944 终版、43472b3 收官） | owner 按期 |
 | 最后 | 9 | D-031 Daily 生成器换问询环境（owner 09-01 指示先聚焦手动 CLI；骨架稿 docs/design/d031-daily-consult-env.md 备好）；BUG-016/017 盘后复验、黑话译注推送侧生效（一期 a06db30 / 下批 ea220af 已施工）均并入本项验证；BUG-042/043（窗口外补投出口、CLAIMED 专码）量裁随本项 | owner 指示恢复推送后 |
 
