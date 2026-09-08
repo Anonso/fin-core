@@ -1,0 +1,11 @@
+{
+ "schema_version": "fin.zsxq-retired/v1",
+ "retired": [
+  {
+   "id": "zsxq-45548825112521288",
+   "retired_at": "2026-09-04",
+   "reason": "粉丝AI转述稿；owner 裁决由 S-0904D（G 审核版）换锚取代。09-05 曾被 backfill 复活（BUG#36），09-08 补删并登记墓碑",
+   "backup_ref": "article-prune-backup-20260904T222303"
+  }
+ ]
+}

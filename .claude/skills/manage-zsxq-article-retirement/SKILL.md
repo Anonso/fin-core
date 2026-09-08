@@ -57,7 +57,10 @@ description: 退役/换锚 shared KB 里的 ZSXQ 文章（删文章/下线文章
 
 1. 备份：文章文件 + index.json 全量 + manifest。
 2. 删除三件套：`rm` 文章文件 → index.json 原子移除该行 → 标签墓碑。
-3. 探针（见下）。
+3. **登记墓碑行**：`config/zsxq_retired.json` `retired[]` 追加
+   `{id, retired_at, reason, backup_ref:备份目录名}`——清扫器按此持续值守，
+   防 backfill 复活（BUG#36）；漏登记=退役不 durable。
+4. 探针（见下）。
 
 ## 操作 B：换锚退役（主线有引用；实弹参照 0903 粉丝稿→G 审核版）
 
@@ -85,9 +88,13 @@ description: 退役/换锚 shared KB 里的 ZSXQ 文章（删文章/下线文章
    → disposition `PUBLISHED`；核对 payload：新源 nature 正确
    （G_ORIGINAL 才入投影、SPOKEN_FAN_TRANSCRIBED 只入档）、单元已换锚。
 5. 删除三件套（同操作 A 第 2 步）。
-6. 探针。
+6. **登记墓碑行**（同操作 A 第 3 步——换锚退役同样必须登记）。
+7. 探针。
 
 ## 探针阶梯（两类操作通用）
+
+- **墓碑对账**：`config/zsxq_retired.json` 含该 id；备份 manifest items 含该
+  `article_id` 且 `sha256` 与备份文件一致（清扫器三条件删除闸依赖此对账）。
 
 - `read_article` 退役 id → `article_not_found`；替代文章 → READY。
 - `read_article_search` 主题词 → 替代文章命中、退役稿 0 命中。

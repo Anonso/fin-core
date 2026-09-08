@@ -600,6 +600,24 @@ def _rebuild_cognition_mainline() -> dict[str, object]:
         logging.getLogger(__name__).warning(
             "adjudication inbox reconcile failed", exc_info=True
         )
+    # 退役墓碑清扫（设计门 zsxq-retirement-tombstone-20260908）：registry 驱动、
+    # 永不阻断 ingest、零 stdout；只删「manifest 三条件」核身的我方退役材料。
+    try:
+        from fin_analyse.ingestion.retirement import sweep_retired_articles
+
+        sweep_payload = sweep_retired_articles(
+            default_knowledge_base_root(),
+            Path(__file__).resolve().parents[1] / "config" / "zsxq_retired.json",
+        )
+        if sweep_payload.get("actions") or sweep_payload.get("warns"):
+            with suppress(Exception):
+                _append_rebuild_audit(
+                    sweep_payload,
+                    state_root / "fin-analyse",
+                    filename="retired-sweep.v1.jsonl",
+                )
+    except Exception:  # noqa: BLE001 - 清扫挂点永不阻断 ingest
+        logging.getLogger(__name__).warning("retired sweep failed", exc_info=True)
     return result_dict
 
 
